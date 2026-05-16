@@ -26,6 +26,12 @@ Rectangle {
     property var remoteStateBySession: ({})
     property var remoteRequestOwners: ({})
     property var remoteOperationOwners: ({})
+    property string draggedLocalPath: ""
+    property string dropRemoteTargetPath: ""
+    property bool remoteDropActive: false
+    property var transferTasks: []
+    property bool transferPanelOpen: false
+    readonly property bool remoteListingLoading: remoteLoading && remoteRequestId.length > 0
 
     property string localSortColumn: "name"
     property bool localSortAsc: true
@@ -166,6 +172,41 @@ Rectangle {
             width: 3
             height: 3
             color: "#cbd5e1"
+        }
+    }
+
+    component BroomIcon: Item {
+        implicitWidth: 15
+        implicitHeight: 15
+
+        Rectangle {
+            x: 9
+            y: 1
+            width: 2
+            height: 9
+            radius: 1
+            rotation: 38
+            color: "#cbd5e1"
+        }
+        Rectangle {
+            x: 4
+            y: 8
+            width: 8
+            height: 5
+            radius: 1
+            rotation: 38
+            color: "#facc15"
+        }
+        Repeater {
+            model: 3
+            Rectangle {
+                x: 3 + index * 3
+                y: 11
+                width: 1
+                height: 3
+                rotation: 38
+                color: "#fef3c7"
+            }
         }
     }
 
@@ -568,14 +609,12 @@ Rectangle {
         interval: 12000
         repeat: false
         onTriggered: {
-            if (!root.remoteLoading) {
+            if (!root.remoteListingLoading) {
                 return
             }
             root.forgetRequestOwner(root.remoteRequestId, false)
-            root.forgetRequestOwner(root.remoteOperationRequestId, true)
             root.remoteLoading = false
             root.remoteRequestId = ""
-            root.remoteOperationRequestId = ""
             root.remoteError = qsTr("Remote listing timed out. Try refresh again.")
             root.saveCurrentRemoteState()
         }
@@ -868,10 +907,8 @@ Rectangle {
         }
         rememberRequestOwner(requestId, true)
         remoteOperationRequestId = requestId
-        remoteLoading = true
         remoteError = ""
         saveCurrentRemoteState()
-        remoteRequestTimeout.restart()
     }
 
     function refreshLocal() {
@@ -924,14 +961,55 @@ Rectangle {
         refreshRemote()
     }
 
-    function uploadLocalPath(path) {
+    function uploadLocalPathTo(path, targetRemoteDirectory) {
         if (connectionId === "" || path.length === 0) {
             return
         }
         pendingUploadPath = path
+        const targetPath = targetRemoteDirectory && targetRemoteDirectory.length > 0
+                       ? targetRemoteDirectory
+                       : remotePath
         startRemoteOperation(appController.requestUploadLocalPath(connectionId,
                                                                   path,
-                                                                  remotePath))
+                                                                  targetPath))
+    }
+
+    function uploadLocalPath(path) {
+        uploadLocalPathTo(path, remotePath)
+    }
+
+    function uploadDroppedUrls(urls, targetRemoteDirectory) {
+        if (connectionId === "" || !urls || urls.length === 0) {
+            return
+        }
+        for (let i = 0; i < urls.length; ++i) {
+            const path = appController.localPathFromUrl(urls[i])
+            if (path && path.length > 0) {
+                uploadLocalPathTo(path, targetRemoteDirectory)
+            }
+        }
+    }
+
+    function handleRemoteDrop(drop, targetRemoteDirectory) {
+        if (connectionId === "") {
+            drop.accepted = false
+            return
+        }
+        const targetPath = targetRemoteDirectory && targetRemoteDirectory.length > 0
+                       ? targetRemoteDirectory
+                       : remotePath
+        if (draggedLocalPath.length > 0) {
+            uploadLocalPathTo(draggedLocalPath, targetPath)
+            drop.accepted = true
+        } else if (drop.hasUrls) {
+            uploadDroppedUrls(drop.urls, targetPath)
+            drop.accepted = true
+        } else {
+            drop.accepted = false
+        }
+        draggedLocalPath = ""
+        dropRemoteTargetPath = ""
+        remoteDropActive = false
     }
 
     function chooseAndUploadFile() {
@@ -1023,6 +1101,92 @@ Rectangle {
         }
     }
 
+    function formatSpeed(bytesPerSecond) {
+        const speed = Number(bytesPerSecond) || 0
+        return formatFileSize(speed) + "/s"
+    }
+
+    function shortPath(path) {
+        if (!path || path.length === 0) {
+            return ""
+        }
+        const normalized = String(path).replace(/\\/g, "/")
+        const parts = normalized.split("/")
+        return parts.length > 0 && parts[parts.length - 1].length > 0
+               ? parts[parts.length - 1]
+               : normalized
+    }
+
+    function transferPercent(task) {
+        if (!task || !task.total || task.total <= 0) {
+            return 0
+        }
+        return Math.max(0, Math.min(100, Math.round(task.done * 100 / task.total)))
+    }
+
+    function upsertTransferTask(requestId, connectionId, operation, path, done, total, speed) {
+        const next = transferTasks.slice()
+        let found = false
+        for (let i = 0; i < next.length; ++i) {
+            if (next[i].requestId === requestId) {
+                next[i] = {
+                    requestId: requestId,
+                    connectionId: connectionId,
+                    operation: operation,
+                    path: path,
+                    done: done,
+                    total: total,
+                    speed: speed,
+                    status: next[i].status || "running",
+                    message: next[i].message || ""
+                }
+                found = true
+                break
+            }
+        }
+        if (!found) {
+            next.unshift({
+                requestId: requestId,
+                connectionId: connectionId,
+                operation: operation,
+                path: path,
+                done: done,
+                total: total,
+                speed: speed,
+                status: "running",
+                message: ""
+            })
+        }
+        transferTasks = next.slice(0, 20)
+    }
+
+    function finishTransferTask(requestId, ok, message) {
+        const next = transferTasks.slice()
+        for (let i = 0; i < next.length; ++i) {
+            if (next[i].requestId === requestId) {
+                const done = ok && next[i].total > 0 ? next[i].total : next[i].done
+                next[i] = Object.assign({}, next[i], {
+                    done: done,
+                    speed: ok ? 0 : next[i].speed,
+                    status: ok ? "done" : "failed",
+                    message: message || ""
+                })
+                transferTasks = next
+                return
+            }
+        }
+    }
+
+    function clearFinishedTransfers() {
+        const next = []
+        for (let i = 0; i < transferTasks.length; ++i) {
+            if (transferTasks[i].status === "running") {
+                next.push(transferTasks[i])
+            }
+        }
+        transferTasks = next
+    }
+
     function permissionsToSymbolic(octal, isDir) {
         if (!octal || octal.length === 0) {
             return isDir ? "d---------" : "----------"
@@ -1063,6 +1227,7 @@ Rectangle {
         }
 
         function onRemoteOperationFinished(requestId, connectionId, operation, path, ok, message) {
+            root.finishTransferTask(requestId, ok, message)
             const key = root.remoteOperationOwners[requestId] || ""
             if (key.length === 0) {
                 return
@@ -1073,7 +1238,6 @@ Rectangle {
             root.updateRemoteStateForKey(key, {
                 connectionId: connectionId,
                 remoteOperationRequestId: "",
-                remoteLoading: false,
                 remoteError: ok ? "" : message
             })
             if (ok) {
@@ -1081,6 +1245,19 @@ Rectangle {
             } else if (key === root.sessionKey) {
                 remoteRequestTimeout.stop()
             }
+        }
+
+        function onRemoteOperationProgress(requestId, connectionId, operation, path, bytesDone, bytesTotal, speedBytesPerSec) {
+            if (operation !== "upload" && operation !== "download") {
+                return
+            }
+            root.upsertTransferTask(requestId,
+                                    connectionId,
+                                    operation,
+                                    path,
+                                    bytesDone,
+                                    bytesTotal,
+                                    speedBytesPerSec)
         }
     }
 
@@ -1193,6 +1370,24 @@ Rectangle {
                         height: 26
                         color: mouseArea.containsMouse ? "#111827" : "#020617"
 
+                        Drag.active: localDragHandler.active
+                        Drag.dragType: Drag.Automatic
+                        Drag.supportedActions: Qt.CopyAction
+                        Drag.mimeData: {
+                            "text/uri-list": "file:///" + localRow.modelData.path.replace(/\\/g, "/")
+                        }
+                        Drag.hotSpot.x: 10
+                        Drag.hotSpot.y: height / 2
+
+                        DragHandler {
+                            id: localDragHandler
+                            target: null
+                            acceptedButtons: Qt.LeftButton
+                            onActiveChanged: {
+                                root.draggedLocalPath = active ? localRow.modelData.path : ""
+                            }
+                        }
+
                         Item {
                             id: localRowInner
                             anchors.fill: parent
@@ -1218,6 +1413,15 @@ Rectangle {
                             anchors.fill: parent
                             acceptedButtons: Qt.LeftButton | Qt.RightButton
                             hoverEnabled: true
+                            onPressed: {
+                                root.draggedLocalPath = localRow.modelData.path
+                            }
+                            onReleased: {
+                                root.draggedLocalPath = ""
+                            }
+                            onCanceled: {
+                                root.draggedLocalPath = ""
+                            }
                             onClicked: function(mouse) {
                                 if (mouse.button === Qt.RightButton) {
                                     localItemMenu.popup()
@@ -1294,6 +1498,42 @@ Rectangle {
                         ToolTip.text: qsTr("Refresh")
                         onClicked: root.refreshRemote()
                     }
+
+                    Item {
+                        Layout.fillWidth: true
+                    }
+
+                    ToolButton {
+                        implicitWidth: 46
+                        implicitHeight: 24
+                        text: transferTasks.length > 0 ? String(transferTasks.length) : ""
+                        enabled: transferTasks.length > 0
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Transfer tasks")
+                        onClicked: root.transferPanelOpen = !root.transferPanelOpen
+                        background: Rectangle {
+                            color: parent.enabled ? "#111827" : "#020617"
+                            border.color: root.transferPanelOpen ? "#38bdf8" : "#334155"
+                            radius: 3
+                        }
+                        contentItem: Row {
+                            spacing: 4
+                            anchors.centerIn: parent
+                            Rectangle {
+                                width: 12
+                                height: 10
+                                radius: 2
+                                color: root.transferTasks.length > 0 ? "#60a5fa" : "#475569"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Label {
+                                text: root.transferTasks.length > 0 ? String(root.transferTasks.length) : ""
+                                color: "#dbeafe"
+                                font.pixelSize: 11
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                    }
                 }
 
                 TextField {
@@ -1342,7 +1582,7 @@ Rectangle {
                 StackLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    currentIndex: root.remoteLoading || root.remoteError.length > 0 ? 1 : 0
+                    currentIndex: root.remoteListingLoading || (root.remoteError.length > 0 && root.remoteEntries.length === 0) ? 1 : 0
 
                     ListView {
                         id: remoteList
@@ -1355,7 +1595,8 @@ Rectangle {
 
                             width: remoteList.width
                             height: 26
-                            color: remoteMouseArea.containsMouse ? "#111827" : "#020617"
+                            color: remoteRowDropArea.containsDrag ? "#1e3a5f"
+                                  : remoteMouseArea.containsMouse ? "#111827" : "#020617"
 
                             Item {
                                 id: remoteRowInner
@@ -1472,19 +1713,208 @@ Rectangle {
                                     }
                                 }
                             }
+
+                            DropArea {
+                                id: remoteRowDropArea
+                                anchors.fill: parent
+                                enabled: root.connectionId !== "" && remoteRow.modelData.isDir
+                                keys: [ "text/uri-list" ]
+                                onEntered: function(drag) {
+                                    root.remoteDropActive = true
+                                    root.dropRemoteTargetPath = remoteRow.modelData.path
+                                    drag.accepted = true
+                                }
+                                onExited: {
+                                    root.dropRemoteTargetPath = ""
+                                }
+                                onDropped: function(drop) {
+                                    root.handleRemoteDrop(drop, remoteRow.modelData.path)
+                                }
+                            }
                         }
 
                         ScrollBar.vertical: ScrollBar {}
                     }
 
                     Label {
-                        text: root.remoteLoading ? qsTr("Loading...") : root.remoteError
+                        text: root.remoteListingLoading ? qsTr("Loading...") : root.remoteError
                         color: "#64748b"
                         font.pixelSize: 11
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                         wrapMode: Text.WordWrap
                     }
+                }
+            }
+
+            Rectangle {
+                id: transferPanel
+                visible: root.transferPanelOpen && root.transferTasks.length > 0
+                z: 30
+                width: Math.min(420, parent.width - 16)
+                height: Math.min(260, parent.height - 48)
+                anchors.top: parent.top
+                anchors.topMargin: 38
+                anchors.right: parent.right
+                anchors.rightMargin: 8
+                radius: 4
+                color: "#020617"
+                border.color: "#334155"
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 8
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Label {
+                            text: qsTr("Transfer tasks")
+                            color: "#dbeafe"
+                            font.bold: true
+                            font.pixelSize: 12
+                            Layout.fillWidth: true
+                        }
+                        ToolButton {
+                            implicitWidth: 24
+                            implicitHeight: 22
+                            contentItem: BroomIcon {
+                                anchors.centerIn: parent
+                            }
+                            ToolTip.visible: hovered
+                            ToolTip.text: qsTr("Clear finished tasks")
+                            onClicked: root.clearFinishedTransfers()
+                        }
+                        ToolButton {
+                            implicitWidth: 24
+                            implicitHeight: 22
+                            text: "×"
+                            onClicked: root.transferPanelOpen = false
+                        }
+                    }
+
+                    ListView {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        model: root.transferTasks
+                        spacing: 8
+
+                        delegate: Rectangle {
+                            required property var modelData
+                            width: ListView.view.width
+                            height: 58
+                            color: "#0f172a"
+                            radius: 4
+                            border.color: modelData.status === "failed" ? "#7f1d1d" : "#1e293b"
+
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 8
+                                spacing: 4
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Label {
+                                        text: modelData.operation === "upload" ? qsTr("Upload") : qsTr("Download")
+                                        color: modelData.operation === "upload" ? "#93c5fd" : "#86efac"
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                    }
+                                    Label {
+                                        text: root.shortPath(modelData.path)
+                                        color: "#dbeafe"
+                                        font.pixelSize: 11
+                                        elide: Text.ElideMiddle
+                                        Layout.fillWidth: true
+                                    }
+                                    Label {
+                                        text: modelData.status === "failed"
+                                              ? qsTr("Failed")
+                                              : modelData.status === "done"
+                                                ? qsTr("Done")
+                                                : qsTr("%1%").arg(root.transferPercent(modelData))
+                                        color: modelData.status === "failed" ? "#fca5a5" : "#94a3b8"
+                                        font.pixelSize: 11
+                                    }
+                                }
+
+                                ProgressBar {
+                                    Layout.fillWidth: true
+                                    from: 0
+                                    to: modelData.total > 0 ? modelData.total : 1
+                                    value: modelData.total > 0 ? modelData.done : 0
+                                    indeterminate: modelData.status === "running" && modelData.total <= 0
+                                }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Label {
+                                        text: root.formatFileSize(modelData.done) + " / "
+                                              + (modelData.total > 0 ? root.formatFileSize(modelData.total) : qsTr("Unknown"))
+                                        color: "#94a3b8"
+                                        font.pixelSize: 10
+                                        Layout.fillWidth: true
+                                        elide: Text.ElideRight
+                                    }
+                                    Label {
+                                        text: modelData.status === "running" ? root.formatSpeed(modelData.speed) : modelData.message
+                                        color: "#94a3b8"
+                                        font.pixelSize: 10
+                                        elide: Text.ElideMiddle
+                                        Layout.maximumWidth: 140
+                                    }
+                                }
+                            }
+                        }
+
+                        ScrollBar.vertical: ScrollBar {}
+                    }
+                }
+            }
+
+            DropArea {
+                id: remotePanelDropArea
+                anchors.fill: parent
+                anchors.topMargin: 58
+                enabled: root.connectionId !== ""
+                keys: [ "text/uri-list" ]
+                onEntered: function(drag) {
+                    root.remoteDropActive = true
+                    root.dropRemoteTargetPath = root.remotePath
+                    drag.accepted = true
+                }
+                onExited: {
+                    root.remoteDropActive = false
+                    root.dropRemoteTargetPath = ""
+                }
+                onDropped: function(drop) {
+                    root.handleRemoteDrop(drop, root.remotePath)
+                }
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: 8
+                visible: root.remoteDropActive
+                color: "#0ea5e9"
+                opacity: 0.12
+                border.color: "#38bdf8"
+                border.width: 2
+                radius: 4
+                z: 20
+
+                Label {
+                    anchors.centerIn: parent
+                    text: root.dropRemoteTargetPath.length > 0
+                          ? qsTr("Upload to %1").arg(root.dropRemoteTargetPath)
+                          : qsTr("Upload to Remote")
+                    color: "#bfdbfe"
+                    font.pixelSize: 13
+                    font.bold: true
+                    elide: Text.ElideMiddle
+                    width: parent.width - 40
+                    horizontalAlignment: Text.AlignHCenter
                 }
             }
         }

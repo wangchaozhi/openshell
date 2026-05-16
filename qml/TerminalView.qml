@@ -84,6 +84,7 @@ Rectangle {
                 output.text = buffered
                 output.cursorPosition = output.length
             }
+            output.forceActiveFocus()
         }
     }
 
@@ -152,6 +153,7 @@ Rectangle {
                 font.family: "Consolas, Menlo, monospace"
                 font.pixelSize: 13
                 placeholderText: qsTr("Open a connection to start a session.")
+                Component.onCompleted: forceActiveFocus()
                 Rectangle {
                     width: Math.max(8, output.cursorRectangle.width)
                     height: Math.max(output.font.pixelSize + 2, output.cursorRectangle.height)

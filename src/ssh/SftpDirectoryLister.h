@@ -2,18 +2,22 @@
 
 #include "ConnectionCatalog.h"
 
+#include <functional>
 #include <QVariantList>
 
 class SftpDirectoryLister
 {
 public:
+    using ProgressCallback = std::function<void(qint64 bytesDone, qint64 bytesTotal)>;
+
     static QVariantList list(const ConnectionProfile &profile,
                              const QString &remotePath,
                              QString *errorOut = nullptr);
     static bool upload(const ConnectionProfile &profile,
                        const QString &localPath,
                        const QString &remoteDirectory,
-                       QString *errorOut = nullptr);
+                       QString *errorOut = nullptr,
+                       ProgressCallback progress = {});
     static bool chmod(const ConnectionProfile &profile,
                       const QString &remotePath,
                       int permissions,
@@ -22,7 +26,8 @@ public:
                          const QString &remotePath,
                          const QString &localDirectory,
                          QString *downloadedPath = nullptr,
-                         QString *errorOut = nullptr);
+                         QString *errorOut = nullptr,
+                         ProgressCallback progress = {});
     static bool createDirectory(const ConnectionProfile &profile,
                                 const QString &remotePath,
                                 QString *errorOut = nullptr);

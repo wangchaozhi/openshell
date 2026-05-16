@@ -495,6 +495,29 @@ QString permissionsToOctal(const LIBSSH2_SFTP_ATTRIBUTES &attrs)
     return QString::number(static_cast<int>(attrs.permissions & 07777), 8).rightJustified(3, QLatin1Char('0'));
 }
 
+qint64 localPathSize(const QFileInfo &info)
+{
+    if (!info.exists()) {
+        return 0;
+    }
+    if (info.isFile()) {
+        return info.size();
+    }
+    if (!info.isDir()) {
+        return 0;
+    }
+    qint64 total = 0;
+    const QDir dir(info.absoluteFilePath());
+    const QFileInfoList children = dir.entryInfoList(QDir::AllEntries
+                                                         | QDir::NoDotAndDotDot
+                                                         | QDir::Readable,
+                                                     QDir::DirsFirst | QDir::Name);
+    for (const QFileInfo &child : children) {
+        total += localPathSize(child);
+    }
+    return total;
+}
+
 bool makeRemoteDirectory(LIBSSH2_SFTP *sftp, const QString &path)
 {
     const QByteArray encoded = path.toUtf8();
@@ -511,7 +534,10 @@ bool makeRemoteDirectory(LIBSSH2_SFTP *sftp, const QString &path)
 bool uploadFile(LIBSSH2_SFTP *sftp,
                 const QString &localPath,
                 const QString &remotePath,
-                QString *errorOut)
+                QString *errorOut,
+                qint64 bytesTotal,
+                qint64 *bytesDone,
+                const SftpDirectoryLister::ProgressCallback &progress)
 {
     QFile file(localPath);
     if (!file.open(QIODevice::ReadOnly)) {
@@ -550,6 +576,12 @@ bool uploadFile(LIBSSH2_SFTP *sftp,
                 return false;
             }
             written += n;
+            if (bytesDone) {
+                *bytesDone += n;
+                if (progress) {
+                    progress(*bytesDone, bytesTotal);
+                }
+            }
         }
     }
 
@@ -560,7 +592,10 @@ bool uploadFile(LIBSSH2_SFTP *sftp,
 bool uploadPathRecursive(LIBSSH2_SFTP *sftp,
                          const QString &localPath,
                          const QString &remotePath,
-                         QString *errorOut)
+                         QString *errorOut,
+                         qint64 bytesTotal,
+                         qint64 *bytesDone,
+                         const SftpDirectoryLister::ProgressCallback &progress)
 {
     const QFileInfo info(localPath);
     if (info.isDir()) {
@@ -580,14 +615,17 @@ bool uploadPathRecursive(LIBSSH2_SFTP *sftp,
             if (!uploadPathRecursive(sftp,
                                      child.absoluteFilePath(),
                                      joinRemotePath(remotePath, child.fileName()),
-                                     errorOut)) {
+                                     errorOut,
+                                     bytesTotal,
+                                     bytesDone,
+                                     progress)) {
                 return false;
             }
         }
         return true;
     }
 
-    return uploadFile(sftp, localPath, remotePath, errorOut);
+    return uploadFile(sftp, localPath, remotePath, errorOut, bytesTotal, bytesDone, progress);
 }
 
 bool isRemoteDir(LIBSSH2_SFTP *sftp, const QString &remotePath)
@@ -599,10 +637,61 @@ bool isRemoteDir(LIBSSH2_SFTP *sftp, const QString &remotePath)
            && LIBSSH2_SFTP_S_ISDIR(attrs.permissions);
 }
 
+qint64 remoteFileSize(const LIBSSH2_SFTP_ATTRIBUTES &attrs)
+{
+    if (!(attrs.flags & LIBSSH2_SFTP_ATTR_SIZE)) {
+        return 0;
+    }
+    return static_cast<qint64>(attrs.filesize);
+}
+
+qint64 remotePathSizeRecursive(LIBSSH2_SFTP *sftp, const QString &remotePath)
+{
+    LIBSSH2_SFTP_ATTRIBUTES attrs{};
+    const QByteArray encoded = remotePath.toUtf8();
+    if (libssh2_sftp_stat(sftp, encoded.constData(), &attrs) != 0) {
+        return 0;
+    }
+    if (!(attrs.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS)
+            || !LIBSSH2_SFTP_S_ISDIR(attrs.permissions)) {
+        return remoteFileSize(attrs);
+    }
+
+    qint64 total = 0;
+    LIBSSH2_SFTP_HANDLE *dir = libssh2_sftp_opendir(sftp, encoded.constData());
+    if (!dir) {
+        return 0;
+    }
+    char name[512];
+    LIBSSH2_SFTP_ATTRIBUTES childAttrs{};
+    for (;;) {
+        const int rc = libssh2_sftp_readdir_ex(dir, name, sizeof(name), nullptr, 0, &childAttrs);
+        if (rc <= 0) {
+            break;
+        }
+        const QString fileName = QString::fromUtf8(name, rc);
+        if (fileName == QStringLiteral(".") || fileName == QStringLiteral("..")) {
+            continue;
+        }
+        const QString childPath = joinRemotePath(remotePath, fileName);
+        if ((childAttrs.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS)
+                && LIBSSH2_SFTP_S_ISDIR(childAttrs.permissions)) {
+            total += remotePathSizeRecursive(sftp, childPath);
+        } else {
+            total += remoteFileSize(childAttrs);
+        }
+    }
+    libssh2_sftp_closedir(dir);
+    return total;
+}
+
 bool downloadFile(LIBSSH2_SFTP *sftp,
                   const QString &remotePath,
                   const QString &localPath,
-                  QString *errorOut)
+                  QString *errorOut,
+                  qint64 bytesTotal,
+                  qint64 *bytesDone,
+                  const SftpDirectoryLister::ProgressCallback &progress)
 {
     const QByteArray encoded = remotePath.toUtf8();
     LIBSSH2_SFTP_HANDLE *handle = libssh2_sftp_open(sftp,
@@ -638,7 +727,20 @@ bool downloadFile(LIBSSH2_SFTP *sftp,
             }
             return false;
         }
-        file.write(buffer, n);
+        const qint64 written = file.write(buffer, n);
+        if (written < 0) {
+            libssh2_sftp_close(handle);
+            if (errorOut) {
+                *errorOut = QObject::tr("Cannot write local file %1").arg(localPath);
+            }
+            return false;
+        }
+        if (bytesDone) {
+            *bytesDone += written;
+            if (progress) {
+                progress(*bytesDone, bytesTotal);
+            }
+        }
     }
 
     libssh2_sftp_close(handle);
@@ -648,10 +750,13 @@ bool downloadFile(LIBSSH2_SFTP *sftp,
 bool downloadPathRecursive(LIBSSH2_SFTP *sftp,
                            const QString &remotePath,
                            const QString &localPath,
-                           QString *errorOut)
+                           QString *errorOut,
+                           qint64 bytesTotal,
+                           qint64 *bytesDone,
+                           const SftpDirectoryLister::ProgressCallback &progress)
 {
     if (!isRemoteDir(sftp, remotePath)) {
-        return downloadFile(sftp, remotePath, localPath, errorOut);
+        return downloadFile(sftp, remotePath, localPath, errorOut, bytesTotal, bytesDone, progress);
     }
 
     QDir().mkpath(localPath);
@@ -678,7 +783,10 @@ bool downloadPathRecursive(LIBSSH2_SFTP *sftp,
         if (!downloadPathRecursive(sftp,
                                    joinRemotePath(remotePath, fileName),
                                    QDir(localPath).filePath(fileName),
-                                   errorOut)) {
+                                   errorOut,
+                                   bytesTotal,
+                                   bytesDone,
+                                   progress)) {
             libssh2_sftp_closedir(dir);
             return false;
         }
@@ -834,7 +942,8 @@ QVariantList SftpDirectoryLister::list(const ConnectionProfile &profile,
 bool SftpDirectoryLister::upload(const ConnectionProfile &profile,
                                  const QString &localPath,
                                  const QString &remoteDirectory,
-                                 QString *errorOut)
+                                 QString *errorOut,
+                                 ProgressCallback progress)
 {
     if (!ensureLibssh2(errorOut)) {
         return false;
@@ -856,7 +965,21 @@ bool SftpDirectoryLister::upload(const ConnectionProfile &profile,
 
     const QString targetDir = remoteDirectory.isEmpty() ? QStringLiteral("/") : remoteDirectory;
     const QString remotePath = joinRemotePath(targetDir, info.fileName());
-    const bool ok = uploadPathRecursive(connection->sftp, info.absoluteFilePath(), remotePath, errorOut);
+    const qint64 bytesTotal = localPathSize(info);
+    qint64 bytesDone = 0;
+    if (progress) {
+        progress(bytesDone, bytesTotal);
+    }
+    const bool ok = uploadPathRecursive(connection->sftp,
+                                        info.absoluteFilePath(),
+                                        remotePath,
+                                        errorOut,
+                                        bytesTotal,
+                                        &bytesDone,
+                                        progress);
+    if (ok && progress) {
+        progress(bytesTotal, bytesTotal);
+    }
     if (ok && errorOut) {
         errorOut->clear();
     }
@@ -900,7 +1023,8 @@ bool SftpDirectoryLister::download(const ConnectionProfile &profile,
                                    const QString &remotePath,
                                    const QString &localDirectory,
                                    QString *downloadedPath,
-                                   QString *errorOut)
+                                   QString *errorOut,
+                                   ProgressCallback progress)
 {
     if (!ensureLibssh2(errorOut)) {
         return false;
@@ -913,8 +1037,22 @@ bool SftpDirectoryLister::download(const ConnectionProfile &profile,
 
     const QString name = remotePath.section(QLatin1Char('/'), -1);
     const QString localPath = QDir(localDirectory).filePath(name.isEmpty() ? QStringLiteral("download") : name);
-    const bool ok = downloadPathRecursive(connection->sftp, remotePath, localPath, errorOut);
+    const qint64 bytesTotal = remotePathSizeRecursive(connection->sftp, remotePath);
+    qint64 bytesDone = 0;
+    if (progress) {
+        progress(bytesDone, bytesTotal);
+    }
+    const bool ok = downloadPathRecursive(connection->sftp,
+                                          remotePath,
+                                          localPath,
+                                          errorOut,
+                                          bytesTotal,
+                                          &bytesDone,
+                                          progress);
     if (ok) {
+        if (progress) {
+            progress(bytesTotal, bytesTotal);
+        }
         if (downloadedPath) {
             *downloadedPath = localPath;
         }

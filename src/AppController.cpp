@@ -14,11 +14,74 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFutureWatcher>
+#include <QElapsedTimer>
+#include <QMetaObject>
 #include <QStandardPaths>
 #include <QTimer>
 #include <QUrl>
 #include <QUuid>
 #include <QtConcurrent>
+
+#include <utility>
+
+namespace {
+class TransferProgressReporter
+{
+public:
+    TransferProgressReporter(AppController *controller,
+                             QString requestId,
+                             QString connectionId,
+                             QString operation,
+                             QString path)
+        : m_controller(controller)
+        , m_requestId(std::move(requestId))
+        , m_connectionId(std::move(connectionId))
+        , m_operation(std::move(operation))
+        , m_path(std::move(path))
+    {
+        m_timer.start();
+    }
+
+    void report(qint64 bytesDone, qint64 bytesTotal, bool force = false)
+    {
+        const qint64 elapsed = qMax<qint64>(1, m_timer.elapsed());
+        if (!force && bytesDone != 0 && bytesDone != bytesTotal && elapsed - m_lastEmitMs < 200) {
+            return;
+        }
+        m_lastEmitMs = elapsed;
+        const double speed = elapsed > 0
+                                 ? (static_cast<double>(bytesDone) * 1000.0 / static_cast<double>(elapsed))
+                                 : 0.0;
+        QMetaObject::invokeMethod(m_controller,
+                                  [controller = m_controller,
+                                   requestId = m_requestId,
+                                   connectionId = m_connectionId,
+                                   operation = m_operation,
+                                   path = m_path,
+                                   bytesDone,
+                                   bytesTotal,
+                                   speed]() {
+                                      emit controller->remoteOperationProgress(requestId,
+                                                                               connectionId,
+                                                                               operation,
+                                                                               path,
+                                                                               bytesDone,
+                                                                               bytesTotal,
+                                                                               speed);
+                                  },
+                                  Qt::QueuedConnection);
+    }
+
+private:
+    AppController *m_controller = nullptr;
+    QString m_requestId;
+    QString m_connectionId;
+    QString m_operation;
+    QString m_path;
+    QElapsedTimer m_timer;
+    qint64 m_lastEmitMs = -1000;
+};
+}
 
 AppController::AppController(QObject *parent)
     : QObject(parent)
@@ -419,9 +482,20 @@ QString AppController::requestUploadLocalPath(const QString &connectionId,
                 watcher->deleteLater();
             });
 
-    watcher->setFuture(QtConcurrent::run([profile, localPath, remoteDirectory]() {
+    watcher->setFuture(QtConcurrent::run([this, requestId, connectionId, profile, localPath, remoteDirectory]() {
         QString error;
-        const bool ok = SftpDirectoryLister::upload(profile, localPath, remoteDirectory, &error);
+        TransferProgressReporter progress(this,
+                                          requestId,
+                                          connectionId,
+                                          QStringLiteral("upload"),
+                                          localPath);
+        const bool ok = SftpDirectoryLister::upload(profile,
+                                                    localPath,
+                                                    remoteDirectory,
+                                                    &error,
+                                                    [&progress](qint64 done, qint64 total) {
+                                                        progress.report(done, total, done == 0 || done == total);
+                                                    });
         QVariantMap result;
         result.insert(QStringLiteral("ok"), ok);
         result.insert(QStringLiteral("message"),
@@ -498,11 +572,23 @@ QString AppController::requestRemoteDownload(const QString &connectionId,
                                              remotePath, ok, message);
                 watcher->deleteLater();
             });
-    watcher->setFuture(QtConcurrent::run([profile, remotePath, localDirectory]() {
+    watcher->setFuture(QtConcurrent::run([this, requestId, connectionId, profile, remotePath, localDirectory]() {
         QString error;
         QString downloadedPath;
+        TransferProgressReporter progress(this,
+                                          requestId,
+                                          connectionId,
+                                          QStringLiteral("download"),
+                                          remotePath);
         const bool ok = !profile.id.isEmpty()
-                        && SftpDirectoryLister::download(profile, remotePath, localDirectory, &downloadedPath, &error);
+                        && SftpDirectoryLister::download(profile,
+                                                         remotePath,
+                                                         localDirectory,
+                                                         &downloadedPath,
+                                                         &error,
+                                                         [&progress](qint64 done, qint64 total) {
+                                                             progress.report(done, total, done == 0 || done == total);
+                                                         });
         QVariantMap result;
         result.insert(QStringLiteral("ok"), ok);
         result.insert(QStringLiteral("message"), ok ? downloadedPath : (error.isEmpty() ? QObject::tr("Download failed") : error));

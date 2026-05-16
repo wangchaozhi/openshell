@@ -273,6 +273,11 @@
     </message>
     <message>
         <location filename="../qml/FileBrowser.qml" line="1077"/>
+        <source>Upload to %1</source>
+        <translation>上传到 %1</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="1077"/>
         <source>Upload to Remote</source>
         <translation>上传到远端</translation>
     </message>
@@ -367,6 +372,42 @@
         <location filename="../qml/FileBrowser.qml" line="764"/>
         <source>Open a session to enable SFTP browsing.</source>
         <translation>打开一个会话以启用 SFTP 浏览。</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="1452"/>
+        <location filename="../qml/FileBrowser.qml" line="1741"/>
+        <source>Transfer tasks</source>
+        <translation>传输任务</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="1750"/>
+        <source>Clear</source>
+        <translation>清理</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="1752"/>
+        <source>Clear finished tasks</source>
+        <translation>清理已完成任务</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="1786"/>
+        <source>Upload</source>
+        <translation>上传</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="1800"/>
+        <source>Failed</source>
+        <translation>失败</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="1802"/>
+        <source>Done</source>
+        <translation>完成</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="1821"/>
+        <source>Unknown</source>
+        <translation>未知</translation>
     </message>
 </context>
 <context>

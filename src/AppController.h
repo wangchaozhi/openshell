@@ -112,6 +112,13 @@ signals:
                                  const QString &path,
                                  bool ok,
                                  const QString &message);
+    void remoteOperationProgress(const QString &requestId,
+                                 const QString &connectionId,
+                                 const QString &operation,
+                                 const QString &path,
+                                 qint64 bytesDone,
+                                 qint64 bytesTotal,
+                                 double speedBytesPerSec);
 
 private:
     void setLastError(const QString &message);
