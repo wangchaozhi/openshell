@@ -69,6 +69,7 @@ signals:
     void backgroundChanged();
     void cursorColorChanged();
     void selectionChanged();
+    void copySelectionRequested(const QString &text);
     void cellSizeRequested(int cols, int rows);
 
 protected:
@@ -94,6 +95,12 @@ private:
     QPoint cellAtPosition(const QPointF &pos) const;
     QPair<QPoint, QPoint> normalizedSelection() const;
     bool isCellSelected(int row, int col) const;
+    QString lineText(int row) const;
+    bool isWordCharacter(const QString &text) const;
+    void setSelectionRange(const QPoint &start, const QPoint &end, bool active = true);
+    void selectWordAt(const QPoint &cell);
+    void selectLineAt(int row);
+    void copySelectionIfActive();
 
     QPointer<VtScreen> m_screen;
     int m_cols = 0;
@@ -109,6 +116,10 @@ private:
     bool m_selecting = false;
     QPoint m_selectionStart{0, 0};
     QPoint m_selectionEnd{0, 0};
+    QPoint m_selectionAnchor{0, 0};
+    QPoint m_lastClickCell{-1, -1};
+    qint64 m_lastClickMs = 0;
+    int m_clickCount = 0;
     bool m_cursorOn = true;
     QTimer m_cursorTimer;
 };

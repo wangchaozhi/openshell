@@ -5,12 +5,26 @@
 #include <QDebug>
 #include <QFontMetricsF>
 #include <QGuiApplication>
+#include <QElapsedTimer>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QFile>
 #include <QTextStream>
 #include <QStandardPaths>
+#include <QStyleHints>
+
+namespace {
+qint64 monotonicMs()
+{
+    static QElapsedTimer timer = [] {
+        QElapsedTimer t;
+        t.start();
+        return t;
+    }();
+    return timer.elapsed();
+}
+} // namespace
 
 TerminalScreenItem::TerminalScreenItem(QQuickItem *parent)
     : QQuickPaintedItem(parent)
@@ -201,6 +215,7 @@ void TerminalScreenItem::selectAll()
     m_selectAllActive = true;
     update();
     emit selectionChanged();
+    copySelectionIfActive();
 }
 
 void TerminalScreenItem::clearSelection()
@@ -257,9 +272,32 @@ void TerminalScreenItem::mousePressEvent(QMouseEvent *event)
 {
     forceActiveFocus(Qt::MouseFocusReason);
     if (event->button() == Qt::LeftButton && m_screen) {
-        clearSelection();
-        m_selectionStart = cellAtPosition(event->position());
-        m_selectionEnd = m_selectionStart;
+        const QPoint cell = cellAtPosition(event->position());
+        const qint64 now = monotonicMs();
+        const int doubleClickMs = QGuiApplication::styleHints()->mouseDoubleClickInterval();
+        if (cell == m_lastClickCell && now - m_lastClickMs <= doubleClickMs) {
+            ++m_clickCount;
+        } else {
+            m_clickCount = 1;
+        }
+        m_lastClickCell = cell;
+        m_lastClickMs = now;
+
+        if (event->modifiers() & Qt::ShiftModifier) {
+            if (!m_selectionActive && !m_selectAllActive) {
+                m_selectionAnchor = m_selectionStart;
+            }
+            setSelectionRange(m_selectionAnchor, cell);
+        } else if (m_clickCount >= 3) {
+            selectLineAt(cell.y());
+        } else if (m_clickCount == 2) {
+            selectWordAt(cell);
+        } else {
+            clearSelection();
+            m_selectionAnchor = cell;
+            m_selectionStart = cell;
+            m_selectionEnd = cell;
+        }
         m_selecting = true;
         event->accept();
         return;
@@ -275,14 +313,7 @@ void TerminalScreenItem::mouseMoveEvent(QMouseEvent *event)
     if (m_selecting && m_screen && (event->buttons() & Qt::LeftButton)) {
         const QPoint next = cellAtPosition(event->position());
         if (next != m_selectionEnd) {
-            m_selectionEnd = next;
-            const bool nextActive = m_selectionEnd != m_selectionStart;
-            const bool changed = m_selectionActive != nextActive;
-            m_selectionActive = nextActive;
-            update();
-            if (changed || m_selectionActive) {
-                emit selectionChanged();
-            }
+            setSelectionRange(m_selectionAnchor, next, next != m_selectionAnchor);
         }
         event->accept();
         return;
@@ -293,15 +324,13 @@ void TerminalScreenItem::mouseMoveEvent(QMouseEvent *event)
 void TerminalScreenItem::mouseReleaseEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton && m_selecting) {
-        m_selectionEnd = cellAtPosition(event->position());
         m_selecting = false;
-        const bool nextActive = m_selectionEnd != m_selectionStart;
-        const bool changed = m_selectionActive != nextActive;
-        m_selectionActive = nextActive;
-        update();
-        if (changed || m_selectionActive) {
-            emit selectionChanged();
+        if (m_clickCount < 2) {
+            const QPoint next = cellAtPosition(event->position());
+            setSelectionRange(m_selectionAnchor, next, next != m_selectionAnchor);
         }
+        update();
+        copySelectionIfActive();
         event->accept();
         return;
     }
@@ -426,6 +455,104 @@ bool TerminalScreenItem::isCellSelected(int row, int col) const
         return false;
     }
     return true;
+}
+
+QString TerminalScreenItem::lineText(int row) const
+{
+    QString line;
+    if (!m_screen || row < 0 || row >= m_rows) {
+        return line;
+    }
+    line.reserve(m_cols);
+    for (int col = 0; col < m_cols; ++col) {
+        const VtCell cell = m_screen->cellAt(row, col);
+        if (cell.placeholder) {
+            continue;
+        }
+        if (cell.text.isEmpty()) {
+            line.append(QLatin1Char(' '));
+        } else {
+            line.append(cell.text);
+        }
+    }
+    return line;
+}
+
+bool TerminalScreenItem::isWordCharacter(const QString &text) const
+{
+    if (text.isEmpty()) {
+        return false;
+    }
+    const QChar ch = text.at(0);
+    return ch.isLetterOrNumber()
+           || ch == QLatin1Char('_')
+           || ch == QLatin1Char('-')
+           || ch == QLatin1Char('.')
+           || ch == QLatin1Char('/')
+           || ch == QLatin1Char(':')
+           || ch == QLatin1Char('@')
+           || ch == QLatin1Char('~');
+}
+
+void TerminalScreenItem::setSelectionRange(const QPoint &start, const QPoint &end, bool active)
+{
+    const bool changed = m_selectAllActive
+                         || m_selectionStart != start
+                         || m_selectionEnd != end
+                         || m_selectionActive != active;
+    m_selectAllActive = false;
+    m_selectionStart = start;
+    m_selectionEnd = end;
+    m_selectionActive = active;
+    if (changed) {
+        update();
+        emit selectionChanged();
+    }
+}
+
+void TerminalScreenItem::selectWordAt(const QPoint &cell)
+{
+    if (!m_screen) {
+        return;
+    }
+    if (!isWordCharacter(m_screen->cellAt(cell.y(), cell.x()).text)) {
+        setSelectionRange(cell, cell, false);
+        return;
+    }
+    int startCol = cell.x();
+    int endCol = cell.x();
+    while (startCol > 0 && isWordCharacter(m_screen->cellAt(cell.y(), startCol - 1).text)) {
+        --startCol;
+    }
+    while (endCol + 1 < m_cols && isWordCharacter(m_screen->cellAt(cell.y(), endCol + 1).text)) {
+        ++endCol;
+    }
+    m_selectionAnchor = QPoint(startCol, cell.y());
+    setSelectionRange(m_selectionAnchor, QPoint(endCol, cell.y()));
+    copySelectionIfActive();
+}
+
+void TerminalScreenItem::selectLineAt(int row)
+{
+    QString line = lineText(row);
+    while (!line.isEmpty() && line.endsWith(QLatin1Char(' '))) {
+        line.chop(1);
+    }
+    if (line.isEmpty()) {
+        setSelectionRange(QPoint(0, row), QPoint(0, row), false);
+        return;
+    }
+    m_selectionAnchor = QPoint(0, row);
+    setSelectionRange(m_selectionAnchor, QPoint(qMin(m_cols - 1, line.size() - 1), row));
+    copySelectionIfActive();
+}
+
+void TerminalScreenItem::copySelectionIfActive()
+{
+    const QString text = selectedText();
+    if (!text.isEmpty()) {
+        emit copySelectionRequested(text);
+    }
 }
 
 void TerminalScreenItem::paint(QPainter *painter)

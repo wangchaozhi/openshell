@@ -189,6 +189,9 @@ Rectangle {
                         appController.resizeSession(root.sessionId, cols, rows)
                     }
                 }
+                onCopySelectionRequested: function(text) {
+                    appController.copyTextToClipboard(text)
+                }
                 Component.onCompleted: bindScreen()
 
                 MouseArea {
