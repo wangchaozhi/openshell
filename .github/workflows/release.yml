@@ -93,13 +93,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install aqtinstall
-          extra_modules=""
+          extra_modules=()
           if [ "${{ runner.os }}" = "Linux" ]; then
-            # qtwayland exposes the Wayland QPA plugin so AppImages run on
-            # Wayland-only sessions (Ubuntu 22.04+ default) without warnings.
-            extra_modules="--modules qtwayland"
+            # qtwayland is useful for Wayland sessions, but not every Qt
+            # release/arch publishes it as an aqt module. Treat it as optional
+            # so the build is not blocked by package-index drift.
+            available_modules="$(python -m aqt list-qt "${{ matrix.aqt_host }}" desktop --modules "${QT_VERSION}" "${{ matrix.qt_arch }}" || true)"
+            if printf '%s\n' "${available_modules}" | grep -qx 'qtwayland'; then
+              extra_modules=(--modules qtwayland)
+            fi
           fi
-          python -m aqt install-qt "${{ matrix.aqt_host }}" desktop "${QT_VERSION}" "${{ matrix.qt_arch }}" -O "${RUNNER_TEMP}/Qt" ${extra_modules}
+          python -m aqt install-qt "${{ matrix.aqt_host }}" desktop "${QT_VERSION}" "${{ matrix.qt_arch }}" -O "${RUNNER_TEMP}/Qt" "${extra_modules[@]}"
 
       - name: Configure Qt environment
         shell: bash
