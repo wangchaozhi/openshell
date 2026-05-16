@@ -67,6 +67,8 @@ set(OPENSHELL_SOURCES
     src/ssh/SshSession.cpp
     src/ssh/SshSession.h
     src/ssh/SshWorkerFactory.h
+    src/ssh/SftpDirectoryLister.cpp
+    src/ssh/SftpDirectoryLister.h
     src/ssh/Libssh2ChannelWorker.cpp
     src/ssh/Libssh2ChannelWorker.h
 )

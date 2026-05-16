@@ -4,12 +4,17 @@
 
 namespace {
 
-QByteArray stripTerminalControls(const QByteArray &input)
+bool applyTerminalOutput(QByteArray *buffer, const QByteArray &input)
 {
     enum class State { Normal, Escape, Csi, Osc, OscEscape, Charset };
 
-    QByteArray out;
-    out.reserve(input.size());
+    if (!buffer) {
+        return false;
+    }
+
+    const QByteArray before = *buffer;
+    qsizetype cursor = buffer->size();
+    qsizetype lineStart = buffer->lastIndexOf('\n') + 1;
     State state = State::Normal;
 
     for (unsigned char ch : input) {
@@ -17,8 +22,24 @@ QByteArray stripTerminalControls(const QByteArray &input)
         case State::Normal:
             if (ch == 0x1b) {
                 state = State::Escape;
-            } else if (ch == '\n' || ch == '\t' || ch >= 0x20) {
-                out.append(static_cast<char>(ch));
+            } else if (ch == '\r') {
+                cursor = lineStart;
+            } else if (ch == '\n') {
+                buffer->append('\n');
+                cursor = buffer->size();
+                lineStart = cursor;
+            } else if (ch == '\b' || ch == 0x7f) {
+                if (cursor > lineStart) {
+                    buffer->remove(cursor - 1, 1);
+                    --cursor;
+                }
+            } else if (ch == '\t' || ch >= 0x20) {
+                if (cursor < buffer->size()) {
+                    (*buffer)[cursor] = static_cast<char>(ch);
+                } else {
+                    buffer->append(static_cast<char>(ch));
+                }
+                ++cursor;
             }
             break;
         case State::Escape:
@@ -53,7 +74,7 @@ QByteArray stripTerminalControls(const QByteArray &input)
         }
     }
 
-    return out;
+    return *buffer != before;
 }
 
 } // namespace
@@ -142,12 +163,13 @@ void SshSession::handleDisconnected(const QString &reason)
 
 void SshSession::handleOutput(const QByteArray &chunk)
 {
-    const QByteArray visible = stripTerminalControls(chunk);
-    if (visible.isEmpty()) {
+    if (!applyTerminalOutput(&m_buffer, chunk)) {
         return;
     }
-    appendBuffer(visible);
-    emit outputAppended(visible);
+    if (m_buffer.size() > kBufferCap) {
+        m_buffer.remove(0, m_buffer.size() - kBufferCap / 2);
+    }
+    emit outputAppended(chunk);
 }
 
 void SshSession::handleError(const QString &message)

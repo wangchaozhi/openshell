@@ -13,6 +13,27 @@ Rectangle {
 
     color: "#020617"
 
+    component CloseIcon: Item {
+        implicitWidth: 12
+        implicitHeight: 12
+        Rectangle {
+            anchors.centerIn: parent
+            width: 13
+            height: 2
+            radius: 1
+            rotation: 45
+            color: "#cbd5e1"
+        }
+        Rectangle {
+            anchors.centerIn: parent
+            width: 13
+            height: 2
+            radius: 1
+            rotation: -45
+            color: "#cbd5e1"
+        }
+    }
+
     Row {
         anchors.fill: parent
         anchors.leftMargin: 4
@@ -54,9 +75,13 @@ Rectangle {
                     }
 
                     ToolButton {
-                        text: "×"
-                        font.pixelSize: 14
                         Layout.preferredWidth: 22
+                        Layout.preferredHeight: 22
+                        contentItem: CloseIcon {
+                            anchors.centerIn: parent
+                        }
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Close session")
                         onClicked: root.sessionClosed(modelData.id)
                     }
                 }

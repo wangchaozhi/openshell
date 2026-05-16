@@ -42,6 +42,10 @@ Rectangle {
             appController.sendSessionInput(sessionId, "\u007f")
             return true
         }
+        if (event.key === Qt.Key_Delete) {
+            appController.sendSessionInput(sessionId, "\u001b[3~")
+            return true
+        }
         if (event.key === Qt.Key_Tab) {
             appController.sendSessionInput(sessionId, "\t")
             return true
@@ -89,7 +93,7 @@ Rectangle {
             if (id !== root.sessionId) {
                 return
             }
-            output.insert(output.length, chunk)
+            output.text = appController.sessionBuffer(root.sessionId)
             output.cursorPosition = output.length
         }
     }
@@ -140,18 +144,49 @@ Rectangle {
                 readOnly: true
                 focus: true
                 activeFocusOnTab: true
+                selectByMouse: false
+                cursorVisible: false
                 wrapMode: TextEdit.Wrap
                 color: "#e2e8f0"
                 background: Rectangle { color: "#020617" }
                 font.family: "Consolas, Menlo, monospace"
                 font.pixelSize: 13
                 placeholderText: qsTr("Open a connection to start a session.")
+                Rectangle {
+                    width: Math.max(8, output.cursorRectangle.width)
+                    height: Math.max(output.font.pixelSize + 2, output.cursorRectangle.height)
+                    x: output.cursorRectangle.x
+                    y: output.cursorRectangle.y
+                    color: "#38bdf8"
+                    opacity: terminalCursorBlink.visiblePhase ? 0.85 : 0
+                    visible: root.sessionId !== "" && output.activeFocus
+                    z: 10
+
+                    Timer {
+                        id: terminalCursorBlink
+                        property bool visiblePhase: true
+                        interval: 530
+                        repeat: true
+                        running: root.sessionId !== "" && output.activeFocus
+                        onTriggered: visiblePhase = !visiblePhase
+                        onRunningChanged: visiblePhase = true
+                    }
+                }
                 TapHandler {
-                    onTapped: output.forceActiveFocus()
+                    onTapped: {
+                        output.cursorPosition = output.length
+                        output.forceActiveFocus()
+                    }
                 }
                 Keys.onPressed: function(event) {
+                    output.cursorPosition = output.length
                     if (root.sendTerminalKey(event)) {
                         event.accepted = true
+                    }
+                }
+                onCursorPositionChanged: {
+                    if (cursorPosition !== length) {
+                        cursorPosition = length
                     }
                 }
             }

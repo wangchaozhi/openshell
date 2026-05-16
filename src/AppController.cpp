@@ -3,10 +3,18 @@
 #include "ConnectionCatalog.h"
 #include "SessionController.h"
 #include "SettingsStore.h"
+#include "ssh/SftpDirectoryLister.h"
 #include "TrayController.h"
 #include "TranslationManager.h"
 
 #include <QApplication>
+#include <QDir>
+#include <QFileInfo>
+#include <QFutureWatcher>
+#include <QStandardPaths>
+#include <QTimer>
+#include <QUuid>
+#include <QtConcurrent>
 
 AppController::AppController(QObject *parent)
     : QObject(parent)
@@ -195,6 +203,138 @@ void AppController::sendSessionInput(const QString &sessionId, const QString &te
 void AppController::resizeSession(const QString &sessionId, int cols, int rows)
 {
     m_sessions->requestResize(sessionId, cols, rows);
+}
+
+QString AppController::localHomePath() const
+{
+    return QDir::homePath();
+}
+
+QString AppController::localParentPath(const QString &path) const
+{
+    QDir dir(path.isEmpty() ? QDir::homePath() : path);
+    dir.cdUp();
+    return QDir::toNativeSeparators(dir.absolutePath());
+}
+
+QVariantList AppController::localDirectoryEntries(const QString &path) const
+{
+    const QString target = path.isEmpty() ? QDir::homePath() : path;
+    const QDir dir(target);
+    QVariantList entries;
+    const QFileInfoList items = dir.entryInfoList(QDir::AllEntries
+                                                      | QDir::NoDotAndDotDot
+                                                      | QDir::Readable,
+                                                  QDir::DirsFirst
+                                                      | QDir::IgnoreCase
+                                                      | QDir::Name);
+    entries.reserve(items.size());
+    for (const QFileInfo &item : items) {
+        QVariantMap row;
+        row.insert(QStringLiteral("name"), item.fileName());
+        row.insert(QStringLiteral("path"), QDir::toNativeSeparators(item.absoluteFilePath()));
+        row.insert(QStringLiteral("isDir"), item.isDir());
+        row.insert(QStringLiteral("size"), item.isDir() ? QStringLiteral("--")
+                                                        : QString::number(item.size()));
+        row.insert(QStringLiteral("modified"),
+                   item.lastModified().toString(QStringLiteral("yyyy-MM-dd HH:mm")));
+        entries.append(row);
+    }
+    return entries;
+}
+
+QString AppController::remoteHomePath(const QString &connectionId) const
+{
+    const ConnectionProfile profile = m_catalog->profileById(connectionId);
+    if (profile.username == QStringLiteral("root")) {
+        return QStringLiteral("/root");
+    }
+    if (!profile.username.isEmpty()) {
+        return QStringLiteral("/home/%1").arg(profile.username);
+    }
+    return QStringLiteral("/");
+}
+
+QString AppController::remoteParentPath(const QString &path) const
+{
+    if (path.isEmpty() || path == QStringLiteral("/")) {
+        return QStringLiteral("/");
+    }
+    QString clean = path;
+    while (clean.size() > 1 && clean.endsWith(QLatin1Char('/'))) {
+        clean.chop(1);
+    }
+    const int slash = clean.lastIndexOf(QLatin1Char('/'));
+    if (slash <= 0) {
+        return QStringLiteral("/");
+    }
+    return clean.left(slash);
+}
+
+QVariantList AppController::remoteDirectoryEntries(const QString &connectionId,
+                                                   const QString &path)
+{
+    const ConnectionProfile profile = m_catalog->profileById(connectionId);
+    if (profile.id.isEmpty()) {
+        setLastError(tr("Unknown connection"));
+        return {};
+    }
+
+    QString error;
+    QVariantList rows = SftpDirectoryLister::list(profile,
+                                                  path.isEmpty()
+                                                      ? remoteHomePath(connectionId)
+                                                      : path,
+                                                  &error);
+    if (!error.isEmpty()) {
+        setLastError(error);
+    } else {
+        setLastError(QString());
+    }
+    return rows;
+}
+
+QString AppController::requestRemoteDirectoryEntries(const QString &connectionId,
+                                                     const QString &path)
+{
+    const QString requestId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const ConnectionProfile profile = m_catalog->profileById(connectionId);
+    const QString targetPath = path.isEmpty() ? remoteHomePath(connectionId) : path;
+
+    if (profile.id.isEmpty()) {
+        const QString error = tr("Unknown connection");
+        setLastError(error);
+        QTimer::singleShot(0, this, [this, requestId, connectionId, targetPath, error]() {
+            emit remoteDirectoryEntriesReady(requestId, connectionId, targetPath, {}, error);
+        });
+        return requestId;
+    }
+
+    auto *watcher = new QFutureWatcher<QVariantMap>(this);
+    connect(watcher, &QFutureWatcher<QVariantMap>::finished, this,
+            [this, watcher, requestId, connectionId, targetPath]() {
+                const QVariantMap result = watcher->result();
+                const QVariantList entries = result.value(QStringLiteral("entries")).toList();
+                const QString error = result.value(QStringLiteral("error")).toString();
+                setLastError(error);
+                emit remoteDirectoryEntriesReady(requestId,
+                                                 connectionId,
+                                                 targetPath,
+                                                 entries,
+                                                 error);
+                watcher->deleteLater();
+            });
+
+    watcher->setFuture(QtConcurrent::run([profile, targetPath]() {
+        QString error;
+        QVariantList entries = SftpDirectoryLister::list(profile, targetPath, &error);
+        QVariantMap result;
+        result.insert(QStringLiteral("entries"), entries);
+        result.insert(QStringLiteral("error"), error);
+        return result;
+    }));
+
+    return requestId;
 }
 
 void AppController::showWindow()
