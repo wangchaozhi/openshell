@@ -17,6 +17,15 @@ public:
     bool minimizeToTray() const;
     void setMinimizeToTray(bool enabled);
 
+    QString remoteFileOpenMode() const;
+    void setRemoteFileOpenMode(const QString &mode);
+
+    QString externalTextEditorPath() const;
+    void setExternalTextEditorPath(const QString &path);
+
+    bool autoUploadRemoteEdits() const;
+    void setAutoUploadRemoteEdits(bool enabled);
+
     QRect mainWindowGeometry() const;
     void setMainWindowGeometry(const QRect &geometry);
 

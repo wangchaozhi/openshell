@@ -32,6 +32,41 @@
         <source>Invalid permission value</source>
         <translation>权限值无效</translation>
     </message>
+    <message>
+        <location filename="../src/AppController.cpp" line="0"/>
+        <source>Select text editor</source>
+        <translation>选择文本编辑器</translation>
+    </message>
+    <message>
+        <location filename="../src/AppController.cpp" line="0"/>
+        <source>Applications (*.exe);;All files (*)</source>
+        <translation>应用程序 (*.exe);;所有文件 (*)</translation>
+    </message>
+    <message>
+        <location filename="../src/AppController.cpp" line="0"/>
+        <source>Remote file saved</source>
+        <translation>远程文件已保存</translation>
+    </message>
+    <message>
+        <location filename="../src/AppController.cpp" line="0"/>
+        <source>Upload failed</source>
+        <translation>上传失败</translation>
+    </message>
+    <message>
+        <location filename="../src/AppController.cpp" line="0"/>
+        <source>Cannot open %1</source>
+        <translation>无法打开 %1</translation>
+    </message>
+    <message>
+        <location filename="../src/AppController.cpp" line="0"/>
+        <source>Cannot write %1</source>
+        <translation>无法写入 %1</translation>
+    </message>
+    <message>
+        <location filename="../src/AppController.cpp" line="0"/>
+        <source>Cannot save %1</source>
+        <translation>无法保存 %1</translation>
+    </message>
 </context>
 <context>
     <name>ConnectionCatalog</name>
@@ -418,6 +453,61 @@
         <location filename="../qml/FileBrowser.qml" line="1821"/>
         <source>Unknown</source>
         <translation>未知</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <source>Remote File Open</source>
+        <translation>远程文件打开</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <source>Open remote files with</source>
+        <translation>远程文件打开方式</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <source>System default app</source>
+        <translation>系统默认应用</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <source>Specified text editor</source>
+        <translation>指定文本编辑器</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <source>Built-in editor</source>
+        <translation>内置编辑器</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <source>Text editor path</source>
+        <translation>文本编辑器路径</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <source>Browse</source>
+        <translation>浏览</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <source>Auto upload after external edits</source>
+        <translation>外部编辑后自动上传</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <source>Remote file open settings</source>
+        <translation>远程文件打开设置</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <source>Browse...</source>
+        <translation>浏览...</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <source>Open settings</source>
+        <translation>打开设置</translation>
     </message>
 </context>
 <context>

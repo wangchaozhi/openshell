@@ -9,7 +9,11 @@ namespace {
 constexpr auto kLanguage = "ui/language";
 constexpr auto kMinimizeToTray = "ui/minimizeToTray";
 constexpr auto kMainWindowGeometry = "ui/mainGeometry";
+constexpr auto kRemoteFileOpenMode = "remoteFiles/openMode";
+constexpr auto kExternalTextEditorPath = "remoteFiles/externalTextEditorPath";
+constexpr auto kAutoUploadRemoteEdits = "remoteFiles/autoUploadEdits";
 constexpr auto kDefaultLanguage = "system";
+constexpr auto kDefaultRemoteFileOpenMode = "system";
 } // namespace
 
 SettingsStore::SettingsStore(QObject *parent)
@@ -40,6 +44,42 @@ void SettingsStore::setMinimizeToTray(bool enabled)
 {
     QSettings settings;
     settings.setValue(kMinimizeToTray, enabled);
+}
+
+QString SettingsStore::remoteFileOpenMode() const
+{
+    QSettings settings;
+    return settings.value(kRemoteFileOpenMode, QString::fromLatin1(kDefaultRemoteFileOpenMode)).toString();
+}
+
+void SettingsStore::setRemoteFileOpenMode(const QString &mode)
+{
+    QSettings settings;
+    settings.setValue(kRemoteFileOpenMode, mode);
+}
+
+QString SettingsStore::externalTextEditorPath() const
+{
+    QSettings settings;
+    return settings.value(kExternalTextEditorPath).toString();
+}
+
+void SettingsStore::setExternalTextEditorPath(const QString &path)
+{
+    QSettings settings;
+    settings.setValue(kExternalTextEditorPath, path);
+}
+
+bool SettingsStore::autoUploadRemoteEdits() const
+{
+    QSettings settings;
+    return settings.value(kAutoUploadRemoteEdits, true).toBool();
+}
+
+void SettingsStore::setAutoUploadRemoteEdits(bool enabled)
+{
+    QSettings settings;
+    settings.setValue(kAutoUploadRemoteEdits, enabled);
 }
 
 QRect SettingsStore::mainWindowGeometry() const

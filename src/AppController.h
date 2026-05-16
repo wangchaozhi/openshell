@@ -3,11 +3,14 @@
 #include <QObject>
 #include <QPoint>
 #include <QRect>
+#include <QDateTime>
+#include <QHash>
 #include <QStringList>
 #include <QVariantList>
 #include <QVariantMap>
 
 class ConnectionCatalog;
+class QFileSystemWatcher;
 class SessionController;
 class SettingsStore;
 class TrayController;
@@ -20,6 +23,9 @@ class AppController : public QObject
     Q_PROPERTY(QString currentConnectionId READ currentConnectionId WRITE setCurrentConnectionId NOTIFY currentConnectionChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(bool minimizeToTray READ minimizeToTray WRITE setMinimizeToTray NOTIFY minimizeToTrayChanged)
+    Q_PROPERTY(QString remoteFileOpenMode READ remoteFileOpenMode WRITE setRemoteFileOpenMode NOTIFY remoteFileOpenSettingsChanged)
+    Q_PROPERTY(QString externalTextEditorPath READ externalTextEditorPath WRITE setExternalTextEditorPath NOTIFY remoteFileOpenSettingsChanged)
+    Q_PROPERTY(bool autoUploadRemoteEdits READ autoUploadRemoteEdits WRITE setAutoUploadRemoteEdits NOTIFY remoteFileOpenSettingsChanged)
 
 public:
     explicit AppController(QObject *parent = nullptr);
@@ -35,6 +41,13 @@ public:
 
     bool minimizeToTray() const;
     void setMinimizeToTray(bool enabled);
+
+    QString remoteFileOpenMode() const;
+    void setRemoteFileOpenMode(const QString &mode);
+    QString externalTextEditorPath() const;
+    void setExternalTextEditorPath(const QString &path);
+    bool autoUploadRemoteEdits() const;
+    void setAutoUploadRemoteEdits(bool enabled);
 
     Q_INVOKABLE QRect mainWindowGeometry() const;
     Q_INVOKABLE void saveMainWindowGeometry(int x, int y, int w, int h);
@@ -77,6 +90,12 @@ public:
                                               const QString &localDirectory);
     Q_INVOKABLE QString requestOpenRemotePath(const QString &connectionId,
                                               const QString &remotePath);
+    Q_INVOKABLE QString requestUploadEditedRemoteFile(const QString &connectionId,
+                                                      const QString &localPath,
+                                                      const QString &remotePath);
+    Q_INVOKABLE QString chooseExternalTextEditor();
+    Q_INVOKABLE QString readTextFile(const QString &path) const;
+    Q_INVOKABLE bool saveTextFile(const QString &path, const QString &text);
     Q_INVOKABLE QString requestCreateRemotePath(const QString &connectionId,
                                                 const QString &remoteDirectory,
                                                 const QString &name,
@@ -100,6 +119,7 @@ signals:
     void currentConnectionChanged();
     void lastErrorChanged();
     void minimizeToTrayChanged();
+    void remoteFileOpenSettingsChanged();
     void showRequested();
     void hideRequested();
     void sessionsChanged();
@@ -123,9 +143,28 @@ signals:
                                  qint64 bytesDone,
                                  qint64 bytesTotal,
                                  double speedBytesPerSec);
+    void remoteFileReadyForInternalEditor(const QString &connectionId,
+                                          const QString &remotePath,
+                                          const QString &localPath,
+                                          const QString &text,
+                                          const QString &error);
 
 private:
+    struct RemoteEditWatch
+    {
+        QString connectionId;
+        QString remotePath;
+        QDateTime lastKnownModified;
+    };
+
     void setLastError(const QString &message);
+    void openDownloadedRemoteFile(const QString &connectionId,
+                                  const QString &remotePath,
+                                  const QString &localPath);
+    void watchRemoteEditFile(const QString &connectionId,
+                             const QString &remotePath,
+                             const QString &localPath);
+    void handleWatchedRemoteEditChanged(const QString &localPath);
 
     QString m_currentConnectionId;
     QString m_lastError;
@@ -134,4 +173,6 @@ private:
     SessionController *m_sessions = nullptr;
     TranslationManager *m_translations = nullptr;
     TrayController *m_tray = nullptr;
+    QFileSystemWatcher *m_remoteEditWatcher = nullptr;
+    QHash<QString, RemoteEditWatch> m_remoteEditWatches;
 };

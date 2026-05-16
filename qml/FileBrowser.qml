@@ -21,6 +21,9 @@ Rectangle {
     property string pendingUploadPath: ""
     property string pendingRemotePath: ""
     property string nameDialogMode: ""
+    property string editingRemotePath: ""
+    property string editingLocalPath: ""
+    property string editingConnectionId: ""
     readonly property string connectionId: session && session.connectionId ? session.connectionId : ""
     readonly property string sessionKey: session && session.id ? session.id : ""
     property string loadedSessionKey: ""
@@ -187,6 +190,48 @@ Rectangle {
             height: 3
             radius: 1
             color: active ? "#dbeafe" : "#94a3b8"
+        }
+    }
+
+    component SettingsIcon: Item {
+        implicitWidth: 15
+        implicitHeight: 15
+
+        Rectangle {
+            x: 2
+            y: 2
+            width: 11
+            height: 11
+            radius: 6
+            color: "transparent"
+            border.color: "#93c5fd"
+            border.width: 2
+        }
+        Rectangle {
+            x: 6
+            y: 0
+            width: 3
+            height: 15
+            radius: 1
+            color: "#93c5fd"
+        }
+        Rectangle {
+            x: 0
+            y: 6
+            width: 15
+            height: 3
+            radius: 1
+            color: "#93c5fd"
+        }
+        Rectangle {
+            x: 5
+            y: 5
+            width: 5
+            height: 5
+            radius: 3
+            color: "#020617"
+            border.color: "#dbeafe"
+            border.width: 1
         }
     }
 
@@ -661,6 +706,97 @@ Rectangle {
                                                                                 root.remotePath,
                                                                                 nameField.text,
                                                                                 root.nameDialogMode === "newDir"))
+            }
+        }
+    }
+
+    Dialog {
+        id: remoteOpenSettingsDialog
+        title: qsTr("Remote File Open")
+        modal: true
+        anchors.centerIn: parent
+        width: 420
+        standardButtons: Dialog.Ok | Dialog.Cancel
+
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 8
+
+            Label {
+                text: qsTr("Open remote files with")
+                color: "#020617"
+                font.pixelSize: 12
+            }
+
+            ComboBox {
+                id: openModeBox
+                Layout.fillWidth: true
+                textRole: "label"
+                valueRole: "value"
+                model: [
+                    { label: qsTr("System default app"), value: "system" },
+                    { label: qsTr("Specified text editor"), value: "custom" },
+                    { label: qsTr("Built-in editor"), value: "internal" }
+                ]
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                enabled: openModeBox.currentValue === "custom"
+
+                TextField {
+                    id: editorPathField
+                    Layout.fillWidth: true
+                    selectByMouse: true
+                    placeholderText: qsTr("Text editor path")
+                }
+                Button {
+                    text: qsTr("Browse")
+                    onClicked: {
+                        const path = appController.chooseExternalTextEditor()
+                        if (path && path.length > 0) {
+                            editorPathField.text = path
+                        }
+                    }
+                }
+            }
+
+            CheckBox {
+                id: autoUploadCheck
+                text: qsTr("Auto upload after external edits")
+            }
+        }
+
+        onAccepted: {
+            appController.remoteFileOpenMode = openModeBox.currentValue || "system"
+            appController.externalTextEditorPath = editorPathField.text
+            appController.autoUploadRemoteEdits = autoUploadCheck.checked
+        }
+    }
+
+    Dialog {
+        id: internalEditorDialog
+        title: root.editingRemotePath.length > 0 ? root.editingRemotePath : qsTr("Built-in editor")
+        modal: false
+        anchors.centerIn: parent
+        width: Math.min(root.width - 48, 820)
+        height: Math.min(root.height - 36, 520)
+        standardButtons: Dialog.Save | Dialog.Close
+
+        TextArea {
+            id: internalEditorText
+            anchors.fill: parent
+            selectByMouse: true
+            wrapMode: TextEdit.NoWrap
+            font.family: "Consolas"
+            font.pixelSize: 13
+        }
+
+        onAccepted: {
+            if (appController.saveTextFile(root.editingLocalPath, internalEditorText.text)) {
+                root.startRemoteOperation(appController.requestUploadEditedRemoteFile(root.editingConnectionId,
+                                                                                     root.editingLocalPath,
+                                                                                     root.editingRemotePath))
             }
         }
     }
@@ -1171,6 +1307,22 @@ Rectangle {
         startRemoteOperation(appController.requestOpenRemotePath(connectionId, path))
     }
 
+    function chooseExternalEditor() {
+        const path = appController.chooseExternalTextEditor()
+        if (path && path.length > 0) {
+            appController.externalTextEditorPath = path
+            appController.remoteFileOpenMode = "custom"
+        }
+    }
+
+    function openRemoteOpenSettings() {
+        const modes = ["system", "custom", "internal"]
+        openModeBox.currentIndex = Math.max(0, modes.indexOf(appController.remoteFileOpenMode || "system"))
+        editorPathField.text = appController.externalTextEditorPath || ""
+        autoUploadCheck.checked = appController.autoUploadRemoteEdits
+        remoteOpenSettingsDialog.open()
+    }
+
     function openNameDialog(mode, path, currentName) {
         nameDialogMode = mode
         pendingRemotePath = path || ""
@@ -1373,6 +1525,17 @@ Rectangle {
                                     bytesDone,
                                     bytesTotal,
                                     speedBytesPerSec)
+        }
+
+        function onRemoteFileReadyForInternalEditor(connectionId, remotePath, localPath, text, error) {
+            if (connectionId !== root.connectionId || error.length > 0) {
+                return
+            }
+            root.editingConnectionId = connectionId
+            root.editingRemotePath = remotePath
+            root.editingLocalPath = localPath
+            internalEditorText.text = text
+            internalEditorDialog.open()
         }
     }
 
@@ -1636,6 +1799,17 @@ Rectangle {
                                               : qsTr("Sync with terminal folder: off")
                     }
 
+                    ToolButton {
+                        implicitWidth: 30
+                        implicitHeight: 24
+                        contentItem: SettingsIcon {
+                            anchors.centerIn: parent
+                        }
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Remote file open settings")
+                        onClicked: root.openRemoteOpenSettings()
+                    }
+
                     Item {
                         Layout.fillWidth: true
                     }
@@ -1768,6 +1942,8 @@ Rectangle {
                                 onDoubleClicked: {
                                     if (remoteRow.modelData.isDir) {
                                         root.enterRemote(remoteRow.modelData.path)
+                                    } else {
+                                        root.openRemotePath(remoteRow.modelData.path)
                                     }
                                 }
 
@@ -1785,13 +1961,41 @@ Rectangle {
                                     }
                                     Menu {
                                         title: qsTr("Open With")
-                                        enabled: false
-                                        MenuItem { text: qsTr("Not configured") }
+                                        enabled: !remoteRow.modelData.isDir
+                                        MenuItem {
+                                            text: qsTr("System default app")
+                                            onTriggered: {
+                                                appController.remoteFileOpenMode = "system"
+                                                root.openRemotePath(remoteRow.modelData.path)
+                                            }
+                                        }
+                                        MenuItem {
+                                            text: qsTr("Specified text editor")
+                                            onTriggered: {
+                                                appController.remoteFileOpenMode = "custom"
+                                                root.openRemotePath(remoteRow.modelData.path)
+                                            }
+                                        }
+                                        MenuItem {
+                                            text: qsTr("Built-in editor")
+                                            onTriggered: {
+                                                appController.remoteFileOpenMode = "internal"
+                                                root.openRemotePath(remoteRow.modelData.path)
+                                            }
+                                        }
                                     }
                                     Menu {
                                         title: qsTr("Select Text Editor")
-                                        enabled: false
-                                        MenuItem { text: qsTr("Coming soon") }
+                                        MenuItem {
+                                            text: appController.externalTextEditorPath && appController.externalTextEditorPath.length > 0
+                                                  ? appController.externalTextEditorPath
+                                                  : qsTr("Browse...")
+                                            onTriggered: root.chooseExternalEditor()
+                                        }
+                                        MenuItem {
+                                            text: qsTr("Open settings")
+                                            onTriggered: root.openRemoteOpenSettings()
+                                        }
                                     }
                                     MenuSeparator {}
                                     MenuItem {
