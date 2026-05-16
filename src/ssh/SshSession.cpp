@@ -16,6 +16,7 @@ bool applyTerminalOutput(QByteArray *buffer, const QByteArray &input)
     qsizetype cursor = buffer->size();
     qsizetype lineStart = buffer->lastIndexOf('\n') + 1;
     State state = State::Normal;
+    QByteArray csi;
 
     for (unsigned char ch : input) {
         switch (state) {
@@ -44,6 +45,7 @@ bool applyTerminalOutput(QByteArray *buffer, const QByteArray &input)
             break;
         case State::Escape:
             if (ch == '[') {
+                csi.clear();
                 state = State::Csi;
             } else if (ch == ']') {
                 state = State::Osc;
@@ -54,7 +56,13 @@ bool applyTerminalOutput(QByteArray *buffer, const QByteArray &input)
             }
             break;
         case State::Csi:
+            csi.append(static_cast<char>(ch));
             if (ch >= 0x40 && ch <= 0x7e) {
+                if (ch == 'm') {
+                    buffer->append("\x1b[");
+                    buffer->append(csi);
+                    cursor = buffer->size();
+                }
                 state = State::Normal;
             }
             break;

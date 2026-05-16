@@ -9,6 +9,7 @@ Rectangle {
     readonly property string sessionId: session && session.id ? session.id : ""
     property int terminalCols: 0
     property int terminalRows: 0
+    property string rawOutput: ""
 
     color: "#020617"
 
@@ -93,13 +94,102 @@ Rectangle {
         return false
     }
 
+    function escapeHtml(text) {
+        return text.replace(/&/g, "&amp;")
+                   .replace(/</g, "&lt;")
+                   .replace(/>/g, "&gt;")
+    }
+
+    function ansiColor(code, bright) {
+        const normal = {
+            30: "#020617", 31: "#ef4444", 32: "#22c55e", 33: "#eab308",
+            34: "#3b82f6", 35: "#d946ef", 36: "#06b6d4", 37: "#e2e8f0"
+        }
+        const high = {
+            90: "#64748b", 91: "#f87171", 92: "#86efac", 93: "#fde047",
+            94: "#60a5fa", 95: "#e879f9", 96: "#67e8f9", 97: "#ffffff"
+        }
+        if (code >= 90 && code <= 97) {
+            return high[code]
+        }
+        if (bright && code >= 30 && code <= 37) {
+            return high[code + 60]
+        }
+        return normal[code] || "#e2e8f0"
+    }
+
+    function renderAnsi(text) {
+        let html = "<pre style=\"margin:0; color:#e2e8f0; font-family:Consolas; font-size:13px;\">"
+        let fg = ""
+        let bold = false
+        let open = false
+
+        function closeSpan() {
+            if (open) {
+                html += "</span>"
+                open = false
+            }
+        }
+
+        function openSpan() {
+            closeSpan()
+            let style = ""
+            if (fg.length > 0) {
+                style += "color:" + fg + ";"
+            }
+            if (bold) {
+                style += "font-weight:700;"
+            }
+            if (style.length > 0) {
+                html += "<span style=\"" + style + "\">"
+                open = true
+            }
+        }
+
+        for (let i = 0; i < text.length; ++i) {
+            const ch = text.charAt(i)
+            if (ch === "\u001b" && i + 1 < text.length && text.charAt(i + 1) === "[") {
+                let end = i + 2
+                while (end < text.length && text.charAt(end) !== "m") {
+                    end++
+                }
+                if (end < text.length) {
+                    const parts = text.substring(i + 2, end).split(";")
+                    for (let p = 0; p < parts.length; ++p) {
+                        const code = parts[p].length === 0 ? 0 : parseInt(parts[p])
+                        if (code === 0) {
+                            fg = ""
+                            bold = false
+                        } else if (code === 1) {
+                            bold = true
+                        } else if (code === 22) {
+                            bold = false
+                        } else if (code === 39) {
+                            fg = ""
+                        } else if ((code >= 30 && code <= 37) || (code >= 90 && code <= 97)) {
+                            fg = ansiColor(code, bold)
+                        }
+                    }
+                    openSpan()
+                    i = end
+                    continue
+                }
+            }
+            html += escapeHtml(ch)
+        }
+        closeSpan()
+        html += "</pre>"
+        return html
+    }
+
     onSessionIdChanged: {
         // 切到新会话时，把累积缓冲一次性灌进 TextArea；之后增量靠 sessionOutput。
         output.clear()
         if (sessionId !== "") {
             const buffered = appController.sessionBuffer(sessionId)
+            rawOutput = buffered
             if (buffered.length > 0) {
-                output.text = buffered
+                output.text = renderAnsi(buffered)
                 output.cursorPosition = output.length
             }
             output.forceActiveFocus()
@@ -113,7 +203,8 @@ Rectangle {
             if (id !== root.sessionId) {
                 return
             }
-            output.text = appController.sessionBuffer(root.sessionId)
+            root.rawOutput = appController.sessionBuffer(root.sessionId)
+            output.text = root.renderAnsi(root.rawOutput)
             output.cursorPosition = output.length
             resizeDebounce.restart()
         }
@@ -163,6 +254,7 @@ Rectangle {
             TextArea {
                 id: output
                 readOnly: true
+                textFormat: TextEdit.RichText
                 focus: true
                 activeFocusOnTab: true
                 selectByMouse: false
