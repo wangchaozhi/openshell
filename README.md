@@ -1,32 +1,40 @@
 # OpenShell
 
-跨平台 SSH / SFTP 终端工具骨架（Qt 6 / QML / C++20，类 FinalShell）。
+English | [简体中文](README-CN.md)
 
-## 目标
+OpenShell is a cross-platform SSH / SFTP terminal client built with Qt 6, QML, and C++20. It aims for a workflow similar to FinalShell: connection management on the left, multi-tab terminals in the main area, and a local/remote file browser below.
 
-- 多 Tab 终端、SFTP 双栏文件浏览、服务器状态监控。
-- 保存的连接 Profile：SSH 密码 / 私钥 / Agent，分组与备注。
-- 系统托盘常驻、关窗隐藏到托盘。
-- 多语言：简体中文 + 英文（系统语言自动落点）。
-- 跨平台：Windows / macOS / Linux。
+The project is no longer only a UI skeleton. It already includes real SSH sessions, terminal rendering, SFTP browsing and transfer operations, remote file open/edit/upload-back workflows, a system tray, and basic localization.
 
-> ⚠️ 当前仓库只是**骨架**：终端输出、SSH 连接、SFTP 列表都是 stub。要让它真正能登录服务器，需要在 `SessionController` 接入 `libssh2` / `Qt6SerialBus` / 自研协议。
+## Features
 
-## 环境
+- Connection profiles: name, protocol, host, port, username, password/private key/agent auth, group, and notes.
+- SSH terminal sessions: real libssh2-backed connections, multi-tab sessions, resize handling, and Ctrl+C interrupt support.
+- Terminal rendering: libvterm screen model rendered through a custom `QQuickPaintedItem`, with cursor, clear screen, basic colors, and text attributes.
+- Terminal selection and copy: drag selection, select all, double-click word selection, triple-click line selection, Shift-extend selection, and copy-on-selection.
+- SFTP dual-pane file browser: local/remote directory browsing, sorting, upload, download, delete, rename, create file/folder, and chmod.
+- Remote directory sync: optionally sync the remote file browser to the current directory detected from the terminal prompt.
+- Remote file opening: double-click remote files and open them with the system default app, a configured editor, or the built-in editor.
+- Edit upload-back: external editor saves can be watched and uploaded back to the original remote path; the built-in editor uploads on save.
+- System tray: show/hide window, quick-open connections, language switching, and quit.
+- Localization: Simplified Chinese is included; English currently uses source-string fallback.
 
-- Qt 6.6+ （`Quick`、`QuickControls2`、`Widgets`、`Network`、`Concurrent`、`LinguistTools`，测试时另需 `Test`）
-- CMake 3.16+
-- 支持 C++20 的编译器（MSVC 2022 / Clang 14+ / GCC 11+）
+## Requirements
 
-## 构建
+- Qt 6.6+ with `Quick`, `QuickControls2`, `Widgets`, `Network`, `Concurrent`, and `LinguistTools`; tests also require `Test`.
+- CMake 3.16+.
+- A C++20 compiler: MSVC 2022 is recommended on Windows; GCC/Clang work on Linux/macOS.
+- On Windows, use the Qt `msvc2022_64` kit. Do not mix it with MinGW.
 
-### Visual Studio 脚本（Windows，推荐）
+## Build
+
+### Recommended Windows Scripts
 
 ```bat
 run-vs-debug.bat
 ```
 
-需要 CMake / Qt MSVC 套件时可临时覆盖：
+Override CMake or Qt paths when needed:
 
 ```bat
 set "CMAKE_EXE=E:\Qt\Tools\CMake_64\bin\cmake.exe"
@@ -34,64 +42,102 @@ set "QT_PREFIX=E:\Qt\6.11.1\msvc2022_64"
 run-vs-debug.bat
 ```
 
-部署 Qt 运行时到 `build-vs\bin\Debug` 或 `\Release`：
+Deploy Qt runtime files:
 
 ```bat
 deploy-vs-debug.bat
 deploy-vs-release.bat
 ```
 
-### CMake 直接调
+### CMake
 
 ```bash
 cmake -S . -B build -DCMAKE_PREFIX_PATH=/path/to/Qt
-cmake --build build --config Release
+cmake --build build --config Debug
 ```
 
-## 项目结构
-
-```text
-.
-├─ main.cpp
-├─ Main.qml
-├─ CMakeLists.txt
-├─ src/
-│  ├─ AppController.*
-│  ├─ ConnectionCatalog.*    # 保存连接 Profile 到 AppData JSON
-│  ├─ SessionController.*    # 活动会话 stub
-│  ├─ SettingsStore.*        # QSettings 封装
-│  ├─ TranslationManager.*   # zh_CN / en 切换
-│  └─ TrayController.*       # 系统托盘菜单
-├─ qml/
-│  ├─ MainWindow.qml
-│  ├─ Sidebar.qml            # 左侧连接列表
-│  ├─ ConnectionEditor.qml   # 新建/编辑连接对话框
-│  ├─ SessionTabs.qml
-│  ├─ TerminalView.qml       # 终端 stub
-│  ├─ FileBrowser.qml        # 本地/远程 stub
-│  └─ AccentCard.qml
-├─ translations/
-│  └─ OpenShell_zh_CN.ts
-├─ assets/icons/openshell.svg
-├─ tests/test_connection_catalog.cpp  # QTest（需 -DOPENSHELL_BUILD_TESTS=ON）
-├─ docs/architecture.md
-└─ .github/workflows/release.yml
-```
-
-## 单元测试
+Enable tests:
 
 ```bash
 cmake -S . -B build -DOPENSHELL_BUILD_TESTS=ON -DCMAKE_PREFIX_PATH=/path/to/Qt
-cmake --build build --target test_connection_catalog
+cmake --build build --config Debug
 ctest --test-dir build
 ```
 
-## 后续
+## Project Layout
 
-- 接入 SSH 协议栈（libssh2 / QtSSH / 自研），让 `SessionController::open` 真正建立 transport。
-- 终端渲染：`QTermWidget` 或自研 vt100 解析 + Canvas/QQuickPaintedItem。
-- SFTP：libssh2 的 sftp 子模块 + 双栏 ListView。
-- 密码加密：当前明文写在 JSON，需要在 `SettingsStore` 加 `QtKeychain` 或 OS Credential Store。
-- 端口转发、跳板机链、断线重连、stats（CPU/Mem 通过 ssh exec `top` / `vmstat`）。
+```text
+.
+├── CMakeLists.txt
+├── Main.qml
+├── src/
+│   ├── AppController.*          # Application facade for QML, sessions, SFTP, settings, and tray
+│   ├── ConnectionCatalog.*      # Connection profile persistence
+│   ├── SessionController.*      # Active SSH session management
+│   ├── SettingsStore.*          # QSettings wrapper
+│   ├── TranslationManager.*     # Runtime language switching
+│   ├── TrayController.*         # System tray integration
+│   ├── ssh/                     # libssh2 SSH/SFTP workers and remote file operations
+│   └── terminal/                # libvterm screen model and QML-painted terminal widget
+├── qml/
+│   ├── MainWindow.qml
+│   ├── Sidebar.qml
+│   ├── ConnectionEditor.qml
+│   ├── SessionTabs.qml
+│   ├── TerminalView.qml
+│   ├── FileBrowser.qml
+│   └── AccentCard.qml
+├── translations/
+│   └── OpenShell_zh_CN.ts
+├── tests/
+│   ├── test_connection_catalog.cpp
+│   └── test_session_controller.cpp
+└── docs/
+    └── architecture.md
+```
 
-更多见 [docs/architecture.md](docs/architecture.md) 与 [AGENTS.md](AGENTS.md)。
+## Data Storage
+
+Connection profiles are stored at:
+
+```text
+QStandardPaths::AppDataLocation/connections/<id>.json
+```
+
+Passwords and private key passphrases may still be stored in local plaintext configuration. A future version should integrate QtKeychain or the host OS credential store.
+
+Remote file open/edit workflows first download files to:
+
+```text
+<Temp>/OpenShell/remote-open/<uuid>/
+```
+
+When upload-back is enabled, OpenShell watches the temporary file and uploads changes back to the original remote path.
+
+## Common Operations
+
+- Double-click a connection in the sidebar to open an SSH session.
+- Right-click the terminal for Copy, Paste, Select All, Send Ctrl+C, and Clear Screen.
+- Drag-select terminal text to copy on mouse release.
+- Double-click or triple-click terminal text to select a word or line and copy immediately.
+- Double-click a remote directory to enter it.
+- Double-click a remote file to open it according to the configured open mode.
+- Use the remote sync button to follow the terminal's current directory.
+- Use the remote settings button to choose the system default app, a configured text editor, or the built-in editor.
+
+## Support
+
+OpenShell is built in spare time. If it saves you time, a coffee would be appreciated.
+
+[Support via PayPal](https://paypal.me/wangchaozhi)
+
+## Roadmap
+
+- Credential security: integrate QtKeychain or the host OS credential store.
+- Terminal improvements: scrollback history, search, broader VT compatibility, and copy formatting refinements.
+- SFTP improvements: transfer queue, resume support, conflict handling, and batch operations.
+- SSH improvements: jump hosts, port forwarding, reconnects, and fuller agent support.
+- Server monitoring: collect CPU, memory, disk, and network stats through SSH exec and render a dashboard.
+- Packaging: improve Windows/macOS/Linux release workflows.
+
+See [docs/architecture.md](docs/architecture.md) and [AGENTS.md](AGENTS.md) for more project notes.
