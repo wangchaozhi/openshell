@@ -17,7 +17,17 @@ ApplicationWindow {
     property var connections: appController.connectionProfiles()
     property var activeSessions: appController.sessions()
     property string selectedConnectionId: appController.currentConnectionId
+    property string activeSessionId: ""
     property string statusMessage: ""
+
+    readonly property var activeSession: {
+        for (let i = 0; i < activeSessions.length; ++i) {
+            if (activeSessions[i].id === activeSessionId) {
+                return activeSessions[i]
+            }
+        }
+        return ({})
+    }
 
     function refreshConnections() {
         connections = appController.reloadConnectionProfiles()
@@ -25,6 +35,31 @@ ApplicationWindow {
 
     function refreshSessions() {
         activeSessions = appController.sessions()
+        // 当前活动会话被外部关掉了，自动落到第一个。
+        if (activeSessionId !== "") {
+            let stillThere = false
+            for (let i = 0; i < activeSessions.length; ++i) {
+                if (activeSessions[i].id === activeSessionId) {
+                    stillThere = true
+                    break
+                }
+            }
+            if (!stillThere) {
+                activeSessionId = activeSessions.length > 0 ? activeSessions[0].id : ""
+            }
+        } else if (activeSessions.length > 0) {
+            activeSessionId = activeSessions[0].id
+        }
+    }
+
+    function openSessionFor(connectionId) {
+        const newId = appController.openSession(connectionId)
+        if (newId && newId.length > 0) {
+            // 新开的会话自动激活。
+            activeSessionId = newId
+        } else if (appController.lastError && appController.lastError.length > 0) {
+            statusMessage = appController.lastError
+        }
     }
 
     Component.onCompleted: {
@@ -86,7 +121,7 @@ ApplicationWindow {
             selectedConnectionId: window.selectedConnectionId
 
             onConnectionPicked: (id) => window.selectedConnectionId = id
-            onConnectionDoublePicked: (id) => appController.openSession(id)
+            onConnectionDoublePicked: (id) => window.openSessionFor(id)
             onNewConnectionRequested: connectionEditor.openForNew()
             onEditConnectionRequested: (id) => connectionEditor.openForEdit(id)
             onDeleteConnectionRequested: (id) => {
@@ -107,6 +142,8 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 36
                 sessions: window.activeSessions
+                activeSessionId: window.activeSessionId
+                onSessionActivated: (id) => window.activeSessionId = id
                 onSessionClosed: (id) => appController.closeSession(id)
             }
 
@@ -121,13 +158,13 @@ ApplicationWindow {
                     TerminalView {
                         SplitView.fillWidth: true
                         SplitView.fillHeight: true
-                        session: window.activeSessions.length > 0 ? window.activeSessions[0] : ({})
+                        session: window.activeSession
                     }
 
                     FileBrowser {
                         SplitView.fillWidth: true
                         SplitView.preferredHeight: 220
-                        session: window.activeSessions.length > 0 ? window.activeSessions[0] : ({})
+                        session: window.activeSession
                     }
                 }
 

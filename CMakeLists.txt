@@ -109,4 +109,28 @@ if(OPENSHELL_BUILD_TESTS)
     )
 
     add_test(NAME connection_catalog COMMAND test_connection_catalog)
+
+    qt_add_executable(test_session_controller
+        tests/test_session_controller.cpp
+        src/ConnectionCatalog.cpp
+        src/ConnectionCatalog.h
+        src/SessionController.cpp
+        src/SessionController.h
+        src/ssh/SshChannelWorker.cpp
+        src/ssh/SshChannelWorker.h
+        src/ssh/EchoChannelWorker.cpp
+        src/ssh/EchoChannelWorker.h
+        src/ssh/SshSession.cpp
+        src/ssh/SshSession.h
+    )
+
+    target_include_directories(test_session_controller PRIVATE src)
+
+    target_link_libraries(test_session_controller
+        PRIVATE
+            Qt6::Core
+            Qt6::Test
+    )
+
+    add_test(NAME session_controller COMMAND test_session_controller)
 endif()

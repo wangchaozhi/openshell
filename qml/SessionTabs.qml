@@ -6,6 +6,9 @@ Rectangle {
     id: root
 
     property var sessions: []
+    property string activeSessionId: ""
+
+    signal sessionActivated(string id)
     signal sessionClosed(string id)
 
     color: "#020617"
@@ -18,12 +21,24 @@ Rectangle {
         Repeater {
             model: root.sessions
             delegate: Rectangle {
+                id: tab
                 width: tabRow.implicitWidth + 16
                 height: parent.height - 4
                 anchors.verticalCenter: parent.verticalCenter
                 radius: 4
-                color: index === 0 ? "#1e293b" : "#0f172a"
-                border.color: "#1e293b"
+
+                readonly property bool isActive: modelData.id === root.activeSessionId
+
+                color: isActive ? "#1e293b" : "#0f172a"
+                border.color: isActive ? "#38bdf8" : "#1e293b"
+                border.width: 1
+
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.sessionActivated(modelData.id)
+                }
 
                 RowLayout {
                     id: tabRow
@@ -34,7 +49,7 @@ Rectangle {
 
                     Label {
                         text: modelData.title || qsTr("session")
-                        color: "#f1f5f9"
+                        color: tab.isActive ? "#f1f5f9" : "#cbd5f5"
                         font.pixelSize: 12
                     }
 
