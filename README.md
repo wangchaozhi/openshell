@@ -129,7 +129,7 @@ When upload-back is enabled, OpenShell watches the temporary file and uploads ch
 
 OpenShell is built in spare time. If it saves you time, a coffee would be appreciated.
 
-[Support via PayPal](https://paypal.me/wangchaozhi)
+[Support via PayPal](https://paypal.me/wangchaozhi123)
 
 ## Roadmap
 

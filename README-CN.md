@@ -134,7 +134,7 @@ QStandardPaths::AppDataLocation/connections/<id>.json
   <img src="assets/support/alipay.png" alt="支付宝收款码" width="260">
 </p>
 
-国际用户也可以通过 PayPal 支持：[paypal.me/wangchaozhi](https://paypal.me/wangchaozhi)
+国际用户也可以通过 PayPal 支持：[paypal.me/wangchaozhi123](https://paypal.me/wangchaozhi123)
 
 ## 后续计划
 
