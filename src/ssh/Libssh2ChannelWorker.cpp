@@ -26,6 +26,7 @@ inline bool openshell_socket_would_block(int err) { return err == WSAEWOULDBLOCK
 #include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -86,6 +87,36 @@ bool isInvalidSocket(OpenShellSocket s)
 int connectTimeoutMs(const ConnectionProfile &profile)
 {
     return profile.connectTimeoutSec > 0 ? profile.connectTimeoutSec * 1000 : 10000;
+}
+
+bool resolveHostAddress(const QString &host, QHostAddress *out, QString *errorOut)
+{
+    // IP literal short-circuit avoids QHostInfo's AAAA / reverse-DNS overhead on LAN IPs.
+    if (out->setAddress(host)) {
+        return true;
+    }
+    const QHostInfo info = QHostInfo::fromName(host);
+    if (info.error() != QHostInfo::NoError || info.addresses().isEmpty()) {
+        if (errorOut) {
+            *errorOut = QObject::tr("Cannot resolve host %1: %2").arg(host, info.errorString());
+        }
+        return false;
+    }
+    for (const QHostAddress &candidate : info.addresses()) {
+        if (candidate.protocol() == QAbstractSocket::IPv4Protocol) {
+            *out = candidate;
+            return true;
+        }
+    }
+    *out = info.addresses().first();
+    return true;
+}
+
+void applyTcpNoDelay(OpenShellSocket sock)
+{
+    int one = 1;
+    ::setsockopt(static_cast<int>(sock), IPPROTO_TCP, TCP_NODELAY,
+                 reinterpret_cast<const char *>(&one), sizeof(one));
 }
 
 LIBSSH2_USERAUTH_KBDINT_RESPONSE_FUNC(keyboardInteractiveCallback)
@@ -251,23 +282,9 @@ void Libssh2ChannelWorker::pump()
 bool Libssh2ChannelWorker::openSocket(QString *errorOut)
 {
     const QString hostStr = m_profile.host.isEmpty() ? QStringLiteral("127.0.0.1") : m_profile.host;
-    const QHostInfo info = QHostInfo::fromName(hostStr);
-    if (info.error() != QHostInfo::NoError || info.addresses().isEmpty()) {
-        if (errorOut) {
-            *errorOut = tr("Cannot resolve host %1: %2").arg(hostStr, info.errorString());
-        }
-        return false;
-    }
-
     QHostAddress addr;
-    for (const QHostAddress &candidate : info.addresses()) {
-        if (candidate.protocol() == QAbstractSocket::IPv4Protocol) {
-            addr = candidate;
-            break;
-        }
-    }
-    if (addr.isNull()) {
-        addr = info.addresses().first();
+    if (!resolveHostAddress(hostStr, &addr, errorOut)) {
+        return false;
     }
 
     const int port = m_profile.port > 0 ? m_profile.port : 22;
@@ -325,6 +342,7 @@ bool Libssh2ChannelWorker::openSocket(QString *errorOut)
             }
             return false;
         }
+        applyTcpNoDelay(m_socket);
         return true;
     }
 
@@ -364,6 +382,7 @@ bool Libssh2ChannelWorker::openSocket(QString *errorOut)
                     }
                     return false;
                 }
+                applyTcpNoDelay(m_socket);
                 return true;
             }
             if (errorOut) {

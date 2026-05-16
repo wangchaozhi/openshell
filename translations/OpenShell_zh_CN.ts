@@ -5,30 +5,30 @@
     <name>AppController</name>
     <message>
         <location filename="../src/AppController.cpp" line="171"/>
-        <location filename="../src/AppController.cpp" line="321"/>
-        <location filename="../src/AppController.cpp" line="347"/>
-        <location filename="../src/AppController.cpp" line="389"/>
-        <location filename="../src/AppController.cpp" line="437"/>
+        <location filename="../src/AppController.cpp" line="329"/>
+        <location filename="../src/AppController.cpp" line="355"/>
+        <location filename="../src/AppController.cpp" line="397"/>
+        <location filename="../src/AppController.cpp" line="445"/>
         <source>Unknown connection</source>
         <translation>未知连接</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="261"/>
+        <location filename="../src/AppController.cpp" line="269"/>
         <source>Select file to upload</source>
         <translation>选择要上传的文件</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="266"/>
+        <location filename="../src/AppController.cpp" line="274"/>
         <source>Select folder to upload</source>
         <translation>选择要上传的文件夹</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="271"/>
+        <location filename="../src/AppController.cpp" line="279"/>
         <source>Select download folder</source>
         <translation>选择下载目录</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="438"/>
+        <location filename="../src/AppController.cpp" line="446"/>
         <source>Invalid permission value</source>
         <translation>权限值无效</translation>
     </message>
@@ -132,258 +132,239 @@
 <context>
     <name>FileBrowser</name>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="156"/>
+        <location filename="../qml/FileBrowser.qml" line="375"/>
         <source>Change File Permissions</source>
         <translation>修改文件权限</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="210"/>
+        <location filename="../qml/FileBrowser.qml" line="455"/>
         <source>Read</source>
         <translation>读</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="211"/>
+        <location filename="../qml/FileBrowser.qml" line="456"/>
         <source>Write</source>
         <translation>写</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="212"/>
+        <location filename="../qml/FileBrowser.qml" line="457"/>
         <source>Exec</source>
         <translation>执行</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="214"/>
+        <location filename="../qml/FileBrowser.qml" line="459"/>
         <source>Owner</source>
         <translation>所有者</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="219"/>
+        <location filename="../qml/FileBrowser.qml" line="464"/>
         <source>Group</source>
         <translation>组</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="224"/>
+        <location filename="../qml/FileBrowser.qml" line="469"/>
         <source>Other</source>
         <translation>其他</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="236"/>
+        <location filename="../qml/FileBrowser.qml" line="482"/>
         <source>Apply recursively</source>
         <translation>递归应用</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="240"/>
+        <location filename="../qml/FileBrowser.qml" line="485"/>
         <source>Apply to files and folders</source>
         <translation>应用于文件和文件夹</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="245"/>
+        <location filename="../qml/FileBrowser.qml" line="489"/>
         <source>Apply to files only</source>
         <translation>仅应用于文件</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="249"/>
+        <location filename="../qml/FileBrowser.qml" line="492"/>
         <source>Apply to folders only</source>
         <translation>仅应用于文件夹</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="258"/>
+        <location filename="../qml/FileBrowser.qml" line="500"/>
         <source>OK</source>
         <translation>确定</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="262"/>
+        <location filename="../qml/FileBrowser.qml" line="504"/>
         <source>Cancel</source>
         <translation>取消</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="279"/>
-        <location filename="../qml/FileBrowser.qml" line="917"/>
+        <location filename="../qml/FileBrowser.qml" line="521"/>
+        <location filename="../qml/FileBrowser.qml" line="1297"/>
         <source>Rename</source>
         <translation>重命名</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="279"/>
-        <location filename="../qml/FileBrowser.qml" line="905"/>
+        <location filename="../qml/FileBrowser.qml" line="521"/>
+        <location filename="../qml/FileBrowser.qml" line="1285"/>
         <source>New</source>
         <translation>新建</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="289"/>
+        <location filename="../qml/FileBrowser.qml" line="531"/>
         <source>Folder name</source>
         <translation>文件夹名</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="290"/>
+        <location filename="../qml/FileBrowser.qml" line="532"/>
         <source>File name</source>
         <translation>文件名</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="291"/>
+        <location filename="../qml/FileBrowser.qml" line="533"/>
         <source>New name</source>
         <translation>新名称</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="331"/>
+        <location filename="../qml/FileBrowser.qml" line="573"/>
         <source>Remote listing timed out. Try refresh again.</source>
         <translation>远程目录加载超时，请重试。</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="508"/>
+        <location filename="../qml/FileBrowser.qml" line="595"/>
+        <source>User/Group</source>
+        <translation>用户/组</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="949"/>
         <source>Local</source>
         <translation>本地</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="521"/>
-        <location filename="../qml/FileBrowser.qml" line="706"/>
+        <location filename="../qml/FileBrowser.qml" line="962"/>
+        <location filename="../qml/FileBrowser.qml" line="1120"/>
         <source>Parent folder</source>
         <translation>上一级</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="535"/>
-        <location filename="../qml/FileBrowser.qml" line="722"/>
-        <location filename="../qml/FileBrowser.qml" line="861"/>
+        <location filename="../qml/FileBrowser.qml" line="976"/>
+        <location filename="../qml/FileBrowser.qml" line="1136"/>
+        <location filename="../qml/FileBrowser.qml" line="1241"/>
         <source>Refresh</source>
         <translation>刷新</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="569"/>
-        <location filename="../qml/FileBrowser.qml" line="757"/>
+        <location filename="../qml/FileBrowser.qml" line="593"/>
         <source>Name</source>
         <translation>名称</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="575"/>
-        <location filename="../qml/FileBrowser.qml" line="763"/>
+        <location filename="../qml/FileBrowser.qml" line="594"/>
         <source>Size</source>
         <translation>大小</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="582"/>
-        <location filename="../qml/FileBrowser.qml" line="770"/>
+        <location filename="../qml/FileBrowser.qml" line="596"/>
         <source>Perm</source>
         <translation>权限</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="589"/>
-        <location filename="../qml/FileBrowser.qml" line="777"/>
+        <location filename="../qml/FileBrowser.qml" line="597"/>
         <source>Modified</source>
         <translation>修改时间</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="663"/>
+        <location filename="../qml/FileBrowser.qml" line="1077"/>
         <source>Upload to Remote</source>
         <translation>上传到远端</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="691"/>
+        <location filename="../qml/FileBrowser.qml" line="1105"/>
         <source>Remote</source>
         <translation>远程</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="866"/>
+        <location filename="../qml/FileBrowser.qml" line="1246"/>
         <source>Open</source>
         <translation>打开</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="871"/>
+        <location filename="../qml/FileBrowser.qml" line="1251"/>
         <source>Open With</source>
         <translation>打开方式</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="873"/>
+        <location filename="../qml/FileBrowser.qml" line="1253"/>
         <source>Not configured</source>
         <translation>未配置</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="876"/>
+        <location filename="../qml/FileBrowser.qml" line="1256"/>
         <source>Select Text Editor</source>
         <translation>选择文本编辑器</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="878"/>
-        <location filename="../qml/FileBrowser.qml" line="901"/>
+        <location filename="../qml/FileBrowser.qml" line="1258"/>
+        <location filename="../qml/FileBrowser.qml" line="1281"/>
         <source>Coming soon</source>
         <translation>即将推出</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="882"/>
+        <location filename="../qml/FileBrowser.qml" line="1262"/>
         <source>Copy Path</source>
         <translation>复制路径</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="887"/>
+        <location filename="../qml/FileBrowser.qml" line="1267"/>
         <source>Download</source>
         <translation>下载</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="891"/>
+        <location filename="../qml/FileBrowser.qml" line="1271"/>
         <source>Upload...</source>
         <translation>上传…</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="899"/>
+        <location filename="../qml/FileBrowser.qml" line="1279"/>
         <source>Transfer Package</source>
         <translation>传输套件</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="907"/>
+        <location filename="../qml/FileBrowser.qml" line="1287"/>
         <source>File</source>
         <translation>文件</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="911"/>
+        <location filename="../qml/FileBrowser.qml" line="1291"/>
         <source>Folder</source>
         <translation>文件夹</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="921"/>
+        <location filename="../qml/FileBrowser.qml" line="1301"/>
         <source>Delete</source>
         <translation>删除</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="925"/>
+        <location filename="../qml/FileBrowser.qml" line="1305"/>
         <source>Quick Delete (rm)</source>
         <translation>快速删除 (rm)</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="930"/>
-        <source>Permissions: %1</source>
-        <translation>权限：%1</translation>
+        <location filename="../qml/FileBrowser.qml" line="1310"/>
+        <source>Permissions (%1)</source>
+        <translation>权限 (%1)</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="930"/>
-        <source>unknown</source>
-        <translation>未知</translation>
+        <location filename="../qml/FileBrowser.qml" line="1310"/>
+        <source>?</source>
+        <translation>?</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="935"/>
-        <source>Set 644</source>
-        <translation>设为 644</translation>
-    </message>
-    <message>
-        <location filename="../qml/FileBrowser.qml" line="939"/>
-        <source>Set 755</source>
-        <translation>设为 755</translation>
-    </message>
-    <message>
-        <location filename="../qml/FileBrowser.qml" line="943"/>
-        <source>Set 600</source>
-        <translation>设为 600</translation>
-    </message>
-    <message>
-        <location filename="../qml/FileBrowser.qml" line="947"/>
-        <source>Custom Permissions...</source>
-        <translation>自定义权限…</translation>
-    </message>
-    <message>
-        <location filename="../qml/FileBrowser.qml" line="959"/>
+        <location filename="../qml/FileBrowser.qml" line="1323"/>
         <source>Loading...</source>
         <translation>加载中…</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="342"/>
-        <location filename="../qml/FileBrowser.qml" line="364"/>
+        <location filename="../qml/FileBrowser.qml" line="584"/>
+        <location filename="../qml/FileBrowser.qml" line="764"/>
         <source>Open a session to enable SFTP browsing.</source>
         <translation>打开一个会话以启用 SFTP 浏览。</translation>
     </message>
@@ -391,145 +372,140 @@
 <context>
     <name>Libssh2ChannelWorker</name>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="138"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="169"/>
         <source>libssh2_init failed</source>
         <translation>libssh2_init 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="139"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="170"/>
         <source>Initialization failed</source>
         <translation>初始化失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="148"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="179"/>
         <source>Connection failed</source>
         <translation>连接失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="165"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="196"/>
         <source>Disconnected</source>
         <translation>已断开</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="257"/>
-        <source>Cannot resolve host %1: %2</source>
-        <translation>无法解析主机 %1：%2</translation>
-    </message>
-    <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="281"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="298"/>
         <source>WSAStartup failed</source>
         <translation>WSAStartup 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="293"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="310"/>
         <source>socket() failed</source>
         <translation>socket() 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="300"/>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="587"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="317"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="606"/>
         <source>Failed to switch socket to non-blocking mode</source>
         <translation>切换 socket 到非阻塞模式失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="324"/>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="363"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="341"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="381"/>
         <source>Failed to switch socket to blocking mode</source>
         <translation>切换 socket 到阻塞模式失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="370"/>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="388"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="389"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="407"/>
         <source>connect() to %1:%2 failed (errno=%3)</source>
         <translation>连接 %1:%2 失败 (errno=%3)</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="379"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="398"/>
         <source>connect() to %1:%2 timed out after %3 seconds</source>
         <translation>连接 %1:%2 超时（%3 秒）</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="400"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="419"/>
         <source>libssh2_session_init failed</source>
         <translation>libssh2_session_init 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="410"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="429"/>
         <source>SSH handshake failed: %1</source>
         <translation>SSH 握手失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="430"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="449"/>
         <source>Unknown auth type &apos;%1&apos;</source>
         <translation>未知认证方式 &apos;%1&apos;</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="434"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="453"/>
         <source>Authentication failed</source>
         <translation>认证失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="449"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="468"/>
         <source>Password auth failed: %1</source>
         <translation>密码认证失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="468"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="487"/>
         <source>Keyboard-interactive auth failed: %1</source>
         <translation>键盘交互认证失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="479"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="498"/>
         <source>Private key path is empty</source>
         <translation>私钥路径为空</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="494"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="513"/>
         <source>Key auth failed: %1</source>
         <translation>公钥认证失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="506"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="525"/>
         <source>libssh2_agent_init failed</source>
         <translation>libssh2_agent_init 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="518"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="537"/>
         <source>Cannot connect to ssh-agent</source>
         <translation>无法连接 ssh-agent</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="525"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="544"/>
         <source>ssh-agent: list_identities failed</source>
         <translation>ssh-agent：list_identities 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="551"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="570"/>
         <source>ssh-agent: no identity accepted by server</source>
         <translation>ssh-agent：服务器未接受任何身份</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="562"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="581"/>
         <source>channel_open_session failed: %1</source>
         <translation>channel_open_session 失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="569"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="588"/>
         <source>request_pty failed: %1</source>
         <translation>request_pty 失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="576"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="595"/>
         <source>channel_shell failed: %1</source>
         <translation>channel_shell 失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="627"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="646"/>
         <source>(no session)</source>
         <translation>(无会话)</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="635"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="654"/>
         <source>(unknown libssh2 error)</source>
         <translation>(未知 libssh2 错误)</translation>
     </message>
@@ -576,183 +552,184 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../src/AppController.cpp" line="420"/>
+        <location filename="../src/AppController.cpp" line="428"/>
         <source>Upload completed</source>
         <translation>上传完成</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="469"/>
+        <location filename="../src/AppController.cpp" line="477"/>
         <source>Permissions updated</source>
         <translation>权限已更新</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="500"/>
+        <location filename="../src/AppController.cpp" line="508"/>
         <source>Download failed</source>
         <translation>下载失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="556"/>
+        <location filename="../src/AppController.cpp" line="564"/>
         <source>Created</source>
         <translation>已创建</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="556"/>
+        <location filename="../src/AppController.cpp" line="564"/>
         <source>Create failed</source>
         <translation>创建失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="586"/>
+        <location filename="../src/AppController.cpp" line="594"/>
         <source>Renamed</source>
         <translation>已重命名</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="586"/>
+        <location filename="../src/AppController.cpp" line="594"/>
         <source>Rename failed</source>
         <translation>重命名失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="615"/>
+        <location filename="../src/AppController.cpp" line="623"/>
         <source>Deleted</source>
         <translation>已删除</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="615"/>
+        <location filename="../src/AppController.cpp" line="623"/>
         <source>Delete failed</source>
         <translation>删除失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="75"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="90"/>
         <source>libssh2_init failed</source>
         <translation>libssh2_init 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="197"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="101"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="217"/>
         <source>Cannot resolve host %1: %2</source>
         <translation>无法解析主机 %1：%2</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="220"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="252"/>
         <source>WSAStartup failed</source>
         <translation>WSAStartup 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="236"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="268"/>
         <source>socket() failed</source>
         <translation>socket() 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="244"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="276"/>
         <source>Failed to switch SFTP socket to non-blocking mode</source>
         <translation>切换 SFTP socket 到非阻塞模式失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="270"/>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="306"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="302"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="339"/>
         <source>Failed to switch SFTP socket to blocking mode</source>
         <translation>切换 SFTP socket 到阻塞模式失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="315"/>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="328"/>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="339"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="349"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="362"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="373"/>
         <source>connect() to %1:%2 failed (errno=%3)</source>
         <translation>连接 %1:%2 失败 (errno=%3)</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="325"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="359"/>
         <source>connect() to %1:%2 timed out after %3 seconds</source>
         <translation>连接 %1:%2 超时（%3 秒）</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="369"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="403"/>
         <source>SFTP key auth failed: %1</source>
         <translation>SFTP 公钥认证失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="389"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="423"/>
         <source>SFTP password auth failed: %1</source>
         <translation>SFTP 密码认证失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="412"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="446"/>
         <source>libssh2_session_init failed</source>
         <translation>libssh2_session_init 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="423"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="457"/>
         <source>SFTP handshake failed: %1</source>
         <translation>SFTP 握手失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="438"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="472"/>
         <source>SFTP init failed: %1</source>
         <translation>SFTP 初始化失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="485"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="519"/>
         <source>Cannot read local file %1</source>
         <translation>无法读取本地文件 %1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="499"/>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="948"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="533"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="960"/>
         <source>Cannot create remote file %1</source>
         <translation>无法创建远端文件 %1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="514"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="548"/>
         <source>Failed to write remote file %1</source>
         <translation>写入远端文件 %1 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="535"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="569"/>
         <source>Cannot create remote directory %1</source>
         <translation>无法创建远端目录 %1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="580"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="614"/>
         <source>Cannot open remote file %1</source>
         <translation>无法打开远端文件 %1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="589"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="623"/>
         <source>Cannot write local file %1</source>
         <translation>无法写入本地文件 %1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="603"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="637"/>
         <source>Failed to read remote file %1</source>
         <translation>读取远端文件 %1 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="628"/>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="677"/>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="748"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="662"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="711"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="775"/>
         <source>Cannot open remote directory %1</source>
         <translation>无法打开远端目录 %1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="668"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="702"/>
         <source>Cannot delete remote file %1</source>
         <translation>无法删除远端文件 %1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="702"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="736"/>
         <source>Cannot delete remote directory %1</source>
         <translation>无法删除远端目录 %1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="818"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="852"/>
         <source>Local path does not exist: %1</source>
         <translation>本地路径不存在：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="861"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="888"/>
         <source>Failed to change permissions for %1</source>
         <translation>修改 %1 的权限失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="978"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="985"/>
         <source>Cannot rename %1</source>
         <translation>无法重命名 %1</translation>
     </message>

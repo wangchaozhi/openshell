@@ -242,6 +242,14 @@ QVariantList AppController::localDirectoryEntries(const QString &path) const
                                                         : QString::number(item.size()));
         row.insert(QStringLiteral("modified"),
                    item.lastModified().toString(QStringLiteral("yyyy-MM-dd HH:mm")));
+        // Windows 简化权限：映射成 Unix 数字供 QML 统一转换
+        QString perm;
+        if (item.isDir()) {
+            perm = item.isWritable() ? QStringLiteral("755") : QStringLiteral("555");
+        } else {
+            perm = item.isWritable() ? QStringLiteral("644") : QStringLiteral("444");
+        }
+        row.insert(QStringLiteral("permissions"), perm);
         entries.append(row);
     }
     return entries;

@@ -32,6 +32,7 @@ inline bool is_invalid_sftp_socket(SftpSocket s) { return s == INVALID_SOCKET; }
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -50,9 +51,12 @@ struct CachedSftpConnection
     SftpSocket sock = invalid_sftp_socket();
     LIBSSH2_SESSION *session = nullptr;
     LIBSSH2_SFTP *sftp = nullptr;
+    QMutex mutex; // serializes work on this single libssh2 session (not session-thread-safe)
 };
 
-QMutex &cacheMutex()
+// Tiny mutex protecting only the cache map lookup/insert — long-running SFTP work
+// runs under the per-connection mutex instead, so different connections don't block each other.
+QMutex &cacheMapMutex()
 {
     static QMutex mutex;
     return mutex;
@@ -62,6 +66,17 @@ QHash<QString, CachedSftpConnection *> &connectionCache()
 {
     static QHash<QString, CachedSftpConnection *> cache;
     return cache;
+}
+
+CachedSftpConnection *acquireConnection(const QString &key)
+{
+    QMutexLocker lock(&cacheMapMutex());
+    auto &cache = connectionCache();
+    auto it = cache.find(key);
+    if (it == cache.end()) {
+        it = cache.insert(key, new CachedSftpConnection);
+    }
+    return it.value();
 }
 
 bool ensureLibssh2(QString *errorOut)
@@ -189,26 +204,43 @@ bool setSocketBlocking(SftpSocket s)
 }
 #endif
 
-bool openSocket(const ConnectionProfile &profile, SftpSocket *socketOut, QString *errorOut)
+bool resolveHostAddress(const QString &host, QHostAddress *out, QString *errorOut)
 {
-    const QHostInfo info = QHostInfo::fromName(profile.host);
+    // IP literal short-circuit: skip the resolver entirely so LAN IPs don't pay
+    // the AAAA/reverse-lookup tax that QHostInfo::fromName can incur on Windows.
+    if (out->setAddress(host)) {
+        return true;
+    }
+    const QHostInfo info = QHostInfo::fromName(host);
     if (info.error() != QHostInfo::NoError || info.addresses().isEmpty()) {
         if (errorOut) {
             *errorOut = QObject::tr("Cannot resolve host %1: %2")
-                            .arg(profile.host, info.errorString());
+                            .arg(host, info.errorString());
         }
         return false;
     }
-
-    QHostAddress addr;
     for (const QHostAddress &candidate : info.addresses()) {
         if (candidate.protocol() == QAbstractSocket::IPv4Protocol) {
-            addr = candidate;
-            break;
+            *out = candidate;
+            return true;
         }
     }
-    if (addr.isNull()) {
-        addr = info.addresses().first();
+    *out = info.addresses().first();
+    return true;
+}
+
+void applyTcpNoDelay(SftpSocket sock)
+{
+    int one = 1;
+    ::setsockopt(sock, IPPROTO_TCP, TCP_NODELAY,
+                 reinterpret_cast<const char *>(&one), sizeof(one));
+}
+
+bool openSocket(const ConnectionProfile &profile, SftpSocket *socketOut, QString *errorOut)
+{
+    QHostAddress addr;
+    if (!resolveHostAddress(profile.host, &addr, errorOut)) {
+        return false;
     }
 
 #ifdef _WIN32
@@ -271,6 +303,7 @@ bool openSocket(const ConnectionProfile &profile, SftpSocket *socketOut, QString
             }
             return false;
         }
+        applyTcpNoDelay(sock);
         *socketOut = sock;
         return true;
     }
@@ -307,6 +340,7 @@ bool openSocket(const ConnectionProfile &profile, SftpSocket *socketOut, QString
                     }
                     return false;
                 }
+                applyTcpNoDelay(sock);
                 *socketOut = sock;
                 return true;
             }
@@ -715,8 +749,6 @@ QVariantList SftpDirectoryLister::list(const ConnectionProfile &profile,
     QVariantList rows;
     LIBSSH2_SFTP_HANDLE *dir = nullptr;
 
-    QMutexLocker locker(&cacheMutex());
-
     if (!ensureLibssh2(errorOut)) {
         return rows;
     }
@@ -728,13 +760,8 @@ QVariantList SftpDirectoryLister::list(const ConnectionProfile &profile,
         }
     };
 
-    auto &cache = connectionCache();
-    const QString key = cacheKey(profile);
-    auto it = cache.find(key);
-    if (it == cache.end()) {
-        it = cache.insert(key, new CachedSftpConnection);
-    }
-    CachedSftpConnection *connection = it.value();
+    CachedSftpConnection *connection = acquireConnection(cacheKey(profile));
+    QMutexLocker locker(&connection->mutex);
 
     if (!ensureConnected(connection, profile, errorOut)) {
         return rows;
@@ -751,13 +778,14 @@ QVariantList SftpDirectoryLister::list(const ConnectionProfile &profile,
     }
 
     char name[512];
+    char longentry[1024];
     LIBSSH2_SFTP_ATTRIBUTES attrs{};
     for (;;) {
         const int rc = libssh2_sftp_readdir_ex(dir,
                                                name,
                                                sizeof(name),
-                                               nullptr,
-                                               0,
+                                               longentry,
+                                               sizeof(longentry),
                                                &attrs);
         if (rc <= 0) {
             break;
@@ -769,6 +797,18 @@ QVariantList SftpDirectoryLister::list(const ConnectionProfile &profile,
 
         const bool isDir = (attrs.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS)
                            && LIBSSH2_SFTP_S_ISDIR(attrs.permissions);
+
+        // longentry 格式："-rw-r--r-- 1 root root 1234 Jan 01 12:00 filename"
+        // 解析第3、4个空白分隔字段为 user/group
+        QString owner;
+        const QString le = QString::fromUtf8(longentry);
+        const QStringList fields = le.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+        if (fields.size() >= 4) {
+            owner = fields.at(2) + QLatin1Char('/') + fields.at(3);
+        } else if (attrs.flags & LIBSSH2_SFTP_ATTR_UIDGID) {
+            owner = QString::number(attrs.uid) + QLatin1Char('/') + QString::number(attrs.gid);
+        }
+
         QVariantMap row;
         row.insert(QStringLiteral("name"), fileName);
         row.insert(QStringLiteral("path"), joinRemotePath(cleanPath, fileName));
@@ -776,6 +816,7 @@ QVariantList SftpDirectoryLister::list(const ConnectionProfile &profile,
         row.insert(QStringLiteral("size"),
                    isDir ? QStringLiteral("--") : QString::number(attrs.filesize));
         row.insert(QStringLiteral("permissions"), permissionsToOctal(attrs));
+        row.insert(QStringLiteral("owner"), owner);
         row.insert(QStringLiteral("modified"),
                    attrs.flags & LIBSSH2_SFTP_ATTR_ACMODTIME
                        ? QDateTime::fromSecsSinceEpoch(attrs.mtime).toString(QStringLiteral("yyyy-MM-dd HH:mm"))
@@ -795,19 +836,12 @@ bool SftpDirectoryLister::upload(const ConnectionProfile &profile,
                                  const QString &remoteDirectory,
                                  QString *errorOut)
 {
-    QMutexLocker locker(&cacheMutex());
-
     if (!ensureLibssh2(errorOut)) {
         return false;
     }
 
-    auto &cache = connectionCache();
-    const QString key = cacheKey(profile);
-    auto it = cache.find(key);
-    if (it == cache.end()) {
-        it = cache.insert(key, new CachedSftpConnection);
-    }
-    CachedSftpConnection *connection = it.value();
+    CachedSftpConnection *connection = acquireConnection(cacheKey(profile));
+    QMutexLocker locker(&connection->mutex);
     if (!ensureConnected(connection, profile, errorOut)) {
         return false;
     }
@@ -834,19 +868,12 @@ bool SftpDirectoryLister::chmod(const ConnectionProfile &profile,
                                 int permissions,
                                 QString *errorOut)
 {
-    QMutexLocker locker(&cacheMutex());
-
     if (!ensureLibssh2(errorOut)) {
         return false;
     }
 
-    auto &cache = connectionCache();
-    const QString key = cacheKey(profile);
-    auto it = cache.find(key);
-    if (it == cache.end()) {
-        it = cache.insert(key, new CachedSftpConnection);
-    }
-    CachedSftpConnection *connection = it.value();
+    CachedSftpConnection *connection = acquireConnection(cacheKey(profile));
+    QMutexLocker locker(&connection->mutex);
     if (!ensureConnected(connection, profile, errorOut)) {
         return false;
     }
@@ -875,16 +902,11 @@ bool SftpDirectoryLister::download(const ConnectionProfile &profile,
                                    QString *downloadedPath,
                                    QString *errorOut)
 {
-    QMutexLocker locker(&cacheMutex());
     if (!ensureLibssh2(errorOut)) {
         return false;
     }
-    auto &cache = connectionCache();
-    auto it = cache.find(cacheKey(profile));
-    if (it == cache.end()) {
-        it = cache.insert(cacheKey(profile), new CachedSftpConnection);
-    }
-    CachedSftpConnection *connection = it.value();
+    CachedSftpConnection *connection = acquireConnection(cacheKey(profile));
+    QMutexLocker locker(&connection->mutex);
     if (!ensureConnected(connection, profile, errorOut)) {
         return false;
     }
@@ -907,16 +929,11 @@ bool SftpDirectoryLister::createDirectory(const ConnectionProfile &profile,
                                           const QString &remotePath,
                                           QString *errorOut)
 {
-    QMutexLocker locker(&cacheMutex());
     if (!ensureLibssh2(errorOut)) {
         return false;
     }
-    auto &cache = connectionCache();
-    auto it = cache.find(cacheKey(profile));
-    if (it == cache.end()) {
-        it = cache.insert(cacheKey(profile), new CachedSftpConnection);
-    }
-    CachedSftpConnection *connection = it.value();
+    CachedSftpConnection *connection = acquireConnection(cacheKey(profile));
+    QMutexLocker locker(&connection->mutex);
     return ensureConnected(connection, profile, errorOut)
            && makeRemoteDirectory(connection->sftp, remotePath);
 }
@@ -925,16 +942,11 @@ bool SftpDirectoryLister::createFile(const ConnectionProfile &profile,
                                      const QString &remotePath,
                                      QString *errorOut)
 {
-    QMutexLocker locker(&cacheMutex());
     if (!ensureLibssh2(errorOut)) {
         return false;
     }
-    auto &cache = connectionCache();
-    auto it = cache.find(cacheKey(profile));
-    if (it == cache.end()) {
-        it = cache.insert(cacheKey(profile), new CachedSftpConnection);
-    }
-    CachedSftpConnection *connection = it.value();
+    CachedSftpConnection *connection = acquireConnection(cacheKey(profile));
+    QMutexLocker locker(&connection->mutex);
     if (!ensureConnected(connection, profile, errorOut)) {
         return false;
     }
@@ -958,16 +970,11 @@ bool SftpDirectoryLister::renamePath(const ConnectionProfile &profile,
                                      const QString &newPath,
                                      QString *errorOut)
 {
-    QMutexLocker locker(&cacheMutex());
     if (!ensureLibssh2(errorOut)) {
         return false;
     }
-    auto &cache = connectionCache();
-    auto it = cache.find(cacheKey(profile));
-    if (it == cache.end()) {
-        it = cache.insert(cacheKey(profile), new CachedSftpConnection);
-    }
-    CachedSftpConnection *connection = it.value();
+    CachedSftpConnection *connection = acquireConnection(cacheKey(profile));
+    QMutexLocker locker(&connection->mutex);
     if (!ensureConnected(connection, profile, errorOut)) {
         return false;
     }
@@ -987,16 +994,11 @@ bool SftpDirectoryLister::removePath(const ConnectionProfile &profile,
                                      bool recursive,
                                      QString *errorOut)
 {
-    QMutexLocker locker(&cacheMutex());
     if (!ensureLibssh2(errorOut)) {
         return false;
     }
-    auto &cache = connectionCache();
-    auto it = cache.find(cacheKey(profile));
-    if (it == cache.end()) {
-        it = cache.insert(cacheKey(profile), new CachedSftpConnection);
-    }
-    CachedSftpConnection *connection = it.value();
+    CachedSftpConnection *connection = acquireConnection(cacheKey(profile));
+    QMutexLocker locker(&connection->mutex);
     return ensureConnected(connection, profile, errorOut)
            && removePathRecursive(connection->sftp, remotePath, recursive, errorOut);
 }
