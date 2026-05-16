@@ -85,7 +85,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/Qt
-          key: qt-v1-openshell-${{ runner.os }}-${{ env.QT_VERSION }}-${{ matrix.qt_arch }}-${{ matrix.qt_dir }}
+          key: qt-v2-openshell-${{ runner.os }}-${{ env.QT_VERSION }}-${{ matrix.qt_arch }}-${{ matrix.qt_dir }}
 
       - name: Install Qt
         if: steps.cache-qt.outputs.cache-hit != 'true'
@@ -93,7 +93,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install aqtinstall
-          python -m aqt install-qt "${{ matrix.aqt_host }}" desktop "${QT_VERSION}" "${{ matrix.qt_arch }}" -O "${RUNNER_TEMP}/Qt"
+          extra_modules=""
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            # qtwayland exposes the Wayland QPA plugin so AppImages run on
+            # Wayland-only sessions (Ubuntu 22.04+ default) without warnings.
+            extra_modules="--modules qtwayland"
+          fi
+          python -m aqt install-qt "${{ matrix.aqt_host }}" desktop "${QT_VERSION}" "${{ matrix.qt_arch }}" -O "${RUNNER_TEMP}/Qt" ${extra_modules}
 
       - name: Configure Qt environment
         shell: bash
@@ -208,6 +214,9 @@ jobs:
           export QMAKE="${QT_ROOT}/bin/qmake"
           export VERSION="${{ inputs.tag }}"
           export PATH="${PWD}/tools:${PATH}"
+          # linuxdeploy-plugin-qt 用 qmlimportscanner 扫描这些路径下的 .qml，
+          # 才会把 QtQuick / QtQuick.Controls / OpenShell 自家模块打进 AppImage。
+          export QML_SOURCES_PATHS="${PWD}:${PWD}/qml"
           tools/linuxdeploy-x86_64.AppImage \
             --appdir AppDir \
             --executable "AppDir/usr/bin/${APP_NAME}" \
