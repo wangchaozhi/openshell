@@ -134,6 +134,7 @@ Rectangle {
 
     component FileTypeIcon: Item {
         property bool isDir: false
+        property color accentColor: isDir ? "#3b82f6" : "#94a3b8"
 
         implicitWidth: 16
         implicitHeight: 14
@@ -145,7 +146,7 @@ Rectangle {
             width: 7
             height: 3
             radius: 1
-            color: "#60a5fa"
+            color: accentColor
         }
         Rectangle {
             visible: isDir
@@ -154,7 +155,8 @@ Rectangle {
             width: 14
             height: 9
             radius: 2
-            color: "#93c5fd"
+            color: accentColor
+            opacity: 0.88
         }
         Rectangle {
             visible: !isDir
@@ -163,7 +165,7 @@ Rectangle {
             width: 10
             height: 13
             radius: 1
-            color: "#94a3b8"
+            color: accentColor
         }
         Rectangle {
             visible: !isDir
@@ -171,7 +173,7 @@ Rectangle {
             y: 1
             width: 3
             height: 3
-            color: "#cbd5e1"
+            color: Qt.lighter(accentColor, 1.35)
         }
     }
 
@@ -351,11 +353,12 @@ Rectangle {
 
             FileTypeIcon {
                 isDir: parent.entry.isDir || false
+                accentColor: root.entryNameColor(parent.entry)
                 anchors.verticalCenter: parent.verticalCenter
             }
             Label {
                 text: parent.entry.name || ""
-                color: parent.entry.isDir ? "#bfdbfe" : "#d1d5db"
+                color: root.entryNameColor(parent.entry)
                 font.pixelSize: 11
                 elide: Text.ElideRight
                 width: parent.width - 16 - parent.spacing
@@ -645,6 +648,29 @@ Rectangle {
 
     function columnAlignsRight(colId) {
         return colId === "size" || colId === "permissions"
+    }
+
+    function entryNameColor(entry) {
+        if (!entry) {
+            return "#d1d5db"
+        }
+        const name = String(entry.name || "")
+        if (entry.isDir) {
+            return "#3b82f6"
+        }
+        if (name.match(/\.(tar|tgz|arc|arj|taz|lha|lz4|lzh|lzma|tlz|txz|tzo|t7z|zip|z|dz|gz|lrz|lz|lzo|xz|zst|tzst|bz2|bz|tbz|tbz2|tz|deb|rpm|jar|war|ear|sar|rar|alz|ace|zoo|cpio|7z|rz|cab|wim|swm|dwm|esd)$/i)) {
+            return "#ef4444"
+        }
+        if (name.match(/\.(jpg|jpeg|mjpg|mjpeg|gif|bmp|pbm|pgm|ppm|tga|xbm|xpm|tif|tiff|png|svg|svgz|mng|pcx|mov|mpg|mpeg|m2v|mkv|webm|webp|ogm|mp4|m4v|mp4v|vob|qt|nuv|wmv|asf|rm|rmvb|flc|avi|fli|flv|gl|dl|xcf|xwd|yuv|cgm|emf|ogv|ogx)$/i)) {
+            return "#d946ef"
+        }
+        if (name.match(/\.(aac|au|flac|m4a|mid|midi|mka|mp3|mpc|ogg|ra|wav|oga|opus|spx|xspf)$/i)) {
+            return "#06b6d4"
+        }
+        if (permissionsToSymbolic(String(entry.permissions || ""), false).indexOf("x") >= 0) {
+            return "#22c55e"
+        }
+        return "#d1d5db"
     }
 
     function columnOrderFor(panel) {

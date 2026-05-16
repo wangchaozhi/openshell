@@ -7,8 +7,26 @@ Rectangle {
 
     property var session: ({})
     readonly property string sessionId: session && session.id ? session.id : ""
+    property int terminalCols: 0
+    property int terminalRows: 0
 
     color: "#020617"
+
+    function syncTerminalSize() {
+        if (sessionId === "" || output.width <= 0 || output.height <= 0) {
+            return
+        }
+        const charWidth = Math.max(7, output.fontMetrics.advanceWidth("W"))
+        const lineHeight = Math.max(12, output.fontMetrics.height)
+        const cols = Math.max(20, Math.floor(output.width / charWidth))
+        const rows = Math.max(4, Math.floor(output.height / lineHeight))
+        if (cols === terminalCols && rows === terminalRows) {
+            return
+        }
+        terminalCols = cols
+        terminalRows = rows
+        appController.resizeSession(sessionId, cols, rows)
+    }
 
     function sendTerminalKey(event) {
         if (sessionId === "") {
@@ -85,6 +103,7 @@ Rectangle {
                 output.cursorPosition = output.length
             }
             output.forceActiveFocus()
+            Qt.callLater(syncTerminalSize)
         }
     }
 
@@ -96,6 +115,7 @@ Rectangle {
             }
             output.text = appController.sessionBuffer(root.sessionId)
             output.cursorPosition = output.length
+            resizeDebounce.restart()
         }
     }
 
@@ -150,10 +170,23 @@ Rectangle {
                 wrapMode: TextEdit.Wrap
                 color: "#e2e8f0"
                 background: Rectangle { color: "#020617" }
-                font.family: "Consolas, Menlo, monospace"
+                font.family: "Consolas"
                 font.pixelSize: 13
                 placeholderText: qsTr("Open a connection to start a session.")
                 Component.onCompleted: forceActiveFocus()
+                onWidthChanged: resizeDebounce.restart()
+                onHeightChanged: resizeDebounce.restart()
+                FontMetrics {
+                    id: outputFontMetrics
+                    font: output.font
+                }
+                readonly property var fontMetrics: outputFontMetrics
+                Timer {
+                    id: resizeDebounce
+                    interval: 120
+                    repeat: false
+                    onTriggered: root.syncTerminalSize()
+                }
                 Rectangle {
                     width: Math.max(8, output.cursorRectangle.width)
                     height: Math.max(output.font.pixelSize + 2, output.cursorRectangle.height)
@@ -207,7 +240,7 @@ Rectangle {
                 Label {
                     text: "$"
                     color: "#38bdf8"
-                    font.family: "Consolas, Menlo, monospace"
+                    font.family: "Consolas"
                     font.pixelSize: 13
                 }
 
