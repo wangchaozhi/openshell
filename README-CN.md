@@ -131,7 +131,7 @@ QStandardPaths::AppDataLocation/connections/<id>.json
 
 <p align="center">
   <img src="assets/support/wechat-pay.jpg" alt="微信支付赞赏码" width="260">
-  <img src="assets/support/alipay.jpg" alt="支付宝收款码" width="260">
+  <img src="assets/support/alipay.png" alt="支付宝收款码" width="260">
 </p>
 
 国际用户也可以通过 PayPal 支持：[paypal.me/wangchaozhi](https://paypal.me/wangchaozhi)
