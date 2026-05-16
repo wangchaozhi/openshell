@@ -1,0 +1,306 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, for example v0.1.0"
+        required: true
+        type: string
+      prerelease:
+        description: "Mark this GitHub release as a prerelease"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+env:
+  APP_NAME: OpenShell
+  QT_VERSION: 6.10.0
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    name: Build ${{ matrix.asset_name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            aqt_host: windows
+            qt_arch: win64_msvc2022_64
+            qt_dir: msvc2022_64
+            asset_name: OpenShell-windows-x64
+          - os: macos-15
+            aqt_host: mac
+            qt_arch: clang_64
+            qt_dir: macos
+            cmake_extra_args: -DCMAKE_OSX_ARCHITECTURES=arm64
+            asset_name: OpenShell-macos-arm64
+          - os: ubuntu-22.04
+            aqt_host: linux
+            qt_arch: linux_gcc_64
+            qt_dir: gcc_64
+            asset_name: OpenShell-linux-x64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            desktop-file-utils \
+            libgl1-mesa-dev \
+            libegl1-mesa-dev \
+            patchelf \
+            wget \
+            libxkbcommon-x11-0 \
+            libxcb-cursor0 \
+            libxcb-icccm4 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-randr0 \
+            libxcb-render-util0 \
+            libxcb-shape0 \
+            libxcb-sync1 \
+            libxcb-xfixes0 \
+            libxcb-xinerama0 \
+            libxcb-xinput0 \
+            libxcb-xkb1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache Qt
+        id: cache-qt
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/Qt
+          key: qt-v1-openshell-${{ runner.os }}-${{ env.QT_VERSION }}-${{ matrix.qt_arch }}-${{ matrix.qt_dir }}
+
+      - name: Install Qt
+        if: steps.cache-qt.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install aqtinstall
+          python -m aqt install-qt "${{ matrix.aqt_host }}" desktop "${QT_VERSION}" "${{ matrix.qt_arch }}" -O "${RUNNER_TEMP}/Qt"
+
+      - name: Configure Qt environment
+        shell: bash
+        run: |
+          qt_root="${RUNNER_TEMP}/Qt/${QT_VERSION}/${{ matrix.qt_dir }}"
+          if [ ! -d "${qt_root}" ]; then
+            echo "Qt root was not found: ${qt_root}" >&2
+            exit 1
+          fi
+          echo "QT_ROOT=${qt_root}" >> "${GITHUB_ENV}"
+          echo "CMAKE_PREFIX_PATH=${qt_root}" >> "${GITHUB_ENV}"
+          echo "${qt_root}/bin" >> "${GITHUB_PATH}"
+
+      - name: Configure Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_PREFIX_PATH="$env:CMAKE_PREFIX_PATH"
+
+      - name: Configure Unix
+        if: runner.os != 'Windows'
+        shell: bash
+        run: cmake -S . -B build -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" ${{ matrix.cmake_extra_args || '' }}
+
+      - name: Build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
+
+      - name: Package Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $packageRoot = Join-Path $PWD "package"
+          $deployDir = Join-Path $packageRoot "${{ matrix.asset_name }}"
+          New-Item -ItemType Directory -Force -Path $deployDir | Out-Null
+
+          $exe = Get-ChildItem -Path build -Recurse -Filter "${env:APP_NAME}.exe" | Select-Object -First 1
+          if (-not $exe) { throw "Executable was not found." }
+
+          Copy-Item $exe.FullName $deployDir
+          Copy-Item README.md $deployDir
+          Copy-Item docs $deployDir -Recurse
+          Copy-Item assets $deployDir -Recurse
+          windeployqt --release --qmldir "$PWD\qml" `
+            --no-translations --no-system-d3d-compiler --no-opengl-sw --no-ffmpeg `
+            "$deployDir\${env:APP_NAME}.exe"
+
+          Compress-Archive -Path "$deployDir\*" -DestinationPath "$packageRoot\${{ matrix.asset_name }}.zip" -Force
+
+      - name: Package macOS
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p package
+          app_path="$(find build -maxdepth 4 -name "${APP_NAME}.app" -print -quit)"
+          if [ -z "${app_path}" ]; then
+            echo "${APP_NAME}.app was not found." >&2
+            exit 1
+          fi
+
+          macdeployqt "${app_path}" -qmldir="${PWD}/qml"
+          codesign --force --deep --sign - "${app_path}"
+
+          dmg_root="package/${{ matrix.asset_name }}"
+          mkdir -p "${dmg_root}"
+          cp -R "${app_path}" "${dmg_root}/"
+          cp README.md "${dmg_root}/"
+          cp -R docs "${dmg_root}/"
+          cp -R assets "${dmg_root}/"
+
+          hdiutil create \
+            -volname "OpenShell" \
+            -srcfolder "${dmg_root}" \
+            -ov \
+            -format UDZO \
+            "package/${{ matrix.asset_name }}.dmg"
+
+      - name: Package Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p package tools AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/scalable/apps AppDir/usr/share/doc/${APP_NAME}
+          exe_path="$(find build -type f -name "${APP_NAME}" -executable -print -quit)"
+          if [ -z "${exe_path}" ]; then
+            echo "${APP_NAME} executable was not found." >&2
+            exit 1
+          fi
+
+          cp "${exe_path}" "AppDir/usr/bin/${APP_NAME}"
+          cp -R assets "AppDir/usr/bin/assets"
+          cp assets/icons/openshell.svg "AppDir/usr/share/icons/hicolor/scalable/apps/OpenShell.svg"
+          cp README.md "AppDir/usr/share/doc/${APP_NAME}/"
+          cp -R docs "AppDir/usr/share/doc/${APP_NAME}/"
+
+          cat > "AppDir/usr/share/applications/${APP_NAME}.desktop" <<EOF
+          [Desktop Entry]
+          Type=Application
+          Name=OpenShell
+          Comment=Cross-platform SSH/SFTP client
+          Exec=OpenShell
+          Icon=OpenShell
+          Categories=Network;
+          Terminal=false
+          EOF
+
+          wget -q -O tools/linuxdeploy-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -q -O tools/linuxdeploy-plugin-qt-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x tools/linuxdeploy-x86_64.AppImage tools/linuxdeploy-plugin-qt-x86_64.AppImage
+
+          export APPIMAGE_EXTRACT_AND_RUN=1
+          export QMAKE="${QT_ROOT}/bin/qmake"
+          export VERSION="${{ inputs.tag }}"
+          export PATH="${PWD}/tools:${PATH}"
+          tools/linuxdeploy-x86_64.AppImage \
+            --appdir AppDir \
+            --executable "AppDir/usr/bin/${APP_NAME}" \
+            --desktop-file "AppDir/usr/share/applications/${APP_NAME}.desktop" \
+            --icon-file "AppDir/usr/share/icons/hicolor/scalable/apps/OpenShell.svg" \
+            --plugin qt \
+            --output appimage
+
+          generated_appimage="$(find . -maxdepth 1 -type f -name '*.AppImage' -print -quit)"
+          if [ -z "${generated_appimage}" ]; then
+            echo "Generated AppImage was not found." >&2
+            exit 1
+          fi
+          mv "${generated_appimage}" "package/${{ matrix.asset_name }}.AppImage"
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: |
+            package/*.zip
+            package/*.AppImage
+            package/*.dmg
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-24.04
+    needs: build
+    if: ${{ always() }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create or update tag
+        env:
+          TAG_NAME: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          git fetch --tags
+          if git rev-parse -q --verify "refs/tags/${TAG_NAME}" >/dev/null; then
+            echo "Tag ${TAG_NAME} already exists."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "${TAG_NAME}" -m "Release ${TAG_NAME}"
+            git push origin "${TAG_NAME}"
+          fi
+
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ inputs.tag }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          set -euo pipefail
+          ls -la dist
+
+          mapfile -t assets < <(find dist -maxdepth 1 -type f -printf '%f\n' | sort)
+          if [ "${#assets[@]}" -eq 0 ]; then
+            echo "No release assets were downloaded." >&2
+            exit 1
+          fi
+
+          notes_file="$(mktemp)"
+          {
+            echo "OpenShell ${TAG_NAME}"
+            echo
+            echo "Assets:"
+            for asset in "${assets[@]}"; do
+              echo "- ${asset}"
+            done
+          } > "${notes_file}"
+
+          prerelease_flag=()
+          if [ "${PRERELEASE}" = "true" ]; then
+            prerelease_flag=(--prerelease)
+          fi
+
+          if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
+            gh release edit "${TAG_NAME}" --notes-file "${notes_file}" "${prerelease_flag[@]}"
+            gh release upload "${TAG_NAME}" dist/* --clobber
+          else
+            gh release create "${TAG_NAME}" dist/* \
+              --title "OpenShell ${TAG_NAME}" \
+              --notes-file "${notes_file}" \
+              "${prerelease_flag[@]}"
+          fi

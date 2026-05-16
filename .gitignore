@@ -1,0 +1,37 @@
+build/
+build-vs/
+build-*/
+out/
+.cache/
+CMakeCache.txt
+CMakeFiles/
+CMakeUserPresets.json
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.kdev4
+*.kate-swp
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Generated
+*.qm
+*.exe
+*.dll
+*.pdb
+*.obj
+*.lib
+*.exp
+*.ilk
+*.log
+test_results.txt
+
+# Editor
+*.swp
+*~
