@@ -26,6 +26,7 @@ public:
     void close(const QString &sessionId);
     void sendInput(const QString &sessionId, const QByteArray &data);
     void requestResize(const QString &sessionId, int cols, int rows);
+    void clearBuffer(const QString &sessionId);
 
     QVariantList sessionsAsVariantList() const;
     QString sessionBuffer(const QString &sessionId) const;

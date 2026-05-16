@@ -862,6 +862,26 @@
         <source>Type a command and press Enter</source>
         <translation>输入命令并按回车</translation>
     </message>
+    <message>
+        <location filename="../qml/TerminalView.qml" line="310"/>
+        <source>Copy</source>
+        <translation>复制</translation>
+    </message>
+    <message>
+        <location filename="../qml/TerminalView.qml" line="307"/>
+        <source>Paste</source>
+        <translation>粘贴</translation>
+    </message>
+    <message>
+        <location filename="../qml/TerminalView.qml" line="307"/>
+        <source>Select All</source>
+        <translation>全选</translation>
+    </message>
+    <message>
+        <location filename="../qml/TerminalView.qml" line="310"/>
+        <source>Clear Screen</source>
+        <translation>清屏</translation>
+    </message>
 </context>
 <context>
     <name>TrayController</name>

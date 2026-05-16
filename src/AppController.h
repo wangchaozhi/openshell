@@ -50,6 +50,7 @@ public:
     Q_INVOKABLE QString sessionBuffer(const QString &sessionId) const;
     Q_INVOKABLE void sendSessionInput(const QString &sessionId, const QString &text);
     Q_INVOKABLE void resizeSession(const QString &sessionId, int cols, int rows);
+    Q_INVOKABLE void clearSessionBuffer(const QString &sessionId);
     Q_INVOKABLE QString localHomePath() const;
     Q_INVOKABLE QString localParentPath(const QString &path) const;
     Q_INVOKABLE QVariantList localDirectoryEntries(const QString &path) const;
@@ -86,6 +87,7 @@ public:
                                                 bool recursive);
     Q_INVOKABLE QString remoteSiblingPath(const QString &path, const QString &name) const;
     Q_INVOKABLE void copyTextToClipboard(const QString &text) const;
+    Q_INVOKABLE QString clipboardText() const;
 
     Q_INVOKABLE void showWindow();
     Q_INVOKABLE void hideWindow();

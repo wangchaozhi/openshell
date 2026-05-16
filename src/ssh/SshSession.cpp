@@ -159,6 +159,13 @@ void SshSession::requestResize(int cols, int rows)
                               Q_ARG(int, cols), Q_ARG(int, rows));
 }
 
+void SshSession::clearBuffer()
+{
+    const qsizetype lastLineStart = m_buffer.lastIndexOf('\n') + 1;
+    m_buffer = lastLineStart > 0 ? m_buffer.mid(lastLineStart) : m_buffer;
+    emit outputAppended(QByteArray());
+}
+
 void SshSession::handleConnected()
 {
     setStatus(QStringLiteral("connected"));

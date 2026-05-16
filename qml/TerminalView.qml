@@ -10,8 +10,39 @@ Rectangle {
     property int terminalCols: 0
     property int terminalRows: 0
     property string rawOutput: ""
+    property string clipboardTextSnapshot: ""
 
     color: "#020617"
+
+    component MenuGlyph: Label {
+        property string glyph: ""
+        property bool itemEnabled: true
+
+        text: glyph
+        color: itemEnabled ? "#334155" : "#cbd5e1"
+        font.family: "Segoe MDL2 Assets"
+        font.pixelSize: 13
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+    }
+
+    component TerminalMenuContent: RowLayout {
+        property string glyph: ""
+        property string label: ""
+        property bool itemEnabled: true
+
+        spacing: 8
+        MenuGlyph {
+            glyph: parent.glyph
+            itemEnabled: parent.itemEnabled
+            Layout.preferredWidth: 18
+        }
+        Label {
+            text: parent.label
+            color: parent.itemEnabled ? "#111827" : "#cbd5e1"
+            Layout.fillWidth: true
+        }
+    }
 
     function syncTerminalSize() {
         if (sessionId === "" || output.width <= 0 || output.height <= 0) {
@@ -182,6 +213,30 @@ Rectangle {
         return html
     }
 
+    function clearScreen() {
+        if (sessionId === "") {
+            return
+        }
+        appController.clearSessionBuffer(sessionId)
+        rawOutput = appController.sessionBuffer(sessionId)
+        output.text = renderAnsi(rawOutput)
+        output.cursorPosition = output.length
+    }
+
+    function pasteClipboard() {
+        if (sessionId === "") {
+            return
+        }
+        const text = clipboardTextSnapshot.length > 0 ? clipboardTextSnapshot : appController.clipboardText()
+        if (text.length > 0) {
+            appController.sendSessionInput(sessionId, text)
+        }
+    }
+
+    function refreshTerminalMenu() {
+        clipboardTextSnapshot = appController.clipboardText()
+    }
+
     onSessionIdChanged: {
         // 切到新会话时，把累积缓冲一次性灌进 TextArea；之后增量靠 sessionOutput。
         output.clear()
@@ -257,7 +312,7 @@ Rectangle {
                 textFormat: TextEdit.RichText
                 focus: true
                 activeFocusOnTab: true
-                selectByMouse: false
+                selectByMouse: true
                 cursorVisible: false
                 wrapMode: TextEdit.Wrap
                 color: "#e2e8f0"
@@ -305,6 +360,67 @@ Rectangle {
                         output.forceActiveFocus()
                     }
                 }
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.RightButton
+                    propagateComposedEvents: true
+                    onClicked: function(mouse) {
+                        if (mouse.button === Qt.RightButton) {
+                            terminalMenu.popup()
+                        } else {
+                            mouse.accepted = false
+                        }
+                    }
+                }
+                Menu {
+                    id: terminalMenu
+                    onAboutToShow: root.refreshTerminalMenu()
+                    MenuItem {
+                        id: copyMenuItem
+                        text: qsTr("Copy")
+                        enabled: output.selectedText.length > 0
+                        contentItem: TerminalMenuContent {
+                            glyph: "\uE8C8"
+                            label: copyMenuItem.text
+                            itemEnabled: copyMenuItem.enabled
+                        }
+                        onTriggered: output.copy()
+                    }
+                    MenuItem {
+                        id: pasteMenuItem
+                        text: qsTr("Paste")
+                        enabled: root.sessionId !== "" && root.clipboardTextSnapshot.length > 0
+                        contentItem: TerminalMenuContent {
+                            glyph: "\uE77F"
+                            label: pasteMenuItem.text
+                            itemEnabled: pasteMenuItem.enabled
+                        }
+                        onTriggered: root.pasteClipboard()
+                    }
+                    MenuItem {
+                        id: selectAllMenuItem
+                        text: qsTr("Select All")
+                        enabled: root.rawOutput.length > 0
+                        contentItem: TerminalMenuContent {
+                            glyph: "\uE8B3"
+                            label: selectAllMenuItem.text
+                            itemEnabled: selectAllMenuItem.enabled
+                        }
+                        onTriggered: output.selectAll()
+                    }
+                    MenuSeparator {}
+                    MenuItem {
+                        id: clearScreenMenuItem
+                        text: qsTr("Clear Screen")
+                        enabled: root.sessionId !== ""
+                        contentItem: TerminalMenuContent {
+                            glyph: "\uE74D"
+                            label: clearScreenMenuItem.text
+                            itemEnabled: clearScreenMenuItem.enabled
+                        }
+                        onTriggered: root.clearScreen()
+                    }
+                }
                 Keys.onPressed: function(event) {
                     output.cursorPosition = output.length
                     if (root.sendTerminalKey(event)) {
@@ -312,7 +428,7 @@ Rectangle {
                     }
                 }
                 onCursorPositionChanged: {
-                    if (cursorPosition !== length) {
+                    if (selectedText.length === 0 && cursorPosition !== length) {
                         cursorPosition = length
                     }
                 }

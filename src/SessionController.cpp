@@ -90,6 +90,13 @@ void SessionController::requestResize(const QString &sessionId, int cols, int ro
     }
 }
 
+void SessionController::clearBuffer(const QString &sessionId)
+{
+    if (auto *session = findSession(sessionId)) {
+        session->clearBuffer();
+    }
+}
+
 QVariantList SessionController::sessionsAsVariantList() const
 {
     QVariantList list;

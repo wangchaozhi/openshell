@@ -35,6 +35,7 @@ public:
     void requestStop();
     void sendInput(const QByteArray &data);
     void requestResize(int cols, int rows);
+    void clearBuffer();
 
 signals:
     void statusChanged();

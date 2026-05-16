@@ -272,6 +272,11 @@ void AppController::resizeSession(const QString &sessionId, int cols, int rows)
     m_sessions->requestResize(sessionId, cols, rows);
 }
 
+void AppController::clearSessionBuffer(const QString &sessionId)
+{
+    m_sessions->clearBuffer(sessionId);
+}
+
 QString AppController::localHomePath() const
 {
     return QDir::homePath();
@@ -382,6 +387,11 @@ QString AppController::remoteSiblingPath(const QString &path, const QString &nam
 void AppController::copyTextToClipboard(const QString &text) const
 {
     QApplication::clipboard()->setText(text);
+}
+
+QString AppController::clipboardText() const
+{
+    return QApplication::clipboard()->text();
 }
 
 QVariantList AppController::remoteDirectoryEntries(const QString &connectionId,
