@@ -328,6 +328,11 @@ void AppController::sendSessionBytes(const QString &sessionId, const QByteArray 
     m_sessions->sendInput(sessionId, data);
 }
 
+void AppController::sendSessionCtrlC(const QString &sessionId)
+{
+    m_sessions->sendInput(sessionId, QByteArray(1, '\x03'));
+}
+
 QObject *AppController::sessionScreen(const QString &sessionId) const
 {
     return m_sessions->sessionScreen(sessionId);

@@ -2,6 +2,7 @@
 
 #include <QColor>
 #include <QFont>
+#include <QPoint>
 #include <QPointer>
 #include <QQuickPaintedItem>
 #include <QRect>
@@ -25,6 +26,8 @@ class TerminalScreenItem : public QQuickPaintedItem
     Q_PROPERTY(int fontPixelSize READ fontPixelSize WRITE setFontPixelSize NOTIFY fontChanged)
     Q_PROPERTY(QColor background READ background WRITE setBackground NOTIFY backgroundChanged)
     Q_PROPERTY(QColor cursorColor READ cursorColor WRITE setCursorColor NOTIFY cursorColorChanged)
+    Q_PROPERTY(QString selectedText READ selectedText NOTIFY selectionChanged)
+    Q_PROPERTY(bool hasSelection READ hasSelection NOTIFY selectionChanged)
 
 public:
     explicit TerminalScreenItem(QQuickItem *parent = nullptr);
@@ -51,9 +54,13 @@ public:
 
     QColor cursorColor() const { return m_cursorColor; }
     void setCursorColor(const QColor &c);
+    QString selectedText() const;
+    bool hasSelection() const;
 
     Q_INVOKABLE void sendText(const QString &text);
     Q_INVOKABLE void requestFocus();
+    Q_INVOKABLE void selectAll();
+    Q_INVOKABLE void clearSelection();
 
 signals:
     void screenChanged();
@@ -61,12 +68,15 @@ signals:
     void fontChanged();
     void backgroundChanged();
     void cursorColorChanged();
+    void selectionChanged();
     void cellSizeRequested(int cols, int rows);
 
 protected:
     void geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry) override;
     void keyPressEvent(QKeyEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
     void focusInEvent(QFocusEvent *event) override;
     void focusOutEvent(QFocusEvent *event) override;
 
@@ -81,6 +91,9 @@ private:
     void disconnectScreen();
     void recomputeMetrics();
     void emitDesiredGrid();
+    QPoint cellAtPosition(const QPointF &pos) const;
+    QPair<QPoint, QPoint> normalizedSelection() const;
+    bool isCellSelected(int row, int col) const;
 
     QPointer<VtScreen> m_screen;
     int m_cols = 0;
@@ -91,6 +104,11 @@ private:
     QFont m_font{QStringLiteral("Consolas"), 0};
     QColor m_background{0x02, 0x06, 0x17};
     QColor m_cursorColor{0x38, 0xbd, 0xf8};
+    bool m_selectAllActive = false;
+    bool m_selectionActive = false;
+    bool m_selecting = false;
+    QPoint m_selectionStart{0, 0};
+    QPoint m_selectionEnd{0, 0};
     bool m_cursorOn = true;
     QTimer m_cursorTimer;
 };

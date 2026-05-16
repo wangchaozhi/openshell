@@ -144,10 +144,33 @@ void VtScreen::enqueueRaw(const QByteArray &data)
 
 void VtScreen::clear()
 {
-    // \x1b[2J 清除整个屏幕
-    // \x1b[H   将光标移到左上角
-    static const char kReset[] = "\x1b[2J\x1b[H";
-    feed(QByteArray::fromRawData(kReset, sizeof(kReset) - 1));
+    // Keep the active prompt/input line visible after clearing scrollback-like content.
+    QString cursorLine;
+    const int cursorRow = qBound(0, m_cursorPos.y(), qMax(0, m_rows - 1));
+    const int cursorCol = qBound(0, m_cursorPos.x(), qMax(0, m_cols - 1));
+    cursorLine.reserve(m_cols);
+    for (int c = 0; c < m_cols; ++c) {
+        const VtCell cell = cellAt(cursorRow, c);
+        if (cell.placeholder) {
+            continue;
+        }
+        if (cell.text.isEmpty()) {
+            cursorLine.append(QLatin1Char(' '));
+        } else {
+            cursorLine.append(cell.text);
+        }
+    }
+    while (cursorLine.size() > cursorCol && cursorLine.endsWith(QLatin1Char(' '))) {
+        cursorLine.chop(1);
+    }
+    while (cursorLine.size() < cursorCol) {
+        cursorLine.append(QLatin1Char(' '));
+    }
+
+    QByteArray reset = QByteArrayLiteral("\x1b[2J\x1b[H");
+    reset.append(cursorLine.toUtf8());
+    reset.append(QStringLiteral("\x1b[1;%1H").arg(cursorCol + 1).toUtf8());
+    feed(reset);
 }
 
 bool VtScreen::sendKey(int qtKey, Qt::KeyboardModifiers modifiers, const QString &text)

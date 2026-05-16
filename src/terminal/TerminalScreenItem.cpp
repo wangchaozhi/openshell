@@ -49,6 +49,7 @@ void TerminalScreenItem::setScreenObject(QObject *obj)
     if (next == m_screen.data()) {
         return;
     }
+    clearSelection();
     disconnectScreen();
     m_screen = next;
     connectScreen();
@@ -127,6 +128,57 @@ void TerminalScreenItem::setCursorColor(const QColor &c)
     emit cursorColorChanged();
 }
 
+QString TerminalScreenItem::selectedText() const
+{
+    if (!m_screen) {
+        return QString();
+    }
+    if (m_selectAllActive) {
+        QString text = m_screen->plainTextSnapshot();
+        while (text.endsWith(QLatin1Char('\n')) || text.endsWith(QLatin1Char(' '))) {
+            text.chop(1);
+        }
+        return text;
+    }
+    if (!m_selectionActive) {
+        return QString();
+    }
+
+    const auto bounds = normalizedSelection();
+    const QPoint start = bounds.first;
+    const QPoint end = bounds.second;
+    QString text;
+    for (int row = start.y(); row <= end.y(); ++row) {
+        QString line;
+        const int firstCol = row == start.y() ? start.x() : 0;
+        const int lastCol = row == end.y() ? end.x() : m_cols - 1;
+        for (int col = firstCol; col <= lastCol; ++col) {
+            const VtCell cell = m_screen->cellAt(row, col);
+            if (cell.placeholder) {
+                continue;
+            }
+            if (cell.text.isEmpty()) {
+                line.append(QLatin1Char(' '));
+            } else {
+                line.append(cell.text);
+            }
+        }
+        while (!line.isEmpty() && line.endsWith(QLatin1Char(' '))) {
+            line.chop(1);
+        }
+        text.append(line);
+        if (row < end.y()) {
+            text.append(QLatin1Char('\n'));
+        }
+    }
+    return text;
+}
+
+bool TerminalScreenItem::hasSelection() const
+{
+    return m_screen && (m_selectAllActive || m_selectionActive) && !selectedText().isEmpty();
+}
+
 void TerminalScreenItem::sendText(const QString &text)
 {
     if (m_screen && !text.isEmpty()) {
@@ -139,6 +191,30 @@ void TerminalScreenItem::requestFocus()
     forceActiveFocus(Qt::OtherFocusReason);
 }
 
+void TerminalScreenItem::selectAll()
+{
+    if (!m_screen) {
+        return;
+    }
+    m_selectionActive = false;
+    m_selecting = false;
+    m_selectAllActive = true;
+    update();
+    emit selectionChanged();
+}
+
+void TerminalScreenItem::clearSelection()
+{
+    if (!m_selectAllActive && !m_selectionActive && !m_selecting) {
+        return;
+    }
+    m_selectAllActive = false;
+    m_selectionActive = false;
+    m_selecting = false;
+    update();
+    emit selectionChanged();
+}
+
 void TerminalScreenItem::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry)
 {
     QQuickPaintedItem::geometryChange(newGeometry, oldGeometry);
@@ -147,6 +223,10 @@ void TerminalScreenItem::geometryChange(const QRectF &newGeometry, const QRectF 
 
 void TerminalScreenItem::keyPressEvent(QKeyEvent *event)
 {
+    if (m_selectAllActive && !(event->modifiers() & Qt::ControlModifier)) {
+        clearSelection();
+    }
+
     QString logMsg = QString("KEY EVENT: key=%1 modifiers=%2 text=[%3] focus=%4")
         .arg(event->key()).arg((int)event->modifiers()).arg(event->text()).arg(hasActiveFocus());
 
@@ -176,7 +256,56 @@ void TerminalScreenItem::keyPressEvent(QKeyEvent *event)
 void TerminalScreenItem::mousePressEvent(QMouseEvent *event)
 {
     forceActiveFocus(Qt::MouseFocusReason);
+    if (event->button() == Qt::LeftButton && m_screen) {
+        clearSelection();
+        m_selectionStart = cellAtPosition(event->position());
+        m_selectionEnd = m_selectionStart;
+        m_selecting = true;
+        event->accept();
+        return;
+    }
+    if (event->button() != Qt::RightButton) {
+        clearSelection();
+    }
     QQuickPaintedItem::mousePressEvent(event);
+}
+
+void TerminalScreenItem::mouseMoveEvent(QMouseEvent *event)
+{
+    if (m_selecting && m_screen && (event->buttons() & Qt::LeftButton)) {
+        const QPoint next = cellAtPosition(event->position());
+        if (next != m_selectionEnd) {
+            m_selectionEnd = next;
+            const bool nextActive = m_selectionEnd != m_selectionStart;
+            const bool changed = m_selectionActive != nextActive;
+            m_selectionActive = nextActive;
+            update();
+            if (changed || m_selectionActive) {
+                emit selectionChanged();
+            }
+        }
+        event->accept();
+        return;
+    }
+    QQuickPaintedItem::mouseMoveEvent(event);
+}
+
+void TerminalScreenItem::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton && m_selecting) {
+        m_selectionEnd = cellAtPosition(event->position());
+        m_selecting = false;
+        const bool nextActive = m_selectionEnd != m_selectionStart;
+        const bool changed = m_selectionActive != nextActive;
+        m_selectionActive = nextActive;
+        update();
+        if (changed || m_selectionActive) {
+            emit selectionChanged();
+        }
+        event->accept();
+        return;
+    }
+    QQuickPaintedItem::mouseReleaseEvent(event);
 }
 
 void TerminalScreenItem::focusInEvent(QFocusEvent *event)
@@ -259,6 +388,46 @@ void TerminalScreenItem::emitDesiredGrid()
     emit cellSizeRequested(desiredCols, desiredRows);
 }
 
+QPoint TerminalScreenItem::cellAtPosition(const QPointF &pos) const
+{
+    const int col = qBound(0, int(pos.x()) / qMax(1, m_cellW), qMax(0, m_cols - 1));
+    const int row = qBound(0, int(pos.y()) / qMax(1, m_cellH), qMax(0, m_rows - 1));
+    return QPoint(col, row);
+}
+
+QPair<QPoint, QPoint> TerminalScreenItem::normalizedSelection() const
+{
+    QPoint start = m_selectionStart;
+    QPoint end = m_selectionEnd;
+    if (start.y() > end.y() || (start.y() == end.y() && start.x() > end.x())) {
+        std::swap(start, end);
+    }
+    return qMakePair(start, end);
+}
+
+bool TerminalScreenItem::isCellSelected(int row, int col) const
+{
+    if (m_selectAllActive) {
+        return true;
+    }
+    if (!m_selectionActive) {
+        return false;
+    }
+    const auto bounds = normalizedSelection();
+    const QPoint start = bounds.first;
+    const QPoint end = bounds.second;
+    if (row < start.y() || row > end.y()) {
+        return false;
+    }
+    if (row == start.y() && col < start.x()) {
+        return false;
+    }
+    if (row == end.y() && col > end.x()) {
+        return false;
+    }
+    return true;
+}
+
 void TerminalScreenItem::paint(QPainter *painter)
 {
     painter->fillRect(QRectF(0, 0, width(), height()), m_background);
@@ -292,6 +461,12 @@ void TerminalScreenItem::paint(QPainter *painter)
 
             if (cell.bg != m_background) {
                 painter->fillRect(x, y, w, h, cell.bg);
+            }
+
+            if (isCellSelected(r, c)) {
+                QColor selection = m_cursorColor;
+                selection.setAlphaF(0.28);
+                painter->fillRect(x, y, w, h, selection);
             }
 
             if (!cell.text.isEmpty()) {

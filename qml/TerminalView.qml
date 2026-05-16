@@ -49,6 +49,12 @@ Rectangle {
         clipboardTextSnapshot = appController.clipboardText()
     }
 
+    function copySelection() {
+        if (terminal.hasSelection && terminal.selectedText.length > 0) {
+            appController.copyTextToClipboard(terminal.selectedText)
+        }
+    }
+
     function bindScreen() {
         if (sessionId === "") {
             terminal.screen = null
@@ -203,6 +209,17 @@ Rectangle {
                     onAboutToShow: root.refreshTerminalMenu()
 
                     MenuItem {
+                        id: copyMenuItem
+                        text: qsTr("Copy")
+                        enabled: terminal.hasSelection
+                        contentItem: TerminalMenuContent {
+                            glyph: ""
+                            label: copyMenuItem.text
+                            itemEnabled: copyMenuItem.enabled
+                        }
+                        onTriggered: root.copySelection()
+                    }
+                    MenuItem {
                         id: pasteMenuItem
                         text: qsTr("Paste")
                         enabled: root.sessionId !== "" && root.clipboardTextSnapshot.length > 0
@@ -218,6 +235,17 @@ Rectangle {
                             }
                         }
                     }
+                    MenuItem {
+                        id: selectAllMenuItem
+                        text: qsTr("Select All")
+                        enabled: root.sessionId !== "" && terminal.screen !== null
+                        contentItem: TerminalMenuContent {
+                            glyph: ""
+                            label: selectAllMenuItem.text
+                            itemEnabled: selectAllMenuItem.enabled
+                        }
+                        onTriggered: terminal.selectAll()
+                    }
                     MenuSeparator {}
                     MenuItem {
                         id: sendCtrlCMenuItem
@@ -230,7 +258,7 @@ Rectangle {
                         }
                         onTriggered: {
                             if (root.sessionId !== "") {
-                                appController.sendSessionInput(root.sessionId, "")
+                                appController.sendSessionCtrlC(root.sessionId)
                             }
                         }
                     }

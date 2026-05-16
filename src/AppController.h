@@ -64,6 +64,7 @@ public:
     Q_INVOKABLE QObject *sessionScreen(const QString &sessionId) const;
     Q_INVOKABLE void sendSessionInput(const QString &sessionId, const QString &text);
     Q_INVOKABLE void sendSessionBytes(const QString &sessionId, const QByteArray &data);
+    Q_INVOKABLE void sendSessionCtrlC(const QString &sessionId);
     Q_INVOKABLE void resizeSession(const QString &sessionId, int cols, int rows);
     Q_INVOKABLE void clearSessionBuffer(const QString &sessionId);
     Q_INVOKABLE QString localHomePath() const;

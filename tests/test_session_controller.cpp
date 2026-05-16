@@ -68,7 +68,7 @@ private slots:
     void inputIsEchoedBack();
     void closeReleasesSession();
     void exitCommandTransitionsToDisconnected();
-    void clearScreenWipesBuffer();
+    void clearScreenKeepsPromptLine();
     void redrawingDoesNotGrowBufferUnbounded();
 };
 
@@ -167,7 +167,7 @@ void TestSessionController::exitCommandTransitionsToDisconnected()
     QVERIFY(sawDisconnected);
 }
 
-void TestSessionController::clearScreenWipesBuffer()
+void TestSessionController::clearScreenKeepsPromptLine()
 {
     SessionController controller;
     installEchoFactory(controller);
@@ -176,9 +176,13 @@ void TestSessionController::clearScreenWipesBuffer()
     QVERIFY(!id.isEmpty());
 
     QVERIFY(waitForBuffer(controller, id, QStringLiteral("OpenShell echo backend")));
+    QVERIFY(waitForBuffer(controller, id, QStringLiteral("tester@localhost:~$")));
 
     controller.clearBuffer(id);
     QTest::qWait(50);
+
+    const QString buffer = controller.sessionBuffer(id);
+    QVERIFY(buffer.contains(QStringLiteral("tester@localhost:~$")));
 
     // 清屏后 banner 不应再出现在屏幕快照里
     QVERIFY(!controller.sessionBuffer(id).contains(QStringLiteral("OpenShell echo backend")));
