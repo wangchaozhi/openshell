@@ -1,15 +1,13 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import OpenShell 1.0
 
 Rectangle {
     id: root
 
     property var session: ({})
     readonly property string sessionId: session && session.id ? session.id : ""
-    property int terminalCols: 0
-    property int terminalRows: 0
-    property string rawOutput: ""
     property string clipboardTextSnapshot: ""
 
     color: "#020617"
@@ -44,224 +42,29 @@ Rectangle {
         }
     }
 
-    function syncTerminalSize() {
-        if (sessionId === "" || output.width <= 0 || output.height <= 0) {
-            return
-        }
-        const charWidth = Math.max(7, output.fontMetrics.advanceWidth("W"))
-        const lineHeight = Math.max(12, output.fontMetrics.height)
-        const cols = Math.max(20, Math.floor(output.width / charWidth))
-        const rows = Math.max(4, Math.floor(output.height / lineHeight))
-        if (cols === terminalCols && rows === terminalRows) {
-            return
-        }
-        terminalCols = cols
-        terminalRows = rows
-        appController.resizeSession(sessionId, cols, rows)
-    }
-
-    function sendTerminalKey(event) {
-        if (sessionId === "") {
-            return false
-        }
-
-        if (event.modifiers & Qt.ControlModifier) {
-            if (event.key === Qt.Key_C) {
-                appController.sendSessionInput(sessionId, "\u0003")
-                return true
-            }
-            if (event.key === Qt.Key_D) {
-                appController.sendSessionInput(sessionId, "\u0004")
-                return true
-            }
-            if (event.key === Qt.Key_L) {
-                appController.sendSessionInput(sessionId, "\u000c")
-                return true
-            }
-            if (event.key === Qt.Key_Z) {
-                appController.sendSessionInput(sessionId, "\u001a")
-                return true
-            }
-        }
-
-        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-            appController.sendSessionInput(sessionId, "\r")
-            return true
-        }
-        if (event.key === Qt.Key_Backspace) {
-            appController.sendSessionInput(sessionId, "\u007f")
-            return true
-        }
-        if (event.key === Qt.Key_Delete) {
-            appController.sendSessionInput(sessionId, "\u001b[3~")
-            return true
-        }
-        if (event.key === Qt.Key_Tab) {
-            appController.sendSessionInput(sessionId, "\t")
-            return true
-        }
-        if (event.key === Qt.Key_Up) {
-            appController.sendSessionInput(sessionId, "\u001b[A")
-            return true
-        }
-        if (event.key === Qt.Key_Down) {
-            appController.sendSessionInput(sessionId, "\u001b[B")
-            return true
-        }
-        if (event.key === Qt.Key_Right) {
-            appController.sendSessionInput(sessionId, "\u001b[C")
-            return true
-        }
-        if (event.key === Qt.Key_Left) {
-            appController.sendSessionInput(sessionId, "\u001b[D")
-            return true
-        }
-
-        if (event.text && event.text.length > 0) {
-            appController.sendSessionInput(sessionId, event.text)
-            return true
-        }
-
-        return false
-    }
-
-    function escapeHtml(text) {
-        return text.replace(/&/g, "&amp;")
-                   .replace(/</g, "&lt;")
-                   .replace(/>/g, "&gt;")
-    }
-
-    function ansiColor(code, bright) {
-        const normal = {
-            30: "#020617", 31: "#ef4444", 32: "#22c55e", 33: "#eab308",
-            34: "#3b82f6", 35: "#d946ef", 36: "#06b6d4", 37: "#e2e8f0"
-        }
-        const high = {
-            90: "#64748b", 91: "#f87171", 92: "#86efac", 93: "#fde047",
-            94: "#60a5fa", 95: "#e879f9", 96: "#67e8f9", 97: "#ffffff"
-        }
-        if (code >= 90 && code <= 97) {
-            return high[code]
-        }
-        if (bright && code >= 30 && code <= 37) {
-            return high[code + 60]
-        }
-        return normal[code] || "#e2e8f0"
-    }
-
-    function renderAnsi(text) {
-        let html = "<pre style=\"margin:0; color:#e2e8f0; font-family:Consolas; font-size:13px;\">"
-        let fg = ""
-        let bold = false
-        let open = false
-
-        function closeSpan() {
-            if (open) {
-                html += "</span>"
-                open = false
-            }
-        }
-
-        function openSpan() {
-            closeSpan()
-            let style = ""
-            if (fg.length > 0) {
-                style += "color:" + fg + ";"
-            }
-            if (bold) {
-                style += "font-weight:700;"
-            }
-            if (style.length > 0) {
-                html += "<span style=\"" + style + "\">"
-                open = true
-            }
-        }
-
-        for (let i = 0; i < text.length; ++i) {
-            const ch = text.charAt(i)
-            if (ch === "\u001b" && i + 1 < text.length && text.charAt(i + 1) === "[") {
-                let end = i + 2
-                while (end < text.length && text.charAt(end) !== "m") {
-                    end++
-                }
-                if (end < text.length) {
-                    const parts = text.substring(i + 2, end).split(";")
-                    for (let p = 0; p < parts.length; ++p) {
-                        const code = parts[p].length === 0 ? 0 : parseInt(parts[p])
-                        if (code === 0) {
-                            fg = ""
-                            bold = false
-                        } else if (code === 1) {
-                            bold = true
-                        } else if (code === 22) {
-                            bold = false
-                        } else if (code === 39) {
-                            fg = ""
-                        } else if ((code >= 30 && code <= 37) || (code >= 90 && code <= 97)) {
-                            fg = ansiColor(code, bold)
-                        }
-                    }
-                    openSpan()
-                    i = end
-                    continue
-                }
-            }
-            html += escapeHtml(ch)
-        }
-        closeSpan()
-        html += "</pre>"
-        return html
-    }
-
-    function clearScreen() {
-        if (sessionId === "") {
-            return
-        }
-        appController.clearSessionBuffer(sessionId)
-        rawOutput = appController.sessionBuffer(sessionId)
-        output.text = renderAnsi(rawOutput)
-        output.cursorPosition = output.length
-    }
-
-    function pasteClipboard() {
-        if (sessionId === "") {
-            return
-        }
-        const text = clipboardTextSnapshot.length > 0 ? clipboardTextSnapshot : appController.clipboardText()
-        if (text.length > 0) {
-            appController.sendSessionInput(sessionId, text)
-        }
-    }
-
     function refreshTerminalMenu() {
         clipboardTextSnapshot = appController.clipboardText()
     }
 
-    onSessionIdChanged: {
-        // 切到新会话时，把累积缓冲一次性灌进 TextArea；之后增量靠 sessionOutput。
-        output.clear()
-        if (sessionId !== "") {
-            const buffered = appController.sessionBuffer(sessionId)
-            rawOutput = buffered
-            if (buffered.length > 0) {
-                output.text = renderAnsi(buffered)
-                output.cursorPosition = output.length
-            }
-            output.forceActiveFocus()
-            Qt.callLater(syncTerminalSize)
+    function bindScreen() {
+        if (sessionId === "") {
+            terminal.screen = null
+            return
         }
+        const next = appController.sessionScreen(sessionId)
+        if (next === terminal.screen) {
+            return
+        }
+        terminal.screen = next
+        terminal.requestFocus()
     }
+
+    onSessionIdChanged: bindScreen()
 
     Connections {
         target: appController
-        function onSessionOutput(id, chunk) {
-            if (id !== root.sessionId) {
-                return
-            }
-            root.rawOutput = appController.sessionBuffer(root.sessionId)
-            output.text = root.renderAnsi(root.rawOutput)
-            output.cursorPosition = output.length
-            resizeDebounce.restart()
+        function onSessionsChanged() {
+            bindScreen()
         }
     }
 
@@ -301,65 +104,26 @@ Rectangle {
             }
         }
 
-        ScrollView {
+        Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            clip: true
 
-            TextArea {
-                id: output
-                readOnly: true
-                textFormat: TextEdit.RichText
+            TerminalScreen {
+                id: terminal
+                anchors.fill: parent
                 focus: true
                 activeFocusOnTab: true
-                selectByMouse: true
-                cursorVisible: false
-                wrapMode: TextEdit.Wrap
-                color: "#e2e8f0"
-                background: Rectangle { color: "#020617" }
-                font.family: "Consolas"
-                font.pixelSize: 13
-                placeholderText: qsTr("Open a connection to start a session.")
-                Component.onCompleted: forceActiveFocus()
-                onWidthChanged: resizeDebounce.restart()
-                onHeightChanged: resizeDebounce.restart()
-                FontMetrics {
-                    id: outputFontMetrics
-                    font: output.font
+                fontFamily: "Consolas"
+                fontPixelSize: 14
+                background: "#020617"
+                cursorColor: "#38bdf8"
+                onCellSizeRequested: function(cols, rows) {
+                    if (root.sessionId !== "") {
+                        appController.resizeSession(root.sessionId, cols, rows)
+                    }
                 }
-                readonly property var fontMetrics: outputFontMetrics
-                Timer {
-                    id: resizeDebounce
-                    interval: 120
-                    repeat: false
-                    onTriggered: root.syncTerminalSize()
-                }
-                Rectangle {
-                    width: Math.max(8, output.cursorRectangle.width)
-                    height: Math.max(output.font.pixelSize + 2, output.cursorRectangle.height)
-                    x: output.cursorRectangle.x
-                    y: output.cursorRectangle.y
-                    color: "#38bdf8"
-                    opacity: terminalCursorBlink.visiblePhase ? 0.85 : 0
-                    visible: root.sessionId !== "" && output.activeFocus
-                    z: 10
+                Component.onCompleted: bindScreen()
 
-                    Timer {
-                        id: terminalCursorBlink
-                        property bool visiblePhase: true
-                        interval: 530
-                        repeat: true
-                        running: root.sessionId !== "" && output.activeFocus
-                        onTriggered: visiblePhase = !visiblePhase
-                        onRunningChanged: visiblePhase = true
-                    }
-                }
-                TapHandler {
-                    onTapped: {
-                        output.cursorPosition = output.length
-                        output.forceActiveFocus()
-                    }
-                }
                 MouseArea {
                     anchors.fill: parent
                     acceptedButtons: Qt.RightButton
@@ -372,109 +136,57 @@ Rectangle {
                         }
                     }
                 }
+
                 Menu {
                     id: terminalMenu
                     onAboutToShow: root.refreshTerminalMenu()
-                    MenuItem {
-                        id: copyMenuItem
-                        text: qsTr("Copy")
-                        enabled: output.selectedText.length > 0
-                        contentItem: TerminalMenuContent {
-                            glyph: "\uE8C8"
-                            label: copyMenuItem.text
-                            itemEnabled: copyMenuItem.enabled
-                        }
-                        onTriggered: output.copy()
-                    }
+
                     MenuItem {
                         id: pasteMenuItem
                         text: qsTr("Paste")
                         enabled: root.sessionId !== "" && root.clipboardTextSnapshot.length > 0
                         contentItem: TerminalMenuContent {
-                            glyph: "\uE77F"
+                            glyph: ""
                             label: pasteMenuItem.text
                             itemEnabled: pasteMenuItem.enabled
                         }
-                        onTriggered: root.pasteClipboard()
-                    }
-                    MenuItem {
-                        id: selectAllMenuItem
-                        text: qsTr("Select All")
-                        enabled: root.rawOutput.length > 0
-                        contentItem: TerminalMenuContent {
-                            glyph: "\uE8B3"
-                            label: selectAllMenuItem.text
-                            itemEnabled: selectAllMenuItem.enabled
+                        onTriggered: {
+                            if (root.sessionId !== "") {
+                                appController.sendSessionInput(root.sessionId,
+                                                               root.clipboardTextSnapshot)
+                            }
                         }
-                        onTriggered: output.selectAll()
                     }
                     MenuSeparator {}
+                    MenuItem {
+                        id: sendCtrlCMenuItem
+                        text: qsTr("Send Ctrl+C")
+                        enabled: root.sessionId !== ""
+                        contentItem: TerminalMenuContent {
+                            glyph: ""
+                            label: sendCtrlCMenuItem.text
+                            itemEnabled: sendCtrlCMenuItem.enabled
+                        }
+                        onTriggered: {
+                            if (root.sessionId !== "") {
+                                appController.sendSessionInput(root.sessionId, "")
+                            }
+                        }
+                    }
                     MenuItem {
                         id: clearScreenMenuItem
                         text: qsTr("Clear Screen")
                         enabled: root.sessionId !== ""
                         contentItem: TerminalMenuContent {
-                            glyph: "\uE74D"
+                            glyph: ""
                             label: clearScreenMenuItem.text
                             itemEnabled: clearScreenMenuItem.enabled
                         }
-                        onTriggered: root.clearScreen()
-                    }
-                }
-                Keys.onPressed: function(event) {
-                    output.cursorPosition = output.length
-                    if (root.sendTerminalKey(event)) {
-                        event.accepted = true
-                    }
-                }
-                onCursorPositionChanged: {
-                    if (selectedText.length === 0 && cursorPosition !== length) {
-                        cursorPosition = length
-                    }
-                }
-            }
-        }
-
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 30
-            color: "#0f172a"
-
-            RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: 12
-                anchors.rightMargin: 12
-
-                Label {
-                    text: "$"
-                    color: "#38bdf8"
-                    font.family: "Consolas"
-                    font.pixelSize: 13
-                }
-
-                TextField {
-                    id: commandField
-                    Layout.fillWidth: true
-                    enabled: root.sessionId !== ""
-                    placeholderText: enabled
-                                     ? qsTr("Type a command and press Enter")
-                                     : qsTr("(no session)")
-                    background: null
-                    color: "#e2e8f0"
-                    font.family: "Consolas, Menlo, monospace"
-                    Keys.onTabPressed: function(event) {
-                        if (root.sessionId === "") {
-                            return
+                        onTriggered: {
+                            if (root.sessionId !== "") {
+                                appController.clearSessionBuffer(root.sessionId)
+                            }
                         }
-                        appController.sendSessionInput(root.sessionId, "\t")
-                        event.accepted = true
-                    }
-                    onAccepted: {
-                        if (root.sessionId === "") {
-                            return
-                        }
-                        appController.sendSessionInput(root.sessionId, text + "\n")
-                        text = ""
                     }
                 }
             }

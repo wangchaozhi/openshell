@@ -48,7 +48,9 @@ public:
     Q_INVOKABLE void closeSession(const QString &sessionId);
     Q_INVOKABLE QVariantList sessions() const;
     Q_INVOKABLE QString sessionBuffer(const QString &sessionId) const;
+    Q_INVOKABLE QObject *sessionScreen(const QString &sessionId) const;
     Q_INVOKABLE void sendSessionInput(const QString &sessionId, const QString &text);
+    Q_INVOKABLE void sendSessionBytes(const QString &sessionId, const QByteArray &data);
     Q_INVOKABLE void resizeSession(const QString &sessionId, int cols, int rows);
     Q_INVOKABLE void clearSessionBuffer(const QString &sessionId);
     Q_INVOKABLE QString localHomePath() const;
@@ -101,7 +103,7 @@ signals:
     void showRequested();
     void hideRequested();
     void sessionsChanged();
-    void sessionOutput(const QString &sessionId, const QString &chunk);
+    void sessionScreenUpdated(const QString &sessionId);
     void sessionStatusChanged(const QString &sessionId, const QString &status, const QString &message);
     void remoteDirectoryEntriesReady(const QString &requestId,
                                      const QString &connectionId,

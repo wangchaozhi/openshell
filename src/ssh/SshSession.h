@@ -8,10 +8,15 @@
 #include "ConnectionCatalog.h"
 
 class SshChannelWorker;
+class VtScreen;
 
 // SshSession 把一个 worker thread + 一个 SshChannelWorker 打包起来。
 // SessionController 持有它，QML 通过 sessionId 来引用它。
 // 状态机：disconnected -> connecting -> connected -> disconnected/error。
+//
+// 终端模型由本类持有一个 VtScreen（跑在 GUI 线程）：worker 线程的输出 chunk
+// 通过 queued connection 投递到 GUI 线程后喂给 VtScreen；vterm 要回写给远端
+// 的字节通过 VtScreen::outputReady 信号反向汇聚到本类，再调度回 worker。
 class SshSession : public QObject
 {
     Q_OBJECT
@@ -28,38 +33,42 @@ public:
     QString title() const;
     QString status() const; // connecting/connected/disconnected/error
     QString lastMessage() const;
-    QString buffer() const; // 累积的原始输出，切 tab 时可重放
-    qsizetype bufferSize() const;
+
+    // 纯文本快照（行末空白裁掉），仅用于切 tab 重放与单测断言。
+    QString buffer() const;
+
+    VtScreen *screen() const { return m_screen; }
 
     void start();
     void requestStop();
     void sendInput(const QByteArray &data);
     void requestResize(int cols, int rows);
-    void clearBuffer();
+    void clearScreen();
 
 signals:
     void statusChanged();
-    void outputAppended(const QByteArray &chunk);
+    void screenUpdated(); // 终端模型已变更（光标/cells/title 等任意维度）
 
 private slots:
     void handleConnected();
     void handleDisconnected(const QString &reason);
     void handleOutput(const QByteArray &chunk);
     void handleError(const QString &message);
+    void handleScreenOutputReady();
 
 private:
     void setStatus(const QString &status, const QString &message = QString());
-    void appendBuffer(const QByteArray &chunk);
 
     QString m_id;
     QString m_connectionId;
     QString m_title;
     QString m_status;
     QString m_lastMessage;
-    QByteArray m_buffer;
 
+    VtScreen *m_screen = nullptr; // GUI 线程
     QThread m_thread;
-    SshChannelWorker *m_worker = nullptr; // lives on m_thread
+    SshChannelWorker *m_worker = nullptr; // worker 线程
 
-    static constexpr qsizetype kBufferCap = 256 * 1024; // 256KB 滚动缓冲
+    int m_pendingCols = 0;
+    int m_pendingRows = 0;
 };

@@ -30,11 +30,12 @@ public:
 
     QVariantList sessionsAsVariantList() const;
     QString sessionBuffer(const QString &sessionId) const;
+    QObject *sessionScreen(const QString &sessionId) const;
     bool contains(const QString &sessionId) const;
 
 signals:
     void sessionsChanged();
-    void sessionOutput(const QString &sessionId, const QByteArray &chunk);
+    void sessionScreenUpdated(const QString &sessionId);
     void sessionStatusChanged(const QString &sessionId, const QString &status, const QString &message);
 
 private:

@@ -5,6 +5,8 @@
 
 #include "SshChannelWorker.h"
 
+class QSocketNotifier;
+
 #ifdef _WIN32
 using OpenShellSocket = quintptr;   // SOCKET 是无符号整型
 #else
@@ -59,11 +61,13 @@ private:
     OpenShellSocket m_socket = static_cast<OpenShellSocket>(-1);
     LIBSSH2_SESSION *m_session = nullptr;
     LIBSSH2_CHANNEL *m_channel = nullptr;
+    QSocketNotifier *m_readNotifier = nullptr;
 
     QByteArray m_pendingInput;
     int m_pendingCols = 0;
     int m_pendingRows = 0;
     bool m_pendingResize = false;
+    bool m_pumpScheduled = false;
 
     bool m_running = false;
     bool m_libsshInited = false;

@@ -57,10 +57,13 @@ void TrayController::setConnections(const QVector<ConnectionProfile> &profiles)
     }
 
     if (m_connectionActions.isEmpty()) {
-        QAction *empty = m_connectionsMenu->addAction(tr("(no connections)"));
+        QAction *empty = m_connectionsMenu->addAction(QString());
         empty->setEnabled(false);
+        empty->setData(QStringLiteral("__empty__"));
         m_connectionActions.append(empty);
     }
+
+    updateConnectionsMenuText();
 }
 
 void TrayController::showContextMenu()
@@ -126,6 +129,16 @@ void TrayController::createMenu()
     m_trayIcon->show();
 }
 
+void TrayController::updateConnectionsMenuText()
+{
+    for (QAction *action : m_connectionActions) {
+        if (action->data().toString() == QStringLiteral("__empty__")) {
+            action->setText(tr("(no connections)"));
+            break;
+        }
+    }
+}
+
 void TrayController::retranslate()
 {
     m_showAction->setText(tr("Show OpenShell"));
@@ -137,4 +150,5 @@ void TrayController::retranslate()
     m_chineseLanguageAction->setText(tr("Simplified Chinese"));
     m_quitAction->setText(tr("Quit"));
     m_trayIcon->setToolTip(tr("OpenShell"));
+    updateConnectionsMenuText();
 }

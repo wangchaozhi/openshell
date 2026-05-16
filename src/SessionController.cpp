@@ -2,6 +2,7 @@
 
 #include "ssh/Libssh2ChannelWorker.h"
 #include "ssh/SshSession.h"
+#include "terminal/VtScreen.h"
 
 #include <QUuid>
 #include <QVariantMap>
@@ -46,9 +47,9 @@ QString SessionController::open(const ConnectionProfile &profile, QString *error
     }
     auto *session = new SshSession(sessionId, profile, worker, this);
 
-    connect(session, &SshSession::outputAppended, this,
-            [this, sessionId](const QByteArray &chunk) {
-                emit sessionOutput(sessionId, chunk);
+    connect(session, &SshSession::screenUpdated, this,
+            [this, sessionId]() {
+                emit sessionScreenUpdated(sessionId);
             });
     connect(session, &SshSession::statusChanged, this,
             [this, session]() {
@@ -93,8 +94,16 @@ void SessionController::requestResize(const QString &sessionId, int cols, int ro
 void SessionController::clearBuffer(const QString &sessionId)
 {
     if (auto *session = findSession(sessionId)) {
-        session->clearBuffer();
+        session->clearScreen();
     }
+}
+
+QObject *SessionController::sessionScreen(const QString &sessionId) const
+{
+    if (auto *session = findSession(sessionId)) {
+        return session->screen();
+    }
+    return nullptr;
 }
 
 QVariantList SessionController::sessionsAsVariantList() const

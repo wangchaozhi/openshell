@@ -4,6 +4,7 @@
 #include <QFile>
 #include <QHostAddress>
 #include <QHostInfo>
+#include <QSocketNotifier>
 #include <QString>
 #include <QTimer>
 
@@ -39,9 +40,8 @@ inline bool openshell_socket_would_block(int err) { return err == EWOULDBLOCK ||
 
 namespace {
 
-constexpr int kReadChunk = 4096;
-constexpr int kPumpIdleDelayMs = 20;
-constexpr int kPumpActiveDelayMs = 0;
+constexpr int kReadChunk = 32 * 1024;
+constexpr int kPumpFallbackMs = 250; // 兜底心跳，避免 QSocketNotifier 漏事件
 
 #ifdef _WIN32
 bool openshell_set_nonblocking(OpenShellSocket s)
@@ -216,10 +216,13 @@ void Libssh2ChannelWorker::resizePty(int cols, int rows)
     if (m_running) {
         schedulePump();
     }
+    // 未连接时 pendingResize 也得保留，连上后 openShell 会把它当作初值塞进 PTY。
 }
 
 void Libssh2ChannelWorker::pump()
 {
+    m_pumpScheduled = false;
+
     if (!m_running || !m_channel) {
         return;
     }
@@ -251,6 +254,10 @@ void Libssh2ChannelWorker::pump()
             m_pendingInput.remove(0, static_cast<int>(total));
             didWork = true;
         }
+        if (!m_pendingInput.isEmpty()) {
+            // write 没排空（对端窗口已满），稍后再来。
+            schedulePump(1);
+        }
     }
 
     char buf[kReadChunk];
@@ -276,7 +283,13 @@ void Libssh2ChannelWorker::pump()
         return;
     }
 
-    schedulePump(didWork ? kPumpActiveDelayMs : kPumpIdleDelayMs);
+    if (didWork) {
+        // 刚有活，立刻再问一次，避免 select 唤醒间隙丢数据
+        schedulePump(0);
+    } else {
+        // 否则交给 QSocketNotifier 唤醒，加一个粗心跳兜底
+        schedulePump(kPumpFallbackMs);
+    }
 }
 
 bool Libssh2ChannelWorker::openSocket(QString *errorOut)
@@ -583,12 +596,20 @@ bool Libssh2ChannelWorker::openShell(QString *errorOut)
         return false;
     }
 
-    if (libssh2_channel_request_pty(m_channel, "xterm-256color") != 0) {
+    const int initialCols = m_pendingCols > 0 ? m_pendingCols : 80;
+    const int initialRows = m_pendingRows > 0 ? m_pendingRows : 24;
+    if (libssh2_channel_request_pty_ex(m_channel,
+                                       "xterm-256color",
+                                       static_cast<unsigned int>(std::strlen("xterm-256color")),
+                                       nullptr, 0,
+                                       initialCols, initialRows,
+                                       0, 0) != 0) {
         if (errorOut) {
             *errorOut = tr("request_pty failed: %1").arg(lastSessionError());
         }
         return false;
     }
+    m_pendingResize = false;
 
     if (libssh2_channel_shell(m_channel) != 0) {
         if (errorOut) {
@@ -608,11 +629,24 @@ bool Libssh2ChannelWorker::openShell(QString *errorOut)
         return false;
     }
     libssh2_session_set_blocking(m_session, 0);
+
+    delete m_readNotifier;
+    m_readNotifier = new QSocketNotifier(static_cast<qintptr>(m_socket),
+                                         QSocketNotifier::Read, this);
+    connect(m_readNotifier, &QSocketNotifier::activated, this,
+            [this]() { schedulePump(0); });
+    m_readNotifier->setEnabled(true);
+
     return true;
 }
 
 void Libssh2ChannelWorker::teardown()
 {
+    if (m_readNotifier) {
+        m_readNotifier->setEnabled(false);
+        m_readNotifier->deleteLater();
+        m_readNotifier = nullptr;
+    }
     if (m_channel) {
         libssh2_channel_close(m_channel);
         libssh2_channel_free(m_channel);
@@ -633,10 +667,15 @@ void Libssh2ChannelWorker::teardown()
     }
     m_pendingInput.clear();
     m_pendingResize = false;
+    m_pumpScheduled = false;
 }
 
 void Libssh2ChannelWorker::schedulePump(int delayMs)
 {
+    if (m_pumpScheduled) {
+        return;
+    }
+    m_pumpScheduled = true;
     QTimer::singleShot(delayMs, this, &Libssh2ChannelWorker::pump);
 }
 

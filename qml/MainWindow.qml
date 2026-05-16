@@ -95,7 +95,6 @@ ApplicationWindow {
             }
         }
         function onLanguageChanged() {
-            window.title = qsTr("OpenShell")
             window.refreshConnections()
         }
         function onShowRequested() {

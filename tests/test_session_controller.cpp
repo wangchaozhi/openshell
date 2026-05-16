@@ -5,6 +5,7 @@
 #include "ConnectionCatalog.h"
 #include "SessionController.h"
 #include "EchoChannelWorker.h"
+#include "terminal/VtScreen.h"
 
 namespace {
 
@@ -40,6 +41,21 @@ bool waitForCount(QSignalSpy &spy, int minCount, int timeoutMs = 2000)
     return spy.count() >= minCount;
 }
 
+// 在 buffer() 里等到出现某段文字（带超时）。
+bool waitForBuffer(SessionController &controller, const QString &id,
+                   const QString &needle, int timeoutMs = 2000)
+{
+    QElapsedTimer t;
+    t.start();
+    while (t.elapsed() < timeoutMs) {
+        if (controller.sessionBuffer(id).contains(needle)) {
+            return true;
+        }
+        QTest::qWait(50);
+    }
+    return controller.sessionBuffer(id).contains(needle);
+}
+
 } // namespace
 
 class TestSessionController : public QObject
@@ -52,6 +68,8 @@ private slots:
     void inputIsEchoedBack();
     void closeReleasesSession();
     void exitCommandTransitionsToDisconnected();
+    void clearScreenWipesBuffer();
+    void redrawingDoesNotGrowBufferUnbounded();
 };
 
 void TestSessionController::rejectsEmptyConnectionId()
@@ -69,7 +87,7 @@ void TestSessionController::openProducesIdAndStreamsBanner()
 {
     SessionController controller;
     installEchoFactory(controller);
-    QSignalSpy outputSpy(&controller, &SessionController::sessionOutput);
+    QSignalSpy updateSpy(&controller, &SessionController::sessionScreenUpdated);
 
     QString error;
     const QString id = controller.open(makeProfile(), &error);
@@ -83,19 +101,11 @@ void TestSessionController::openProducesIdAndStreamsBanner()
     QCOMPARE(row.value(QStringLiteral("connectionId")).toString(),
              QStringLiteral("conn-fixture"));
 
-    QVERIFY2(waitForCount(outputSpy, 1), "Echo worker should emit a banner chunk");
+    QVERIFY2(waitForCount(updateSpy, 1),
+             "VtScreen should fire screen updates as banner is fed in");
 
-    bool sawSelf = false;
-    for (const QList<QVariant> &args : outputSpy) {
-        if (args.value(0).toString() == id) {
-            sawSelf = true;
-            break;
-        }
-    }
-    QVERIFY(sawSelf);
-
-    const QString buffered = controller.sessionBuffer(id);
-    QVERIFY(buffered.contains(QStringLiteral("OpenShell echo backend")));
+    QVERIFY2(waitForBuffer(controller, id, QStringLiteral("OpenShell echo backend")),
+             qPrintable(QStringLiteral("buffer was: %1").arg(controller.sessionBuffer(id))));
 }
 
 void TestSessionController::inputIsEchoedBack()
@@ -106,25 +116,12 @@ void TestSessionController::inputIsEchoedBack()
     const QString id = controller.open(makeProfile(), &error);
     QVERIFY2(!id.isEmpty(), qPrintable(error));
 
-    QSignalSpy outputSpy(&controller, &SessionController::sessionOutput);
-    QVERIFY(waitForCount(outputSpy, 1)); // banner first
-    outputSpy.clear();
+    QVERIFY(waitForBuffer(controller, id, QStringLiteral("OpenShell echo backend")));
 
     controller.sendInput(id, QByteArrayLiteral("hello\n"));
 
-    // 等到累积缓冲里看到 echo: hello。
-    QElapsedTimer t;
-    t.start();
-    QString buffer;
-    while (t.elapsed() < 2000) {
-        buffer = controller.sessionBuffer(id);
-        if (buffer.contains(QStringLiteral("echo: hello"))) {
-            break;
-        }
-        QTest::qWait(50);
-    }
-    QVERIFY2(buffer.contains(QStringLiteral("echo: hello")),
-             qPrintable(QStringLiteral("buffer was: %1").arg(buffer)));
+    QVERIFY2(waitForBuffer(controller, id, QStringLiteral("echo: hello")),
+             qPrintable(QStringLiteral("buffer was: %1").arg(controller.sessionBuffer(id))));
 }
 
 void TestSessionController::closeReleasesSession()
@@ -153,7 +150,6 @@ void TestSessionController::exitCommandTransitionsToDisconnected()
 
     QSignalSpy statusSpy(&controller, &SessionController::sessionStatusChanged);
 
-    // 先吃掉初始 connecting->connected 的事件，再发 exit。
     waitForCount(statusSpy, 1);
     statusSpy.clear();
 
@@ -169,6 +165,60 @@ void TestSessionController::exitCommandTransitionsToDisconnected()
         }
     }
     QVERIFY(sawDisconnected);
+}
+
+void TestSessionController::clearScreenWipesBuffer()
+{
+    SessionController controller;
+    installEchoFactory(controller);
+    QString error;
+    const QString id = controller.open(makeProfile(), &error);
+    QVERIFY(!id.isEmpty());
+
+    QVERIFY(waitForBuffer(controller, id, QStringLiteral("OpenShell echo backend")));
+
+    controller.clearBuffer(id);
+    QTest::qWait(50);
+
+    // 清屏后 banner 不应再出现在屏幕快照里
+    QVERIFY(!controller.sessionBuffer(id).contains(QStringLiteral("OpenShell echo backend")));
+}
+
+void TestSessionController::redrawingDoesNotGrowBufferUnbounded()
+{
+    // 模拟 top/less 这类全屏程序：反复"清屏+重画"应该让屏幕快照尺寸保持恒定。
+    SessionController controller;
+    installEchoFactory(controller);
+    QString error;
+    const QString id = controller.open(makeProfile(), &error);
+    QVERIFY(!id.isEmpty());
+
+    auto *screen = qobject_cast<VtScreen *>(controller.sessionScreen(id));
+    QVERIFY(screen);
+
+    screen->resize(80, 24);
+
+    const QByteArray frame = QByteArrayLiteral(
+        "\x1b[2J\x1b[H"  // clear + home
+        "redraw frame\r\n"
+        "second line\r\n");
+
+    QString initial;
+    QString later;
+    for (int i = 0; i < 200; ++i) {
+        screen->feed(frame);
+        if (i == 5) {
+            initial = controller.sessionBuffer(id);
+        }
+        if (i == 199) {
+            later = controller.sessionBuffer(id);
+        }
+    }
+
+    QVERIFY(later.contains(QStringLiteral("redraw frame")));
+    QVERIFY(later.contains(QStringLiteral("second line")));
+    // 屏幕快照长度由 cols*rows 决定，不会随帧数线性增长
+    QCOMPARE(initial.size(), later.size());
 }
 
 QTEST_GUILESS_MAIN(TestSessionController)
