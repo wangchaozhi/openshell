@@ -6,6 +6,7 @@ Rectangle {
     id: root
 
     property var session: ({})
+    property string terminalRemotePath: ""
     property string localPath: appController.localHomePath()
     property var localEntries: []
     property string remotePath: ""
@@ -29,6 +30,7 @@ Rectangle {
     property string draggedLocalPath: ""
     property string dropRemoteTargetPath: ""
     property bool remoteDropActive: false
+    property bool syncRemoteWithTerminal: true
     property var transferTasks: []
     property bool transferPanelOpen: false
     readonly property bool remoteListingLoading: remoteLoading && remoteRequestId.length > 0
@@ -129,6 +131,62 @@ Rectangle {
             width: 5
             height: 4
             color: "#020617"
+        }
+    }
+
+    component SyncIcon: Item {
+        property bool active: true
+
+        implicitWidth: 15
+        implicitHeight: 15
+
+        Rectangle {
+            x: 2
+            y: 2
+            width: 11
+            height: 11
+            radius: 3
+            color: "transparent"
+            border.color: active ? "#93c5fd" : "#64748b"
+            border.width: 2
+        }
+        Rectangle {
+            x: 7
+            y: 1
+            width: 5
+            height: 5
+            rotation: 45
+            color: active ? "#38bdf8" : "#64748b"
+        }
+        Rectangle {
+            x: 3
+            y: 9
+            width: 5
+            height: 5
+            rotation: 45
+            color: active ? "#38bdf8" : "#64748b"
+        }
+        Rectangle {
+            x: 2
+            y: 5
+            width: 5
+            height: 5
+            color: "#020617"
+        }
+        Rectangle {
+            x: 8
+            y: 5
+            width: 5
+            height: 5
+            color: "#020617"
+        }
+        Rectangle {
+            x: 6
+            y: 6
+            width: 3
+            height: 3
+            radius: 1
+            color: active ? "#dbeafe" : "#94a3b8"
         }
     }
 
@@ -987,6 +1045,30 @@ Rectangle {
         refreshRemote()
     }
 
+    function resolveTerminalRemotePath(path) {
+        if (!path || path.length === 0) {
+            return ""
+        }
+        if (path === "~") {
+            return appController.remoteHomePath(connectionId)
+        }
+        if (path.indexOf("~/") === 0) {
+            return appController.remoteHomePath(connectionId) + path.substring(1)
+        }
+        return path.charAt(0) === "/" ? path : ""
+    }
+
+    function syncRemotePathFromTerminal(path) {
+        if (!syncRemoteWithTerminal || connectionId === "") {
+            return
+        }
+        const resolved = resolveTerminalRemotePath(path)
+        if (resolved.length === 0 || resolved === remotePath) {
+            return
+        }
+        enterRemote(resolved)
+    }
+
     function uploadLocalPathTo(path, targetRemoteDirectory) {
         if (connectionId === "" || path.length === 0) {
             return
@@ -1225,6 +1307,13 @@ Rectangle {
         const toRwx = (val) => (val & 4 ? "r" : "-") + (val & 2 ? "w" : "-") + (val & 1 ? "x" : "-")
         const prefix = isDir ? "d" : "-"
         return prefix + toRwx(owner) + toRwx(group) + toRwx(other)
+    }
+
+    onTerminalRemotePathChanged: syncRemotePathFromTerminal(terminalRemotePath)
+    onSyncRemoteWithTerminalChanged: {
+        if (syncRemoteWithTerminal) {
+            syncRemotePathFromTerminal(terminalRemotePath)
+        }
     }
 
     Connections {
@@ -1523,6 +1612,28 @@ Rectangle {
                         ToolTip.visible: hovered
                         ToolTip.text: qsTr("Refresh")
                         onClicked: root.refreshRemote()
+                    }
+
+                    ToolButton {
+                        implicitWidth: 30
+                        implicitHeight: 24
+                        enabled: root.connectionId !== ""
+                        checkable: true
+                        checked: root.syncRemoteWithTerminal
+                        onClicked: root.syncRemoteWithTerminal = checked
+                        background: Rectangle {
+                            color: parent.checked ? "#0f2742" : "#111827"
+                            border.color: parent.checked ? "#38bdf8" : "#334155"
+                            radius: 3
+                        }
+                        contentItem: SyncIcon {
+                            anchors.centerIn: parent
+                            active: root.syncRemoteWithTerminal
+                            opacity: parent.enabled ? 1 : 0.35
+                        }
+                        ToolTip.visible: hovered
+                        ToolTip.text: checked ? qsTr("Sync with terminal folder: on")
+                                              : qsTr("Sync with terminal folder: off")
                     }
 
                     Item {

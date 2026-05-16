@@ -9,6 +9,9 @@ Rectangle {
     property var session: ({})
     readonly property string sessionId: session && session.id ? session.id : ""
     property string clipboardTextSnapshot: ""
+    property string detectedRemotePath: ""
+
+    signal remoteDirectoryDetected(string path)
 
     color: "#020617"
 
@@ -49,6 +52,7 @@ Rectangle {
     function bindScreen() {
         if (sessionId === "") {
             terminal.screen = null
+            detectedRemotePath = ""
             return
         }
         const next = appController.sessionScreen(sessionId)
@@ -57,15 +61,72 @@ Rectangle {
         }
         terminal.screen = next
         terminal.requestFocus()
+        promptPathProbe.restart()
     }
 
-    onSessionIdChanged: bindScreen()
+    function normalizePromptPath(path) {
+        if (!path || path.length === 0) {
+            return ""
+        }
+        let clean = path.trim()
+        clean = clean.replace(/\\\s/g, " ")
+        if (clean === "~" || clean.indexOf("~/") === 0 || clean.charAt(0) === "/") {
+            return clean
+        }
+        return ""
+    }
+
+    function detectPromptPathFromSnapshot(snapshot) {
+        if (!snapshot || snapshot.length === 0) {
+            return ""
+        }
+        const lines = snapshot.split(/\r?\n/)
+        for (let i = lines.length - 1; i >= 0; --i) {
+            const line = lines[i].trim()
+            if (line.length === 0) {
+                continue
+            }
+            let match = line.match(/(?:^|\s)[^@\s]+@[^:\s]+:(~(?:\/[^\s#\$]*)?|\/[^\s#\$]*)[#$]\s*$/)
+            if (match && match[1]) {
+                return normalizePromptPath(match[1])
+            }
+            match = line.match(/(?:^|\s)(~(?:\/[^\s#\$]*)?|\/[^\s#\$]*)[#$]\s*$/)
+            if (match && match[1]) {
+                return normalizePromptPath(match[1])
+            }
+        }
+        return ""
+    }
+
+    function probePromptPath() {
+        if (!terminal.screen || !terminal.screen.plainTextSnapshot) {
+            return
+        }
+        const path = detectPromptPathFromSnapshot(terminal.screen.plainTextSnapshot())
+        if (path.length > 0 && path !== detectedRemotePath) {
+            detectedRemotePath = path
+            remoteDirectoryDetected(path)
+        }
+    }
+
+    onSessionIdChanged: {
+        detectedRemotePath = ""
+        bindScreen()
+    }
 
     Connections {
         target: appController
         function onSessionsChanged() {
             bindScreen()
         }
+    }
+
+    Timer {
+        id: promptPathProbe
+        interval: 600
+        repeat: true
+        running: root.sessionId !== "" && terminal.screen !== null
+        onTriggered: root.probePromptPath()
     }
 
     ColumnLayout {

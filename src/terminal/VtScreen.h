@@ -70,7 +70,7 @@ public:
     bool cursorVisible() const { return m_cursorVisible; }
 
     // 把整屏转成纯文本（行末空白裁掉），用于切 tab 重放 / 测试断言。
-    QString plainTextSnapshot() const;
+    Q_INVOKABLE QString plainTextSnapshot() const;
 
 signals:
     void damaged(const QRect &cellRect); // cellRect.x=col, y=row, w=cols, h=rows

@@ -252,6 +252,16 @@
         <translation>刷新</translation>
     </message>
     <message>
+        <location filename="../qml/FileBrowser.qml" line="1635"/>
+        <source>Sync with terminal folder: on</source>
+        <translation>同步终端目录：开</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="1636"/>
+        <source>Sync with terminal folder: off</source>
+        <translation>同步终端目录：关</translation>
+    </message>
+    <message>
         <location filename="../qml/FileBrowser.qml" line="593"/>
         <source>Name</source>
         <translation>名称</translation>

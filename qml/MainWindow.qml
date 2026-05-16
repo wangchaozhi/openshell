@@ -163,6 +163,7 @@ ApplicationWindow {
                     orientation: Qt.Vertical
 
                     TerminalView {
+                        id: terminalView
                         SplitView.fillWidth: true
                         SplitView.fillHeight: true
                         session: window.activeSession
@@ -172,6 +173,7 @@ ApplicationWindow {
                         SplitView.fillWidth: true
                         SplitView.preferredHeight: 220
                         session: window.activeSession
+                        terminalRemotePath: terminalView.detectedRemotePath
                     }
                 }
 
