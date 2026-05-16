@@ -8,11 +8,15 @@
 #include "TranslationManager.h"
 
 #include <QApplication>
+#include <QClipboard>
+#include <QDesktopServices>
 #include <QDir>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QFutureWatcher>
 #include <QStandardPaths>
 #include <QTimer>
+#include <QUrl>
 #include <QUuid>
 #include <QtConcurrent>
 
@@ -243,6 +247,30 @@ QVariantList AppController::localDirectoryEntries(const QString &path) const
     return entries;
 }
 
+QString AppController::localPathFromUrl(const QString &url) const
+{
+    const QUrl parsed(url);
+    if (parsed.isLocalFile()) {
+        return parsed.toLocalFile();
+    }
+    return url;
+}
+
+QString AppController::chooseLocalFile()
+{
+    return QFileDialog::getOpenFileName(nullptr, tr("Select file to upload"), QDir::homePath());
+}
+
+QString AppController::chooseLocalFolder()
+{
+    return QFileDialog::getExistingDirectory(nullptr, tr("Select folder to upload"), QDir::homePath());
+}
+
+QString AppController::chooseDownloadFolder()
+{
+    return QFileDialog::getExistingDirectory(nullptr, tr("Select download folder"), QDir::homePath());
+}
+
 QString AppController::remoteHomePath(const QString &connectionId) const
 {
     const ConnectionProfile profile = m_catalog->profileById(connectionId);
@@ -269,6 +297,20 @@ QString AppController::remoteParentPath(const QString &path) const
         return QStringLiteral("/");
     }
     return clean.left(slash);
+}
+
+QString AppController::remoteSiblingPath(const QString &path, const QString &name) const
+{
+    const QString parent = remoteParentPath(path);
+    if (parent == QStringLiteral("/")) {
+        return QStringLiteral("/") + name;
+    }
+    return parent + QStringLiteral("/") + name;
+}
+
+void AppController::copyTextToClipboard(const QString &text) const
+{
+    QApplication::clipboard()->setText(text);
 }
 
 QVariantList AppController::remoteDirectoryEntries(const QString &connectionId,
@@ -334,6 +376,245 @@ QString AppController::requestRemoteDirectoryEntries(const QString &connectionId
         return result;
     }));
 
+    return requestId;
+}
+
+QString AppController::requestUploadLocalPath(const QString &connectionId,
+                                              const QString &localPath,
+                                              const QString &remoteDirectory)
+{
+    const QString requestId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const ConnectionProfile profile = m_catalog->profileById(connectionId);
+    if (profile.id.isEmpty()) {
+        const QString error = tr("Unknown connection");
+        setLastError(error);
+        QTimer::singleShot(0, this, [this, requestId, connectionId, localPath, error]() {
+            emit remoteOperationFinished(requestId, connectionId, QStringLiteral("upload"),
+                                         localPath, false, error);
+        });
+        return requestId;
+    }
+
+    auto *watcher = new QFutureWatcher<QVariantMap>(this);
+    connect(watcher, &QFutureWatcher<QVariantMap>::finished, this,
+            [this, watcher, requestId, connectionId, localPath]() {
+                const QVariantMap result = watcher->result();
+                const bool ok = result.value(QStringLiteral("ok")).toBool();
+                const QString message = result.value(QStringLiteral("message")).toString();
+                setLastError(ok ? QString() : message);
+                emit remoteOperationFinished(requestId,
+                                             connectionId,
+                                             QStringLiteral("upload"),
+                                             localPath,
+                                             ok,
+                                             message);
+                watcher->deleteLater();
+            });
+
+    watcher->setFuture(QtConcurrent::run([profile, localPath, remoteDirectory]() {
+        QString error;
+        const bool ok = SftpDirectoryLister::upload(profile, localPath, remoteDirectory, &error);
+        QVariantMap result;
+        result.insert(QStringLiteral("ok"), ok);
+        result.insert(QStringLiteral("message"),
+                      ok ? QObject::tr("Upload completed") : error);
+        return result;
+    }));
+
+    return requestId;
+}
+
+QString AppController::requestRemoteChmod(const QString &connectionId,
+                                          const QString &remotePath,
+                                          const QString &octalPermissions)
+{
+    const QString requestId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const ConnectionProfile profile = m_catalog->profileById(connectionId);
+    bool parseOk = false;
+    const int permissions = octalPermissions.toInt(&parseOk, 8);
+    if (profile.id.isEmpty() || !parseOk) {
+        const QString error = profile.id.isEmpty()
+                                  ? tr("Unknown connection")
+                                  : tr("Invalid permission value");
+        setLastError(error);
+        QTimer::singleShot(0, this, [this, requestId, connectionId, remotePath, error]() {
+            emit remoteOperationFinished(requestId, connectionId, QStringLiteral("chmod"),
+                                         remotePath, false, error);
+        });
+        return requestId;
+    }
+
+    auto *watcher = new QFutureWatcher<QVariantMap>(this);
+    connect(watcher, &QFutureWatcher<QVariantMap>::finished, this,
+            [this, watcher, requestId, connectionId, remotePath]() {
+                const QVariantMap result = watcher->result();
+                const bool ok = result.value(QStringLiteral("ok")).toBool();
+                const QString message = result.value(QStringLiteral("message")).toString();
+                setLastError(ok ? QString() : message);
+                emit remoteOperationFinished(requestId,
+                                             connectionId,
+                                             QStringLiteral("chmod"),
+                                             remotePath,
+                                             ok,
+                                             message);
+                watcher->deleteLater();
+            });
+
+    watcher->setFuture(QtConcurrent::run([profile, remotePath, permissions]() {
+        QString error;
+        const bool ok = SftpDirectoryLister::chmod(profile, remotePath, permissions, &error);
+        QVariantMap result;
+        result.insert(QStringLiteral("ok"), ok);
+        result.insert(QStringLiteral("message"),
+                      ok ? QObject::tr("Permissions updated") : error);
+        return result;
+    }));
+
+    return requestId;
+}
+
+QString AppController::requestRemoteDownload(const QString &connectionId,
+                                             const QString &remotePath,
+                                             const QString &localDirectory)
+{
+    const QString requestId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const ConnectionProfile profile = m_catalog->profileById(connectionId);
+    auto *watcher = new QFutureWatcher<QVariantMap>(this);
+    connect(watcher, &QFutureWatcher<QVariantMap>::finished, this,
+            [this, watcher, requestId, connectionId, remotePath]() {
+                const QVariantMap result = watcher->result();
+                const bool ok = result.value(QStringLiteral("ok")).toBool();
+                const QString message = result.value(QStringLiteral("message")).toString();
+                setLastError(ok ? QString() : message);
+                emit remoteOperationFinished(requestId, connectionId, QStringLiteral("download"),
+                                             remotePath, ok, message);
+                watcher->deleteLater();
+            });
+    watcher->setFuture(QtConcurrent::run([profile, remotePath, localDirectory]() {
+        QString error;
+        QString downloadedPath;
+        const bool ok = !profile.id.isEmpty()
+                        && SftpDirectoryLister::download(profile, remotePath, localDirectory, &downloadedPath, &error);
+        QVariantMap result;
+        result.insert(QStringLiteral("ok"), ok);
+        result.insert(QStringLiteral("message"), ok ? downloadedPath : (error.isEmpty() ? QObject::tr("Download failed") : error));
+        return result;
+    }));
+    return requestId;
+}
+
+QString AppController::requestOpenRemotePath(const QString &connectionId,
+                                             const QString &remotePath)
+{
+    const QString tempRoot = QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation))
+                                 .filePath(QStringLiteral("OpenShell/remote-open"));
+    QDir().mkpath(tempRoot);
+    const QString requestId = requestRemoteDownload(connectionId, remotePath, tempRoot);
+    connect(this, &AppController::remoteOperationFinished, this,
+            [requestId](const QString &finishedId,
+                        const QString &,
+                        const QString &operation,
+                        const QString &,
+                        bool ok,
+                        const QString &message) {
+                if (finishedId == requestId && operation == QStringLiteral("download") && ok) {
+                    QDesktopServices::openUrl(QUrl::fromLocalFile(message));
+                }
+            }, Qt::SingleShotConnection);
+    return requestId;
+}
+
+QString AppController::requestCreateRemotePath(const QString &connectionId,
+                                               const QString &remoteDirectory,
+                                               const QString &name,
+                                               bool directory)
+{
+    const QString requestId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const ConnectionProfile profile = m_catalog->profileById(connectionId);
+    const QString path = remoteDirectory == QStringLiteral("/")
+                             ? QStringLiteral("/") + name
+                             : remoteDirectory + QStringLiteral("/") + name;
+    auto *watcher = new QFutureWatcher<QVariantMap>(this);
+    connect(watcher, &QFutureWatcher<QVariantMap>::finished, this,
+            [this, watcher, requestId, connectionId, path]() {
+                const QVariantMap result = watcher->result();
+                const bool ok = result.value(QStringLiteral("ok")).toBool();
+                const QString message = result.value(QStringLiteral("message")).toString();
+                setLastError(ok ? QString() : message);
+                emit remoteOperationFinished(requestId, connectionId, QStringLiteral("create"),
+                                             path, ok, message);
+                watcher->deleteLater();
+            });
+    watcher->setFuture(QtConcurrent::run([profile, path, directory]() {
+        QString error;
+        const bool ok = !profile.id.isEmpty()
+                        && (directory
+                                ? SftpDirectoryLister::createDirectory(profile, path, &error)
+                                : SftpDirectoryLister::createFile(profile, path, &error));
+        QVariantMap result;
+        result.insert(QStringLiteral("ok"), ok);
+        result.insert(QStringLiteral("message"), ok ? QObject::tr("Created") : (error.isEmpty() ? QObject::tr("Create failed") : error));
+        return result;
+    }));
+    return requestId;
+}
+
+QString AppController::requestRenameRemotePath(const QString &connectionId,
+                                               const QString &oldPath,
+                                               const QString &newName)
+{
+    const QString requestId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const ConnectionProfile profile = m_catalog->profileById(connectionId);
+    const QString newPath = remoteSiblingPath(oldPath, newName);
+    auto *watcher = new QFutureWatcher<QVariantMap>(this);
+    connect(watcher, &QFutureWatcher<QVariantMap>::finished, this,
+            [this, watcher, requestId, connectionId, oldPath]() {
+                const QVariantMap result = watcher->result();
+                const bool ok = result.value(QStringLiteral("ok")).toBool();
+                const QString message = result.value(QStringLiteral("message")).toString();
+                setLastError(ok ? QString() : message);
+                emit remoteOperationFinished(requestId, connectionId, QStringLiteral("rename"),
+                                             oldPath, ok, message);
+                watcher->deleteLater();
+            });
+    watcher->setFuture(QtConcurrent::run([profile, oldPath, newPath]() {
+        QString error;
+        const bool ok = !profile.id.isEmpty()
+                        && SftpDirectoryLister::renamePath(profile, oldPath, newPath, &error);
+        QVariantMap result;
+        result.insert(QStringLiteral("ok"), ok);
+        result.insert(QStringLiteral("message"), ok ? QObject::tr("Renamed") : (error.isEmpty() ? QObject::tr("Rename failed") : error));
+        return result;
+    }));
+    return requestId;
+}
+
+QString AppController::requestDeleteRemotePath(const QString &connectionId,
+                                               const QString &remotePath,
+                                               bool recursive)
+{
+    const QString requestId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const ConnectionProfile profile = m_catalog->profileById(connectionId);
+    auto *watcher = new QFutureWatcher<QVariantMap>(this);
+    connect(watcher, &QFutureWatcher<QVariantMap>::finished, this,
+            [this, watcher, requestId, connectionId, remotePath]() {
+                const QVariantMap result = watcher->result();
+                const bool ok = result.value(QStringLiteral("ok")).toBool();
+                const QString message = result.value(QStringLiteral("message")).toString();
+                setLastError(ok ? QString() : message);
+                emit remoteOperationFinished(requestId, connectionId, QStringLiteral("delete"),
+                                             remotePath, ok, message);
+                watcher->deleteLater();
+            });
+    watcher->setFuture(QtConcurrent::run([profile, remotePath, recursive]() {
+        QString error;
+        const bool ok = !profile.id.isEmpty()
+                        && SftpDirectoryLister::removePath(profile, remotePath, recursive, &error);
+        QVariantMap result;
+        result.insert(QStringLiteral("ok"), ok);
+        result.insert(QStringLiteral("message"), ok ? QObject::tr("Deleted") : (error.isEmpty() ? QObject::tr("Delete failed") : error));
+        return result;
+    }));
     return requestId;
 }
 

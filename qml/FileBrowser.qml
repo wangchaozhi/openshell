@@ -13,6 +13,12 @@ Rectangle {
     property string remoteError: ""
     property bool remoteLoading: false
     property string remoteRequestId: ""
+    property string remoteOperationRequestId: ""
+    property string pendingChmodPath: ""
+    property string pendingChmodName: ""
+    property string pendingUploadPath: ""
+    property string pendingRemotePath: ""
+    property string nameDialogMode: ""
     readonly property string connectionId: session && session.connectionId ? session.connectionId : ""
 
     color: "#0f172a"
@@ -145,6 +151,172 @@ Rectangle {
 
     Component.onCompleted: refreshLocal()
 
+    Dialog {
+        id: chmodDialog
+        title: qsTr("Change File Permissions")
+        modal: true
+        anchors.centerIn: parent
+        width: 260
+
+        function applyOctal(value) {
+            const normalized = (value && value.length > 0 ? value : "755").slice(-3)
+            const owner = parseInt(normalized.charAt(0))
+            const group = parseInt(normalized.charAt(1))
+            const other = parseInt(normalized.charAt(2))
+            ownerRead.checked = (owner & 4) !== 0
+            ownerWrite.checked = (owner & 2) !== 0
+            ownerExec.checked = (owner & 1) !== 0
+            groupRead.checked = (group & 4) !== 0
+            groupWrite.checked = (group & 2) !== 0
+            groupExec.checked = (group & 1) !== 0
+            otherRead.checked = (other & 4) !== 0
+            otherWrite.checked = (other & 2) !== 0
+            otherExec.checked = (other & 1) !== 0
+        }
+
+        function octalText() {
+            const owner = (ownerRead.checked ? 4 : 0)
+                        + (ownerWrite.checked ? 2 : 0)
+                        + (ownerExec.checked ? 1 : 0)
+            const group = (groupRead.checked ? 4 : 0)
+                        + (groupWrite.checked ? 2 : 0)
+                        + (groupExec.checked ? 1 : 0)
+            const other = (otherRead.checked ? 4 : 0)
+                        + (otherWrite.checked ? 2 : 0)
+                        + (otherExec.checked ? 1 : 0)
+            return "" + owner + group + other
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 6
+
+            Label {
+                Layout.fillWidth: true
+                text: root.pendingChmodName
+                color: "#020617"
+                font.bold: true
+                font.pixelSize: 16
+                elide: Text.ElideMiddle
+            }
+
+            GridLayout {
+                Layout.fillWidth: true
+                columns: 4
+                columnSpacing: 4
+                rowSpacing: 2
+
+                Item { Layout.preferredWidth: 44 }
+                Label { text: qsTr("Read"); font.pixelSize: 12 }
+                Label { text: qsTr("Write"); font.pixelSize: 12 }
+                Label { text: qsTr("Exec"); font.pixelSize: 12 }
+
+                Label { text: qsTr("Owner"); font.pixelSize: 12 }
+                CheckBox { id: ownerRead }
+                CheckBox { id: ownerWrite }
+                CheckBox { id: ownerExec }
+
+                Label { text: qsTr("Group"); font.pixelSize: 12 }
+                CheckBox { id: groupRead }
+                CheckBox { id: groupWrite }
+                CheckBox { id: groupExec }
+
+                Label { text: qsTr("Other"); font.pixelSize: 12 }
+                CheckBox { id: otherRead }
+                CheckBox { id: otherWrite }
+                CheckBox { id: otherExec }
+            }
+
+            GroupBox {
+                Layout.fillWidth: true
+                ColumnLayout {
+                    anchors.fill: parent
+                    CheckBox {
+                        id: recursiveCheck
+                        text: qsTr("Apply recursively")
+                        enabled: false
+                    }
+                    RadioButton {
+                        text: qsTr("Apply to files and folders")
+                        enabled: false
+                        checked: true
+                    }
+                    RadioButton {
+                        text: qsTr("Apply to files only")
+                        enabled: false
+                    }
+                    RadioButton {
+                        text: qsTr("Apply to folders only")
+                        enabled: false
+                    }
+                }
+            }
+
+            RowLayout {
+                Layout.alignment: Qt.AlignRight
+                Button {
+                    text: qsTr("OK")
+                    onClicked: chmodDialog.accept()
+                }
+                Button {
+                    text: qsTr("Cancel")
+                    onClicked: chmodDialog.reject()
+                }
+            }
+        }
+
+        onAccepted: {
+            root.remoteOperationRequestId = appController.requestRemoteChmod(root.connectionId,
+                                                                             root.pendingChmodPath,
+                                                                             octalText())
+            root.remoteLoading = true
+            remoteRequestTimeout.restart()
+        }
+    }
+
+    Dialog {
+        id: nameDialog
+        title: root.nameDialogMode === "rename" ? qsTr("Rename") : qsTr("New")
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        anchors.centerIn: parent
+        width: 300
+
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 8
+            Label {
+                text: root.nameDialogMode === "newDir" ? qsTr("Folder name")
+                    : root.nameDialogMode === "newFile" ? qsTr("File name")
+                    : qsTr("New name")
+                color: "#334155"
+            }
+            TextField {
+                id: nameField
+                Layout.fillWidth: true
+                selectByMouse: true
+            }
+        }
+
+        onAccepted: {
+            if (nameField.text.length === 0) {
+                return
+            }
+            if (root.nameDialogMode === "rename") {
+                root.remoteOperationRequestId = appController.requestRenameRemotePath(root.connectionId,
+                                                                                     root.pendingRemotePath,
+                                                                                     nameField.text)
+            } else {
+                root.remoteOperationRequestId = appController.requestCreateRemotePath(root.connectionId,
+                                                                                     root.remotePath,
+                                                                                     nameField.text,
+                                                                                     root.nameDialogMode === "newDir")
+            }
+            root.remoteLoading = true
+            remoteRequestTimeout.restart()
+        }
+    }
+
     Timer {
         id: remoteRequestTimeout
         interval: 12000
@@ -155,6 +327,7 @@ Rectangle {
             }
             root.remoteLoading = false
             root.remoteRequestId = ""
+            root.remoteOperationRequestId = ""
             root.remoteError = qsTr("Remote listing timed out. Try refresh again.")
         }
     }
@@ -202,6 +375,89 @@ Rectangle {
         refreshRemote()
     }
 
+    function uploadLocalPath(path) {
+        if (connectionId === "" || path.length === 0) {
+            return
+        }
+        pendingUploadPath = path
+        remoteError = ""
+        remoteLoading = true
+        remoteOperationRequestId = appController.requestUploadLocalPath(connectionId,
+                                                                        path,
+                                                                        remotePath)
+        remoteRequestTimeout.restart()
+    }
+
+    function chooseAndUploadFile() {
+        const path = appController.chooseLocalFile()
+        if (path && path.length > 0) {
+            uploadLocalPath(path)
+        }
+    }
+
+    function chooseAndUploadFolder() {
+        const path = appController.chooseLocalFolder()
+        if (path && path.length > 0) {
+            uploadLocalPath(path)
+        }
+    }
+
+    function changeRemotePermissions(path, permissions) {
+        if (connectionId === "" || path.length === 0) {
+            return
+        }
+        root.remoteOperationRequestId = appController.requestRemoteChmod(root.connectionId,
+                                                                         path,
+                                                                         permissions)
+        root.remoteLoading = true
+        remoteRequestTimeout.restart()
+    }
+
+    function openChmodDialog(path, currentPermissions) {
+        if (connectionId === "" || path.length === 0) {
+            return
+        }
+        pendingChmodPath = path
+        const parts = path.split("/")
+        pendingChmodName = parts.length > 0 && parts[parts.length - 1].length > 0
+                         ? parts[parts.length - 1]
+                         : path
+        chmodDialog.applyOctal(currentPermissions && currentPermissions.length > 0
+                               ? currentPermissions
+                               : "755")
+        chmodDialog.open()
+    }
+
+    function downloadRemotePath(path) {
+        const folder = appController.chooseDownloadFolder()
+        if (!folder || folder.length === 0) {
+            return
+        }
+        remoteOperationRequestId = appController.requestRemoteDownload(connectionId, path, folder)
+        remoteLoading = true
+        remoteRequestTimeout.restart()
+    }
+
+    function openRemotePath(path) {
+        remoteOperationRequestId = appController.requestOpenRemotePath(connectionId, path)
+        remoteLoading = true
+        remoteRequestTimeout.restart()
+    }
+
+    function openNameDialog(mode, path, currentName) {
+        nameDialogMode = mode
+        pendingRemotePath = path || ""
+        nameField.text = currentName || ""
+        nameField.selectAll()
+        nameDialog.open()
+    }
+
+    function deleteRemotePath(path, recursive) {
+        remoteOperationRequestId = appController.requestDeleteRemotePath(connectionId, path, recursive)
+        remoteLoading = true
+        remoteRequestTimeout.restart()
+    }
+
     Connections {
         target: appController
         function onRemoteDirectoryEntriesReady(requestId, connectionId, path, entries, error) {
@@ -213,6 +469,19 @@ Rectangle {
             root.remotePath = path
             root.remoteEntries = entries
             root.remoteError = error || ""
+        }
+
+        function onRemoteOperationFinished(requestId, connectionId, operation, path, ok, message) {
+            if (requestId !== root.remoteOperationRequestId || connectionId !== root.connectionId) {
+                return
+            }
+            root.remoteOperationRequestId = ""
+            root.remoteLoading = false
+            remoteRequestTimeout.stop()
+            root.remoteError = ok ? "" : message
+            if (ok) {
+                root.refreshRemote()
+            }
         }
     }
 
@@ -310,6 +579,13 @@ Rectangle {
                             Layout.preferredWidth: 78
                         }
                         Label {
+                            text: qsTr("Perm")
+                            color: "#93c5fd"
+                            font.pixelSize: 11
+                            horizontalAlignment: Text.AlignRight
+                            Layout.preferredWidth: 52
+                        }
+                        Label {
                             text: qsTr("Modified")
                             color: "#93c5fd"
                             font.pixelSize: 11
@@ -368,10 +644,25 @@ Rectangle {
                         MouseArea {
                             id: mouseArea
                             anchors.fill: parent
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
                             hoverEnabled: true
+                            onClicked: function(mouse) {
+                                if (mouse.button === Qt.RightButton) {
+                                    localItemMenu.popup()
+                                }
+                            }
                             onDoubleClicked: {
                                 if (modelData.isDir) {
                                     root.enterLocal(modelData.path)
+                                }
+                            }
+
+                            Menu {
+                                id: localItemMenu
+                                MenuItem {
+                                    text: qsTr("Upload to Remote")
+                                    enabled: root.connectionId !== ""
+                                    onTriggered: root.uploadLocalPath(modelData.path)
                                 }
                             }
                         }
@@ -476,6 +767,13 @@ Rectangle {
                             Layout.preferredWidth: 78
                         }
                         Label {
+                            text: qsTr("Perm")
+                            color: "#93c5fd"
+                            font.pixelSize: 11
+                            horizontalAlignment: Text.AlignRight
+                            Layout.preferredWidth: 52
+                        }
+                        Label {
                             text: qsTr("Modified")
                             color: "#93c5fd"
                             font.pixelSize: 11
@@ -527,6 +825,13 @@ Rectangle {
                                     Layout.preferredWidth: 78
                                 }
                                 Label {
+                                    text: modelData.permissions || ""
+                                    color: "#94a3b8"
+                                    font.pixelSize: 11
+                                    horizontalAlignment: Text.AlignRight
+                                    Layout.preferredWidth: 52
+                                }
+                                Label {
                                     text: modelData.modified
                                     color: "#94a3b8"
                                     font.pixelSize: 11
@@ -537,10 +842,111 @@ Rectangle {
                             MouseArea {
                                 id: remoteMouseArea
                                 anchors.fill: parent
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
                                 hoverEnabled: true
+                                onClicked: function(mouse) {
+                                    if (mouse.button === Qt.RightButton) {
+                                        remoteItemMenu.popup()
+                                    }
+                                }
                                 onDoubleClicked: {
                                     if (modelData.isDir) {
                                         root.enterRemote(modelData.path)
+                                    }
+                                }
+
+                                Menu {
+                                    id: remoteItemMenu
+                                    MenuItem {
+                                        text: qsTr("Refresh")
+                                        onTriggered: root.refreshRemote()
+                                    }
+                                    MenuSeparator {}
+                                    MenuItem {
+                                        text: qsTr("Open")
+                                        enabled: !modelData.isDir
+                                        onTriggered: root.openRemotePath(modelData.path)
+                                    }
+                                    Menu {
+                                        title: qsTr("Open With")
+                                        enabled: false
+                                        MenuItem { text: qsTr("Not configured") }
+                                    }
+                                    Menu {
+                                        title: qsTr("Select Text Editor")
+                                        enabled: false
+                                        MenuItem { text: qsTr("Coming soon") }
+                                    }
+                                    MenuSeparator {}
+                                    MenuItem {
+                                        text: qsTr("Copy Path")
+                                        onTriggered: appController.copyTextToClipboard(modelData.path)
+                                    }
+                                    MenuSeparator {}
+                                    MenuItem {
+                                        text: qsTr("Download")
+                                        onTriggered: root.downloadRemotePath(modelData.path)
+                                    }
+                                    MenuItem {
+                                        text: qsTr("Upload...")
+                                        enabled: modelData.isDir
+                                        onTriggered: {
+                                            root.remotePath = modelData.path
+                                            root.chooseAndUploadFile()
+                                        }
+                                    }
+                                    Menu {
+                                        title: qsTr("Transfer Package")
+                                        enabled: false
+                                        MenuItem { text: qsTr("Coming soon") }
+                                    }
+                                    MenuSeparator {}
+                                    Menu {
+                                        title: qsTr("New")
+                                        MenuItem {
+                                            text: qsTr("File")
+                                            onTriggered: root.openNameDialog("newFile", "", "new-file")
+                                        }
+                                        MenuItem {
+                                            text: qsTr("Folder")
+                                            onTriggered: root.openNameDialog("newDir", "", "new-folder")
+                                        }
+                                    }
+                                    MenuSeparator {}
+                                    MenuItem {
+                                        text: qsTr("Rename")
+                                        onTriggered: root.openNameDialog("rename", modelData.path, modelData.name)
+                                    }
+                                    MenuItem {
+                                        text: qsTr("Delete")
+                                        onTriggered: root.deleteRemotePath(modelData.path, false)
+                                    }
+                                    MenuItem {
+                                        text: qsTr("Quick Delete (rm)")
+                                        onTriggered: root.deleteRemotePath(modelData.path, true)
+                                    }
+                                    MenuSeparator {}
+                                    MenuItem {
+                                        text: qsTr("Permissions: %1").arg(modelData.permissions || qsTr("unknown"))
+                                        enabled: false
+                                    }
+                                    MenuSeparator {}
+                                    MenuItem {
+                                        text: qsTr("Set 644")
+                                        onTriggered: root.changeRemotePermissions(modelData.path, "644")
+                                    }
+                                    MenuItem {
+                                        text: qsTr("Set 755")
+                                        onTriggered: root.changeRemotePermissions(modelData.path, "755")
+                                    }
+                                    MenuItem {
+                                        text: qsTr("Set 600")
+                                        onTriggered: root.changeRemotePermissions(modelData.path, "600")
+                                    }
+                                    MenuItem {
+                                        text: qsTr("Custom Permissions...")
+                                        onTriggered: root.openChmodDialog(modelData.path,
+                                                                          modelData.permissions || "")
                                     }
                                 }
                             }

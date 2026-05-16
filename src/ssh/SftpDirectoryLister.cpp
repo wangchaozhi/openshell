@@ -1,7 +1,9 @@
 #include "SftpDirectoryLister.h"
 
 #include <QDateTime>
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QHash>
 #include <QHostAddress>
 #include <QHostInfo>
@@ -451,6 +453,259 @@ QString joinRemotePath(const QString &base, const QString &name)
     return base + QStringLiteral("/") + name;
 }
 
+QString permissionsToOctal(const LIBSSH2_SFTP_ATTRIBUTES &attrs)
+{
+    if (!(attrs.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS)) {
+        return QString();
+    }
+    return QString::number(static_cast<int>(attrs.permissions & 07777), 8).rightJustified(3, QLatin1Char('0'));
+}
+
+bool makeRemoteDirectory(LIBSSH2_SFTP *sftp, const QString &path)
+{
+    const QByteArray encoded = path.toUtf8();
+    if (libssh2_sftp_mkdir(sftp, encoded.constData(), 0755) == 0) {
+        return true;
+    }
+
+    LIBSSH2_SFTP_ATTRIBUTES attrs{};
+    return libssh2_sftp_stat(sftp, encoded.constData(), &attrs) == 0
+           && (attrs.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS)
+           && LIBSSH2_SFTP_S_ISDIR(attrs.permissions);
+}
+
+bool uploadFile(LIBSSH2_SFTP *sftp,
+                const QString &localPath,
+                const QString &remotePath,
+                QString *errorOut)
+{
+    QFile file(localPath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (errorOut) {
+            *errorOut = QObject::tr("Cannot read local file %1").arg(localPath);
+        }
+        return false;
+    }
+
+    const QByteArray encoded = remotePath.toUtf8();
+    LIBSSH2_SFTP_HANDLE *handle = libssh2_sftp_open(sftp,
+                                                    encoded.constData(),
+                                                    LIBSSH2_FXF_WRITE
+                                                        | LIBSSH2_FXF_CREAT
+                                                        | LIBSSH2_FXF_TRUNC,
+                                                    0644);
+    if (!handle) {
+        if (errorOut) {
+            *errorOut = QObject::tr("Cannot create remote file %1").arg(remotePath);
+        }
+        return false;
+    }
+
+    while (!file.atEnd()) {
+        const QByteArray chunk = file.read(32768);
+        qsizetype written = 0;
+        while (written < chunk.size()) {
+            const ssize_t n = libssh2_sftp_write(handle,
+                                                 chunk.constData() + written,
+                                                 static_cast<size_t>(chunk.size() - written));
+            if (n < 0) {
+                libssh2_sftp_close(handle);
+                if (errorOut) {
+                    *errorOut = QObject::tr("Failed to write remote file %1").arg(remotePath);
+                }
+                return false;
+            }
+            written += n;
+        }
+    }
+
+    libssh2_sftp_close(handle);
+    return true;
+}
+
+bool uploadPathRecursive(LIBSSH2_SFTP *sftp,
+                         const QString &localPath,
+                         const QString &remotePath,
+                         QString *errorOut)
+{
+    const QFileInfo info(localPath);
+    if (info.isDir()) {
+        if (!makeRemoteDirectory(sftp, remotePath)) {
+            if (errorOut) {
+                *errorOut = QObject::tr("Cannot create remote directory %1").arg(remotePath);
+            }
+            return false;
+        }
+
+        const QDir dir(localPath);
+        const QFileInfoList children = dir.entryInfoList(QDir::AllEntries
+                                                             | QDir::NoDotAndDotDot
+                                                             | QDir::Readable,
+                                                         QDir::DirsFirst | QDir::Name);
+        for (const QFileInfo &child : children) {
+            if (!uploadPathRecursive(sftp,
+                                     child.absoluteFilePath(),
+                                     joinRemotePath(remotePath, child.fileName()),
+                                     errorOut)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    return uploadFile(sftp, localPath, remotePath, errorOut);
+}
+
+bool isRemoteDir(LIBSSH2_SFTP *sftp, const QString &remotePath)
+{
+    LIBSSH2_SFTP_ATTRIBUTES attrs{};
+    const QByteArray encoded = remotePath.toUtf8();
+    return libssh2_sftp_stat(sftp, encoded.constData(), &attrs) == 0
+           && (attrs.flags & LIBSSH2_SFTP_ATTR_PERMISSIONS)
+           && LIBSSH2_SFTP_S_ISDIR(attrs.permissions);
+}
+
+bool downloadFile(LIBSSH2_SFTP *sftp,
+                  const QString &remotePath,
+                  const QString &localPath,
+                  QString *errorOut)
+{
+    const QByteArray encoded = remotePath.toUtf8();
+    LIBSSH2_SFTP_HANDLE *handle = libssh2_sftp_open(sftp,
+                                                    encoded.constData(),
+                                                    LIBSSH2_FXF_READ,
+                                                    0);
+    if (!handle) {
+        if (errorOut) {
+            *errorOut = QObject::tr("Cannot open remote file %1").arg(remotePath);
+        }
+        return false;
+    }
+
+    QFile file(localPath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        libssh2_sftp_close(handle);
+        if (errorOut) {
+            *errorOut = QObject::tr("Cannot write local file %1").arg(localPath);
+        }
+        return false;
+    }
+
+    char buffer[32768];
+    for (;;) {
+        const ssize_t n = libssh2_sftp_read(handle, buffer, sizeof(buffer));
+        if (n == 0) {
+            break;
+        }
+        if (n < 0) {
+            libssh2_sftp_close(handle);
+            if (errorOut) {
+                *errorOut = QObject::tr("Failed to read remote file %1").arg(remotePath);
+            }
+            return false;
+        }
+        file.write(buffer, n);
+    }
+
+    libssh2_sftp_close(handle);
+    return true;
+}
+
+bool downloadPathRecursive(LIBSSH2_SFTP *sftp,
+                           const QString &remotePath,
+                           const QString &localPath,
+                           QString *errorOut)
+{
+    if (!isRemoteDir(sftp, remotePath)) {
+        return downloadFile(sftp, remotePath, localPath, errorOut);
+    }
+
+    QDir().mkpath(localPath);
+    const QByteArray encoded = remotePath.toUtf8();
+    LIBSSH2_SFTP_HANDLE *dir = libssh2_sftp_opendir(sftp, encoded.constData());
+    if (!dir) {
+        if (errorOut) {
+            *errorOut = QObject::tr("Cannot open remote directory %1").arg(remotePath);
+        }
+        return false;
+    }
+
+    char name[512];
+    LIBSSH2_SFTP_ATTRIBUTES attrs{};
+    for (;;) {
+        const int rc = libssh2_sftp_readdir_ex(dir, name, sizeof(name), nullptr, 0, &attrs);
+        if (rc <= 0) {
+            break;
+        }
+        const QString fileName = QString::fromUtf8(name, rc);
+        if (fileName == QStringLiteral(".") || fileName == QStringLiteral("..")) {
+            continue;
+        }
+        if (!downloadPathRecursive(sftp,
+                                   joinRemotePath(remotePath, fileName),
+                                   QDir(localPath).filePath(fileName),
+                                   errorOut)) {
+            libssh2_sftp_closedir(dir);
+            return false;
+        }
+    }
+
+    libssh2_sftp_closedir(dir);
+    return true;
+}
+
+bool removePathRecursive(LIBSSH2_SFTP *sftp,
+                         const QString &remotePath,
+                         bool recursive,
+                         QString *errorOut)
+{
+    const QByteArray encoded = remotePath.toUtf8();
+    if (!isRemoteDir(sftp, remotePath)) {
+        if (libssh2_sftp_unlink(sftp, encoded.constData()) == 0) {
+            return true;
+        }
+        if (errorOut) {
+            *errorOut = QObject::tr("Cannot delete remote file %1").arg(remotePath);
+        }
+        return false;
+    }
+
+    if (recursive) {
+        LIBSSH2_SFTP_HANDLE *dir = libssh2_sftp_opendir(sftp, encoded.constData());
+        if (!dir) {
+            if (errorOut) {
+                *errorOut = QObject::tr("Cannot open remote directory %1").arg(remotePath);
+            }
+            return false;
+        }
+        char name[512];
+        LIBSSH2_SFTP_ATTRIBUTES attrs{};
+        for (;;) {
+            const int rc = libssh2_sftp_readdir_ex(dir, name, sizeof(name), nullptr, 0, &attrs);
+            if (rc <= 0) {
+                break;
+            }
+            const QString fileName = QString::fromUtf8(name, rc);
+            if (fileName == QStringLiteral(".") || fileName == QStringLiteral("..")) {
+                continue;
+            }
+            if (!removePathRecursive(sftp, joinRemotePath(remotePath, fileName), true, errorOut)) {
+                libssh2_sftp_closedir(dir);
+                return false;
+            }
+        }
+        libssh2_sftp_closedir(dir);
+    }
+
+    if (libssh2_sftp_rmdir(sftp, encoded.constData()) != 0) {
+        if (errorOut) {
+            *errorOut = QObject::tr("Cannot delete remote directory %1").arg(remotePath);
+        }
+        return false;
+    }
+    return true;
+}
+
 } // namespace
 
 QVariantList SftpDirectoryLister::list(const ConnectionProfile &profile,
@@ -520,6 +775,7 @@ QVariantList SftpDirectoryLister::list(const ConnectionProfile &profile,
         row.insert(QStringLiteral("isDir"), isDir);
         row.insert(QStringLiteral("size"),
                    isDir ? QStringLiteral("--") : QString::number(attrs.filesize));
+        row.insert(QStringLiteral("permissions"), permissionsToOctal(attrs));
         row.insert(QStringLiteral("modified"),
                    attrs.flags & LIBSSH2_SFTP_ATTR_ACMODTIME
                        ? QDateTime::fromSecsSinceEpoch(attrs.mtime).toString(QStringLiteral("yyyy-MM-dd HH:mm"))
@@ -532,4 +788,215 @@ QVariantList SftpDirectoryLister::list(const ConnectionProfile &profile,
         errorOut->clear();
     }
     return rows;
+}
+
+bool SftpDirectoryLister::upload(const ConnectionProfile &profile,
+                                 const QString &localPath,
+                                 const QString &remoteDirectory,
+                                 QString *errorOut)
+{
+    QMutexLocker locker(&cacheMutex());
+
+    if (!ensureLibssh2(errorOut)) {
+        return false;
+    }
+
+    auto &cache = connectionCache();
+    const QString key = cacheKey(profile);
+    auto it = cache.find(key);
+    if (it == cache.end()) {
+        it = cache.insert(key, new CachedSftpConnection);
+    }
+    CachedSftpConnection *connection = it.value();
+    if (!ensureConnected(connection, profile, errorOut)) {
+        return false;
+    }
+
+    const QFileInfo info(localPath);
+    if (!info.exists()) {
+        if (errorOut) {
+            *errorOut = QObject::tr("Local path does not exist: %1").arg(localPath);
+        }
+        return false;
+    }
+
+    const QString targetDir = remoteDirectory.isEmpty() ? QStringLiteral("/") : remoteDirectory;
+    const QString remotePath = joinRemotePath(targetDir, info.fileName());
+    const bool ok = uploadPathRecursive(connection->sftp, info.absoluteFilePath(), remotePath, errorOut);
+    if (ok && errorOut) {
+        errorOut->clear();
+    }
+    return ok;
+}
+
+bool SftpDirectoryLister::chmod(const ConnectionProfile &profile,
+                                const QString &remotePath,
+                                int permissions,
+                                QString *errorOut)
+{
+    QMutexLocker locker(&cacheMutex());
+
+    if (!ensureLibssh2(errorOut)) {
+        return false;
+    }
+
+    auto &cache = connectionCache();
+    const QString key = cacheKey(profile);
+    auto it = cache.find(key);
+    if (it == cache.end()) {
+        it = cache.insert(key, new CachedSftpConnection);
+    }
+    CachedSftpConnection *connection = it.value();
+    if (!ensureConnected(connection, profile, errorOut)) {
+        return false;
+    }
+
+    LIBSSH2_SFTP_ATTRIBUTES attrs{};
+    attrs.flags = LIBSSH2_SFTP_ATTR_PERMISSIONS;
+    attrs.permissions = static_cast<unsigned long>(permissions);
+
+    const QByteArray encoded = remotePath.toUtf8();
+    if (libssh2_sftp_setstat(connection->sftp, encoded.constData(), &attrs) != 0) {
+        if (errorOut) {
+            *errorOut = QObject::tr("Failed to change permissions for %1").arg(remotePath);
+        }
+        return false;
+    }
+
+    if (errorOut) {
+        errorOut->clear();
+    }
+    return true;
+}
+
+bool SftpDirectoryLister::download(const ConnectionProfile &profile,
+                                   const QString &remotePath,
+                                   const QString &localDirectory,
+                                   QString *downloadedPath,
+                                   QString *errorOut)
+{
+    QMutexLocker locker(&cacheMutex());
+    if (!ensureLibssh2(errorOut)) {
+        return false;
+    }
+    auto &cache = connectionCache();
+    auto it = cache.find(cacheKey(profile));
+    if (it == cache.end()) {
+        it = cache.insert(cacheKey(profile), new CachedSftpConnection);
+    }
+    CachedSftpConnection *connection = it.value();
+    if (!ensureConnected(connection, profile, errorOut)) {
+        return false;
+    }
+
+    const QString name = remotePath.section(QLatin1Char('/'), -1);
+    const QString localPath = QDir(localDirectory).filePath(name.isEmpty() ? QStringLiteral("download") : name);
+    const bool ok = downloadPathRecursive(connection->sftp, remotePath, localPath, errorOut);
+    if (ok) {
+        if (downloadedPath) {
+            *downloadedPath = localPath;
+        }
+        if (errorOut) {
+            errorOut->clear();
+        }
+    }
+    return ok;
+}
+
+bool SftpDirectoryLister::createDirectory(const ConnectionProfile &profile,
+                                          const QString &remotePath,
+                                          QString *errorOut)
+{
+    QMutexLocker locker(&cacheMutex());
+    if (!ensureLibssh2(errorOut)) {
+        return false;
+    }
+    auto &cache = connectionCache();
+    auto it = cache.find(cacheKey(profile));
+    if (it == cache.end()) {
+        it = cache.insert(cacheKey(profile), new CachedSftpConnection);
+    }
+    CachedSftpConnection *connection = it.value();
+    return ensureConnected(connection, profile, errorOut)
+           && makeRemoteDirectory(connection->sftp, remotePath);
+}
+
+bool SftpDirectoryLister::createFile(const ConnectionProfile &profile,
+                                     const QString &remotePath,
+                                     QString *errorOut)
+{
+    QMutexLocker locker(&cacheMutex());
+    if (!ensureLibssh2(errorOut)) {
+        return false;
+    }
+    auto &cache = connectionCache();
+    auto it = cache.find(cacheKey(profile));
+    if (it == cache.end()) {
+        it = cache.insert(cacheKey(profile), new CachedSftpConnection);
+    }
+    CachedSftpConnection *connection = it.value();
+    if (!ensureConnected(connection, profile, errorOut)) {
+        return false;
+    }
+    const QByteArray encoded = remotePath.toUtf8();
+    LIBSSH2_SFTP_HANDLE *handle = libssh2_sftp_open(connection->sftp,
+                                                    encoded.constData(),
+                                                    LIBSSH2_FXF_WRITE | LIBSSH2_FXF_CREAT | LIBSSH2_FXF_EXCL,
+                                                    0644);
+    if (!handle) {
+        if (errorOut) {
+            *errorOut = QObject::tr("Cannot create remote file %1").arg(remotePath);
+        }
+        return false;
+    }
+    libssh2_sftp_close(handle);
+    return true;
+}
+
+bool SftpDirectoryLister::renamePath(const ConnectionProfile &profile,
+                                     const QString &oldPath,
+                                     const QString &newPath,
+                                     QString *errorOut)
+{
+    QMutexLocker locker(&cacheMutex());
+    if (!ensureLibssh2(errorOut)) {
+        return false;
+    }
+    auto &cache = connectionCache();
+    auto it = cache.find(cacheKey(profile));
+    if (it == cache.end()) {
+        it = cache.insert(cacheKey(profile), new CachedSftpConnection);
+    }
+    CachedSftpConnection *connection = it.value();
+    if (!ensureConnected(connection, profile, errorOut)) {
+        return false;
+    }
+    const QByteArray oldEncoded = oldPath.toUtf8();
+    const QByteArray newEncoded = newPath.toUtf8();
+    if (libssh2_sftp_rename(connection->sftp, oldEncoded.constData(), newEncoded.constData()) != 0) {
+        if (errorOut) {
+            *errorOut = QObject::tr("Cannot rename %1").arg(oldPath);
+        }
+        return false;
+    }
+    return true;
+}
+
+bool SftpDirectoryLister::removePath(const ConnectionProfile &profile,
+                                     const QString &remotePath,
+                                     bool recursive,
+                                     QString *errorOut)
+{
+    QMutexLocker locker(&cacheMutex());
+    if (!ensureLibssh2(errorOut)) {
+        return false;
+    }
+    auto &cache = connectionCache();
+    auto it = cache.find(cacheKey(profile));
+    if (it == cache.end()) {
+        it = cache.insert(cacheKey(profile), new CachedSftpConnection);
+    }
+    CachedSftpConnection *connection = it.value();
+    return ensureConnected(connection, profile, errorOut)
+           && removePathRecursive(connection->sftp, remotePath, recursive, errorOut);
 }

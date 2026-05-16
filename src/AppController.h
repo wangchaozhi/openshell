@@ -53,12 +53,39 @@ public:
     Q_INVOKABLE QString localHomePath() const;
     Q_INVOKABLE QString localParentPath(const QString &path) const;
     Q_INVOKABLE QVariantList localDirectoryEntries(const QString &path) const;
+    Q_INVOKABLE QString localPathFromUrl(const QString &url) const;
+    Q_INVOKABLE QString chooseLocalFile();
+    Q_INVOKABLE QString chooseLocalFolder();
+    Q_INVOKABLE QString chooseDownloadFolder();
     Q_INVOKABLE QString remoteHomePath(const QString &connectionId) const;
     Q_INVOKABLE QString remoteParentPath(const QString &path) const;
     Q_INVOKABLE QVariantList remoteDirectoryEntries(const QString &connectionId,
                                                     const QString &path);
     Q_INVOKABLE QString requestRemoteDirectoryEntries(const QString &connectionId,
                                                       const QString &path);
+    Q_INVOKABLE QString requestUploadLocalPath(const QString &connectionId,
+                                               const QString &localPath,
+                                               const QString &remoteDirectory);
+    Q_INVOKABLE QString requestRemoteChmod(const QString &connectionId,
+                                           const QString &remotePath,
+                                           const QString &octalPermissions);
+    Q_INVOKABLE QString requestRemoteDownload(const QString &connectionId,
+                                              const QString &remotePath,
+                                              const QString &localDirectory);
+    Q_INVOKABLE QString requestOpenRemotePath(const QString &connectionId,
+                                              const QString &remotePath);
+    Q_INVOKABLE QString requestCreateRemotePath(const QString &connectionId,
+                                                const QString &remoteDirectory,
+                                                const QString &name,
+                                                bool directory);
+    Q_INVOKABLE QString requestRenameRemotePath(const QString &connectionId,
+                                                const QString &oldPath,
+                                                const QString &newName);
+    Q_INVOKABLE QString requestDeleteRemotePath(const QString &connectionId,
+                                                const QString &remotePath,
+                                                bool recursive);
+    Q_INVOKABLE QString remoteSiblingPath(const QString &path, const QString &name) const;
+    Q_INVOKABLE void copyTextToClipboard(const QString &text) const;
 
     Q_INVOKABLE void showWindow();
     Q_INVOKABLE void hideWindow();
@@ -79,6 +106,12 @@ signals:
                                      const QString &path,
                                      const QVariantList &entries,
                                      const QString &error);
+    void remoteOperationFinished(const QString &requestId,
+                                 const QString &connectionId,
+                                 const QString &operation,
+                                 const QString &path,
+                                 bool ok,
+                                 const QString &message);
 
 private:
     void setLastError(const QString &message);
