@@ -294,8 +294,29 @@ jobs:
           fi
 
           notes_file="$(mktemp)"
+          previous_tag="$(git tag --sort=-creatordate | grep -v "^${TAG_NAME}$" | head -n 1 || true)"
+          if [ -n "${previous_tag}" ]; then
+            change_range="${previous_tag}..HEAD"
+            compare_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/compare/${previous_tag}...${TAG_NAME}"
+          else
+            change_range="HEAD"
+            compare_url=""
+          fi
+
           {
             echo "OpenShell ${TAG_NAME}"
+            echo
+            echo "Changes:"
+            if git log --pretty='format:- %s (%h)' "${change_range}" | grep -q .; then
+              git log --pretty='format:- %s (%h)' "${change_range}"
+              echo
+            else
+              echo "- No commit changes detected."
+            fi
+            if [ -n "${compare_url}" ]; then
+              echo
+              echo "Full changelog: ${compare_url}"
+            fi
             echo
             echo "Assets:"
             for asset in "${assets[@]}"; do
