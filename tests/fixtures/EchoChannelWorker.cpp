@@ -45,7 +45,6 @@ void EchoChannelWorker::sendInput(const QByteArray &data)
         return;
     }
 
-    // 立刻把按键回显出去，让 TerminalView 看起来像真正终端。
     emit output(data);
     m_lineBuffer.append(data);
 

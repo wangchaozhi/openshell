@@ -10,6 +10,67 @@ Rectangle {
 
     color: "#020617"
 
+    function sendTerminalKey(event) {
+        if (sessionId === "") {
+            return false
+        }
+
+        if (event.modifiers & Qt.ControlModifier) {
+            if (event.key === Qt.Key_C) {
+                appController.sendSessionInput(sessionId, "\u0003")
+                return true
+            }
+            if (event.key === Qt.Key_D) {
+                appController.sendSessionInput(sessionId, "\u0004")
+                return true
+            }
+            if (event.key === Qt.Key_L) {
+                appController.sendSessionInput(sessionId, "\u000c")
+                return true
+            }
+            if (event.key === Qt.Key_Z) {
+                appController.sendSessionInput(sessionId, "\u001a")
+                return true
+            }
+        }
+
+        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            appController.sendSessionInput(sessionId, "\r")
+            return true
+        }
+        if (event.key === Qt.Key_Backspace) {
+            appController.sendSessionInput(sessionId, "\u007f")
+            return true
+        }
+        if (event.key === Qt.Key_Tab) {
+            appController.sendSessionInput(sessionId, "\t")
+            return true
+        }
+        if (event.key === Qt.Key_Up) {
+            appController.sendSessionInput(sessionId, "\u001b[A")
+            return true
+        }
+        if (event.key === Qt.Key_Down) {
+            appController.sendSessionInput(sessionId, "\u001b[B")
+            return true
+        }
+        if (event.key === Qt.Key_Right) {
+            appController.sendSessionInput(sessionId, "\u001b[C")
+            return true
+        }
+        if (event.key === Qt.Key_Left) {
+            appController.sendSessionInput(sessionId, "\u001b[D")
+            return true
+        }
+
+        if (event.text && event.text.length > 0) {
+            appController.sendSessionInput(sessionId, event.text)
+            return true
+        }
+
+        return false
+    }
+
     onSessionIdChanged: {
         // 切到新会话时，把累积缓冲一次性灌进 TextArea；之后增量靠 sessionOutput。
         output.clear()
@@ -77,12 +138,22 @@ Rectangle {
             TextArea {
                 id: output
                 readOnly: true
+                focus: true
+                activeFocusOnTab: true
                 wrapMode: TextEdit.Wrap
                 color: "#e2e8f0"
                 background: Rectangle { color: "#020617" }
                 font.family: "Consolas, Menlo, monospace"
                 font.pixelSize: 13
                 placeholderText: qsTr("Open a connection to start a session.")
+                TapHandler {
+                    onTapped: output.forceActiveFocus()
+                }
+                Keys.onPressed: function(event) {
+                    if (root.sendTerminalKey(event)) {
+                        event.accepted = true
+                    }
+                }
             }
         }
 
@@ -113,6 +184,13 @@ Rectangle {
                     background: null
                     color: "#e2e8f0"
                     font.family: "Consolas, Menlo, monospace"
+                    Keys.onTabPressed: function(event) {
+                        if (root.sessionId === "") {
+                            return
+                        }
+                        appController.sendSessionInput(root.sessionId, "\t")
+                        event.accepted = true
+                    }
                     onAccepted: {
                         if (root.sessionId === "") {
                             return

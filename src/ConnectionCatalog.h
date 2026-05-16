@@ -17,9 +17,12 @@ struct ConnectionProfile
     QString authType = QStringLiteral("password"); // password, key, agent
     QString password;       // stored only when user opts in (TODO: encrypt at rest)
     QString privateKeyPath;
+    QString keyPassphrase;  // 私钥密码，phase 4 接 keychain 之前先明文
     QString group;
     QString notes;
     int lastUsedEpoch = 0;
+    int connectTimeoutSec = 10;
+    int keepaliveSec = 30;  // libssh2_keepalive_config 间隔，<=0 关闭
 
     QVariantMap toVariantMap() const;
     static ConnectionProfile fromVariantMap(const QVariantMap &map);

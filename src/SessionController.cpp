@@ -1,6 +1,6 @@
 #include "SessionController.h"
 
-#include "ssh/EchoChannelWorker.h"
+#include "ssh/Libssh2ChannelWorker.h"
 #include "ssh/SshSession.h"
 
 #include <QUuid>
@@ -8,7 +8,17 @@
 
 SessionController::SessionController(QObject *parent)
     : QObject(parent)
+    , m_workerFactory([](const ConnectionProfile &profile) -> SshChannelWorker * {
+          return new Libssh2ChannelWorker(profile);
+      })
 {
+}
+
+void SessionController::setWorkerFactory(SshWorkerFactory factory)
+{
+    if (factory) {
+        m_workerFactory = std::move(factory);
+    }
 }
 
 SessionController::~SessionController()
@@ -26,9 +36,14 @@ QString SessionController::open(const ConnectionProfile &profile, QString *error
         return QString();
     }
 
-    // 选 worker 后端。真接入 libssh2 后这里按 profile.protocol/authType 路由。
     const QString sessionId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    auto *worker = new EchoChannelWorker(profile);
+    SshChannelWorker *worker = m_workerFactory(profile);
+    if (!worker) {
+        if (error) {
+            *error = tr("Worker factory returned null");
+        }
+        return QString();
+    }
     auto *session = new SshSession(sessionId, profile, worker, this);
 
     connect(session, &SshSession::outputAppended, this,

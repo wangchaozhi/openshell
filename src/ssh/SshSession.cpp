@@ -2,6 +2,62 @@
 
 #include "SshChannelWorker.h"
 
+namespace {
+
+QByteArray stripTerminalControls(const QByteArray &input)
+{
+    enum class State { Normal, Escape, Csi, Osc, OscEscape, Charset };
+
+    QByteArray out;
+    out.reserve(input.size());
+    State state = State::Normal;
+
+    for (unsigned char ch : input) {
+        switch (state) {
+        case State::Normal:
+            if (ch == 0x1b) {
+                state = State::Escape;
+            } else if (ch == '\n' || ch == '\t' || ch >= 0x20) {
+                out.append(static_cast<char>(ch));
+            }
+            break;
+        case State::Escape:
+            if (ch == '[') {
+                state = State::Csi;
+            } else if (ch == ']') {
+                state = State::Osc;
+            } else if (ch == '(' || ch == ')') {
+                state = State::Charset;
+            } else {
+                state = State::Normal;
+            }
+            break;
+        case State::Csi:
+            if (ch >= 0x40 && ch <= 0x7e) {
+                state = State::Normal;
+            }
+            break;
+        case State::Osc:
+            if (ch == 0x07) {
+                state = State::Normal;
+            } else if (ch == 0x1b) {
+                state = State::OscEscape;
+            }
+            break;
+        case State::OscEscape:
+            state = State::Normal;
+            break;
+        case State::Charset:
+            state = State::Normal;
+            break;
+        }
+    }
+
+    return out;
+}
+
+} // namespace
+
 SshSession::SshSession(const QString &id,
                        const ConnectionProfile &profile,
                        SshChannelWorker *worker,
@@ -86,8 +142,12 @@ void SshSession::handleDisconnected(const QString &reason)
 
 void SshSession::handleOutput(const QByteArray &chunk)
 {
-    appendBuffer(chunk);
-    emit outputAppended(chunk);
+    const QByteArray visible = stripTerminalControls(chunk);
+    if (visible.isEmpty()) {
+        return;
+    }
+    appendBuffer(visible);
+    emit outputAppended(visible);
 }
 
 void SshSession::handleError(const QString &message)

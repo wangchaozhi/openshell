@@ -4,6 +4,7 @@
 
 #include "ConnectionCatalog.h"
 #include "SessionController.h"
+#include "EchoChannelWorker.h"
 
 namespace {
 
@@ -18,6 +19,14 @@ ConnectionProfile makeProfile(const QString &name = QStringLiteral("Echo"))
     p.username = QStringLiteral("tester");
     p.authType = QStringLiteral("password");
     return p;
+}
+
+// 全部用例统一注入 Echo 工厂，避开真实 libssh2 连接。
+void installEchoFactory(SessionController &controller)
+{
+    controller.setWorkerFactory([](const ConnectionProfile &p) -> SshChannelWorker * {
+        return new EchoChannelWorker(p);
+    });
 }
 
 // 等待信号至少触发一次（默认 2s），或累计触发 minCount 次。
@@ -59,6 +68,7 @@ void TestSessionController::rejectsEmptyConnectionId()
 void TestSessionController::openProducesIdAndStreamsBanner()
 {
     SessionController controller;
+    installEchoFactory(controller);
     QSignalSpy outputSpy(&controller, &SessionController::sessionOutput);
 
     QString error;
@@ -91,6 +101,7 @@ void TestSessionController::openProducesIdAndStreamsBanner()
 void TestSessionController::inputIsEchoedBack()
 {
     SessionController controller;
+    installEchoFactory(controller);
     QString error;
     const QString id = controller.open(makeProfile(), &error);
     QVERIFY2(!id.isEmpty(), qPrintable(error));
@@ -119,6 +130,7 @@ void TestSessionController::inputIsEchoedBack()
 void TestSessionController::closeReleasesSession()
 {
     SessionController controller;
+    installEchoFactory(controller);
     QString error;
     const QString id = controller.open(makeProfile(), &error);
     QVERIFY(!id.isEmpty());
@@ -134,6 +146,7 @@ void TestSessionController::closeReleasesSession()
 void TestSessionController::exitCommandTransitionsToDisconnected()
 {
     SessionController controller;
+    installEchoFactory(controller);
     QString error;
     const QString id = controller.open(makeProfile(), &error);
     QVERIFY(!id.isEmpty());

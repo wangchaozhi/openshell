@@ -21,9 +21,12 @@ QVariantMap ConnectionProfile::toVariantMap() const
     map.insert(QStringLiteral("authType"), authType);
     map.insert(QStringLiteral("password"), password);
     map.insert(QStringLiteral("privateKeyPath"), privateKeyPath);
+    map.insert(QStringLiteral("keyPassphrase"), keyPassphrase);
     map.insert(QStringLiteral("group"), group);
     map.insert(QStringLiteral("notes"), notes);
     map.insert(QStringLiteral("lastUsedEpoch"), lastUsedEpoch);
+    map.insert(QStringLiteral("connectTimeoutSec"), connectTimeoutSec);
+    map.insert(QStringLiteral("keepaliveSec"), keepaliveSec);
     return map;
 }
 
@@ -39,9 +42,12 @@ ConnectionProfile ConnectionProfile::fromVariantMap(const QVariantMap &map)
     p.authType = map.value(QStringLiteral("authType"), QStringLiteral("password")).toString();
     p.password = map.value(QStringLiteral("password")).toString();
     p.privateKeyPath = map.value(QStringLiteral("privateKeyPath")).toString();
+    p.keyPassphrase = map.value(QStringLiteral("keyPassphrase")).toString();
     p.group = map.value(QStringLiteral("group")).toString();
     p.notes = map.value(QStringLiteral("notes")).toString();
     p.lastUsedEpoch = map.value(QStringLiteral("lastUsedEpoch"), 0).toInt();
+    p.connectTimeoutSec = map.value(QStringLiteral("connectTimeoutSec"), 10).toInt();
+    p.keepaliveSec = map.value(QStringLiteral("keepaliveSec"), 30).toInt();
     return p;
 }
 

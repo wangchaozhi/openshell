@@ -86,6 +86,14 @@ ApplicationWindow {
     Connections {
         target: appController
         function onSessionsChanged() { window.refreshSessions() }
+        function onSessionStatusChanged(id, status, message) {
+            window.refreshSessions()
+            if (message && message.length > 0) {
+                window.statusMessage = message
+            } else if (status === "connected") {
+                window.statusMessage = qsTr("Connected")
+            }
+        }
         function onLanguageChanged() {
             window.title = qsTr("OpenShell")
             window.refreshConnections()
