@@ -137,7 +137,11 @@
     </message>
     <message>
         <source>Type a command and press Enter (stub)</source>
-        <translation>输入命令并按回车（占位）</translation>
+        <translation type="vanished">输入命令并按回车（占位）</translation>
+    </message>
+    <message>
+        <source>Type a command and press Enter</source>
+        <translation>输入命令并按回车</translation>
     </message>
 </context>
 <context>
@@ -237,7 +241,14 @@
     </message>
     <message>
         <source>Stub session — wire up an SSH backend to drive output.</source>
-        <translation>占位会话——接入 SSH 后端后才能驱动输出。</translation>
+        <translation type="vanished">占位会话——接入 SSH 后端后才能驱动输出。</translation>
+    </message>
+</context>
+<context>
+    <name>EchoChannelWorker</name>
+    <message>
+        <source>Echo backend stopped.</source>
+        <translation>回显后端已停止。</translation>
     </message>
 </context>
 <context>

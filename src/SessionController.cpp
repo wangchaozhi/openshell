@@ -1,5 +1,8 @@
 #include "SessionController.h"
 
+#include "ssh/EchoChannelWorker.h"
+#include "ssh/SshSession.h"
+
 #include <QUuid>
 #include <QVariantMap>
 
@@ -8,60 +11,110 @@ SessionController::SessionController(QObject *parent)
 {
 }
 
-bool SessionController::open(const ConnectionProfile &profile, QString *error)
+SessionController::~SessionController()
+{
+    qDeleteAll(m_sessions);
+    m_sessions.clear();
+}
+
+QString SessionController::open(const ConnectionProfile &profile, QString *error)
 {
     if (profile.id.isEmpty()) {
         if (error) {
             *error = tr("Cannot open session without a connection");
         }
-        return false;
+        return QString();
     }
 
-    // Placeholder: a real implementation would spin up a libssh2/QSsh worker on
-    // a background thread, emit sessionOutput on data arrival, and update status
-    // via a thread-safe channel. For now the skeleton records a stub session.
+    // 选 worker 后端。真接入 libssh2 后这里按 profile.protocol/authType 路由。
+    const QString sessionId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    auto *worker = new EchoChannelWorker(profile);
+    auto *session = new SshSession(sessionId, profile, worker, this);
 
-    ActiveSession session;
-    session.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    session.connectionId = profile.id;
-    session.title = profile.name.isEmpty()
-            ? QStringLiteral("%1@%2").arg(profile.username, profile.host)
-            : profile.name;
-    session.status = QStringLiteral("connecting");
-    session.lastMessage = tr("Stub session — wire up an SSH backend to drive output.");
+    connect(session, &SshSession::outputAppended, this,
+            [this, sessionId](const QByteArray &chunk) {
+                emit sessionOutput(sessionId, chunk);
+            });
+    connect(session, &SshSession::statusChanged, this,
+            [this, session]() {
+                emit sessionStatusChanged(session->id(), session->status(), session->lastMessage());
+                emit sessionsChanged();
+            });
+
     m_sessions.append(session);
+    session->start();
 
     emit sessionsChanged();
-    return true;
+    return sessionId;
 }
 
 void SessionController::close(const QString &sessionId)
 {
     for (int i = 0; i < m_sessions.size(); ++i) {
-        if (m_sessions.at(i).id == sessionId) {
-            m_sessions.removeAt(i);
+        if (m_sessions.at(i)->id() == sessionId) {
+            SshSession *session = m_sessions.takeAt(i);
+            session->requestStop();
+            session->deleteLater();
             emit sessionsChanged();
             return;
         }
     }
 }
 
-QVector<ActiveSession> SessionController::sessions() const
+void SessionController::sendInput(const QString &sessionId, const QByteArray &data)
 {
-    return m_sessions;
+    if (auto *session = findSession(sessionId)) {
+        session->sendInput(data);
+    }
+}
+
+void SessionController::requestResize(const QString &sessionId, int cols, int rows)
+{
+    if (auto *session = findSession(sessionId)) {
+        session->requestResize(cols, rows);
+    }
 }
 
 QVariantList SessionController::sessionsAsVariantList() const
 {
     QVariantList list;
-    for (const ActiveSession &s : m_sessions) {
-        QVariantMap map;
-        map.insert(QStringLiteral("id"), s.id);
-        map.insert(QStringLiteral("connectionId"), s.connectionId);
-        map.insert(QStringLiteral("title"), s.title);
-        map.insert(QStringLiteral("status"), s.status);
-        map.insert(QStringLiteral("lastMessage"), s.lastMessage);
-        list.append(map);
+    list.reserve(m_sessions.size());
+    for (const SshSession *session : m_sessions) {
+        list.append(toVariantMap(session));
     }
     return list;
+}
+
+QString SessionController::sessionBuffer(const QString &sessionId) const
+{
+    if (auto *session = findSession(sessionId)) {
+        return session->buffer();
+    }
+    return QString();
+}
+
+bool SessionController::contains(const QString &sessionId) const
+{
+    return findSession(sessionId) != nullptr;
+}
+
+QVariantMap SessionController::toVariantMap(const SshSession *session) const
+{
+    QVariantMap map;
+    map.insert(QStringLiteral("id"), session->id());
+    map.insert(QStringLiteral("connectionId"), session->connectionId());
+    map.insert(QStringLiteral("title"), session->title());
+    map.insert(QStringLiteral("status"), session->status());
+    map.insert(QStringLiteral("lastMessage"), session->lastMessage());
+    return map;
+}
+
+SshSession *SessionController::findSession(const QString &sessionId) const
+{
+    for (SshSession *session : m_sessions) {
+        if (session->id() == sessionId) {
+            return session;
+        }
+    }
+    return nullptr;
 }

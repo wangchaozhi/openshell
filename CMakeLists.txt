@@ -30,7 +30,15 @@ qt_add_executable(OpenShell
     src/TranslationManager.h
     src/TrayController.cpp
     src/TrayController.h
+    src/ssh/SshChannelWorker.cpp
+    src/ssh/SshChannelWorker.h
+    src/ssh/EchoChannelWorker.cpp
+    src/ssh/EchoChannelWorker.h
+    src/ssh/SshSession.cpp
+    src/ssh/SshSession.h
 )
+
+target_include_directories(OpenShell PRIVATE src)
 
 qt_add_qml_module(OpenShell
     URI OpenShell

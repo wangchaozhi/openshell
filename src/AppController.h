@@ -44,9 +44,12 @@ public:
     Q_INVOKABLE bool saveConnectionProfile(const QVariantMap &profile);
     Q_INVOKABLE bool deleteConnection(const QString &id);
 
-    Q_INVOKABLE bool openSession(const QString &connectionId);
+    Q_INVOKABLE QString openSession(const QString &connectionId);
     Q_INVOKABLE void closeSession(const QString &sessionId);
     Q_INVOKABLE QVariantList sessions() const;
+    Q_INVOKABLE QString sessionBuffer(const QString &sessionId) const;
+    Q_INVOKABLE void sendSessionInput(const QString &sessionId, const QString &text);
+    Q_INVOKABLE void resizeSession(const QString &sessionId, int cols, int rows);
 
     Q_INVOKABLE void showWindow();
     Q_INVOKABLE void hideWindow();
@@ -60,6 +63,8 @@ signals:
     void showRequested();
     void hideRequested();
     void sessionsChanged();
+    void sessionOutput(const QString &sessionId, const QString &chunk);
+    void sessionStatusChanged(const QString &sessionId, const QString &status, const QString &message);
 
 private:
     void setLastError(const QString &message);

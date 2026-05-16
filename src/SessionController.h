@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QByteArray>
 #include <QObject>
 #include <QString>
 #include <QVariantList>
@@ -7,14 +8,7 @@
 
 #include "ConnectionCatalog.h"
 
-struct ActiveSession
-{
-    QString id;
-    QString connectionId;
-    QString title;
-    QString status; // connecting, connected, disconnected, error
-    QString lastMessage;
-};
+class SshSession;
 
 class SessionController : public QObject
 {
@@ -22,17 +16,25 @@ class SessionController : public QObject
 
 public:
     explicit SessionController(QObject *parent = nullptr);
+    ~SessionController() override;
 
-    bool open(const ConnectionProfile &profile, QString *error = nullptr);
+    QString open(const ConnectionProfile &profile, QString *error = nullptr);
     void close(const QString &sessionId);
+    void sendInput(const QString &sessionId, const QByteArray &data);
+    void requestResize(const QString &sessionId, int cols, int rows);
 
-    QVector<ActiveSession> sessions() const;
     QVariantList sessionsAsVariantList() const;
+    QString sessionBuffer(const QString &sessionId) const;
+    bool contains(const QString &sessionId) const;
 
 signals:
     void sessionsChanged();
-    void sessionOutput(const QString &sessionId, const QString &chunk);
+    void sessionOutput(const QString &sessionId, const QByteArray &chunk);
+    void sessionStatusChanged(const QString &sessionId, const QString &status, const QString &message);
 
 private:
-    QVector<ActiveSession> m_sessions;
+    QVariantMap toVariantMap(const SshSession *session) const;
+    SshSession *findSession(const QString &sessionId) const;
+
+    QVector<SshSession *> m_sessions;
 };

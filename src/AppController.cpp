@@ -23,10 +23,17 @@ AppController::AppController(QObject *parent)
     connect(m_tray, &TrayController::showRequested, this, &AppController::showWindow);
     connect(m_tray, &TrayController::hideRequested, this, &AppController::hideWindow);
     connect(m_tray, &TrayController::languageChanged, this, &AppController::setLanguage);
-    connect(m_tray, &TrayController::connectionTriggered, this, &AppController::openSession);
+    connect(m_tray, &TrayController::connectionTriggered, this,
+            [this](const QString &connectionId) { openSession(connectionId); });
     connect(m_tray, &TrayController::quitRequested, this, &AppController::quit);
 
     connect(m_sessions, &SessionController::sessionsChanged, this, &AppController::sessionsChanged);
+    connect(m_sessions, &SessionController::sessionOutput, this,
+            [this](const QString &sessionId, const QByteArray &chunk) {
+                emit sessionOutput(sessionId, QString::fromUtf8(chunk));
+            });
+    connect(m_sessions, &SessionController::sessionStatusChanged, this,
+            &AppController::sessionStatusChanged);
 }
 
 AppController::~AppController() = default;
@@ -145,23 +152,24 @@ bool AppController::deleteConnection(const QString &id)
     return true;
 }
 
-bool AppController::openSession(const QString &connectionId)
+QString AppController::openSession(const QString &connectionId)
 {
     const ConnectionProfile profile = m_catalog->profileById(connectionId);
     if (profile.id.isEmpty()) {
         setLastError(tr("Unknown connection"));
-        return false;
+        return QString();
     }
 
     QString error;
-    if (!m_sessions->open(profile, &error)) {
+    const QString sessionId = m_sessions->open(profile, &error);
+    if (sessionId.isEmpty()) {
         setLastError(error);
-        return false;
+        return QString();
     }
 
     setCurrentConnectionId(connectionId);
     setLastError(QString());
-    return true;
+    return sessionId;
 }
 
 void AppController::closeSession(const QString &sessionId)
@@ -172,6 +180,21 @@ void AppController::closeSession(const QString &sessionId)
 QVariantList AppController::sessions() const
 {
     return m_sessions->sessionsAsVariantList();
+}
+
+QString AppController::sessionBuffer(const QString &sessionId) const
+{
+    return m_sessions->sessionBuffer(sessionId);
+}
+
+void AppController::sendSessionInput(const QString &sessionId, const QString &text)
+{
+    m_sessions->sendInput(sessionId, text.toUtf8());
+}
+
+void AppController::resizeSession(const QString &sessionId, int cols, int rows)
+{
+    m_sessions->requestResize(sessionId, cols, rows);
 }
 
 void AppController::showWindow()
