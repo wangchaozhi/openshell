@@ -259,9 +259,6 @@ Dialog {
                 opacity: enabled ? 1.0 : 0.4
             }
 
-            Label { text: qsTr("Group"); color: root.classic ? "#334155" : "#94a3b8"; font.pixelSize: 12 }
-            ThemedTextField { id: groupField; classic: root.classic; Layout.fillWidth: true }
-
             Label {
                 text: qsTr("Notes")
                 color: root.classic ? "#334155" : "#94a3b8"
@@ -284,11 +281,8 @@ Dialog {
                 }
             }
 
-            Item {
-                Layout.columnSpan: 2
-                Layout.fillWidth: true
-                Layout.preferredHeight: 18
-            }
+            Label { text: qsTr("Group"); color: root.classic ? "#334155" : "#94a3b8"; font.pixelSize: 12 }
+            ThemedTextField { id: groupField; classic: root.classic; Layout.fillWidth: true }
         }
         } // ScrollView
 
