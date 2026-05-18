@@ -228,6 +228,7 @@ qt_add_qml_module(OpenShell
         qml/MainWindow.qml
         qml/Sidebar.qml
         qml/ConnectionList.qml
+        qml/ConnectionManagerView.qml
         qml/ConnectionEditor.qml
         qml/SessionTabs.qml
         qml/TerminalView.qml

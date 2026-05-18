@@ -17,6 +17,9 @@ public:
     bool minimizeToTray() const;
     void setMinimizeToTray(bool enabled);
 
+    QString uiTheme() const;
+    void setUiTheme(const QString &theme);
+
     QString remoteFileOpenMode() const;
     void setRemoteFileOpenMode(const QString &mode);
 

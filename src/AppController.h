@@ -24,6 +24,7 @@ class AppController : public QObject
     Q_PROPERTY(QString currentConnectionId READ currentConnectionId WRITE setCurrentConnectionId NOTIFY currentConnectionChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(bool minimizeToTray READ minimizeToTray WRITE setMinimizeToTray NOTIFY minimizeToTrayChanged)
+    Q_PROPERTY(QString uiTheme READ uiTheme WRITE setUiTheme NOTIFY uiThemeChanged)
     Q_PROPERTY(QString remoteFileOpenMode READ remoteFileOpenMode WRITE setRemoteFileOpenMode NOTIFY remoteFileOpenSettingsChanged)
     Q_PROPERTY(QString externalTextEditorPath READ externalTextEditorPath WRITE setExternalTextEditorPath NOTIFY remoteFileOpenSettingsChanged)
     Q_PROPERTY(bool autoUploadRemoteEdits READ autoUploadRemoteEdits WRITE setAutoUploadRemoteEdits NOTIFY remoteFileOpenSettingsChanged)
@@ -42,6 +43,9 @@ public:
 
     bool minimizeToTray() const;
     void setMinimizeToTray(bool enabled);
+
+    QString uiTheme() const;
+    void setUiTheme(const QString &theme);
 
     QString remoteFileOpenMode() const;
     void setRemoteFileOpenMode(const QString &mode);
@@ -122,6 +126,7 @@ signals:
     void currentConnectionChanged();
     void lastErrorChanged();
     void minimizeToTrayChanged();
+    void uiThemeChanged();
     void remoteFileOpenSettingsChanged();
     void showRequested();
     void hideRequested();

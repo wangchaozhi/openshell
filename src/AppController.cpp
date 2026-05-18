@@ -183,6 +183,22 @@ void AppController::setMinimizeToTray(bool enabled)
     emit minimizeToTrayChanged();
 }
 
+QString AppController::uiTheme() const
+{
+    const QString theme = m_settings->uiTheme();
+    return theme == QStringLiteral("classic") ? theme : QStringLiteral("dark");
+}
+
+void AppController::setUiTheme(const QString &theme)
+{
+    const QString normalized = theme == QStringLiteral("classic") ? theme : QStringLiteral("dark");
+    if (uiTheme() == normalized) {
+        return;
+    }
+    m_settings->setUiTheme(normalized);
+    emit uiThemeChanged();
+}
+
 QString AppController::remoteFileOpenMode() const
 {
     const QString mode = m_settings->remoteFileOpenMode();

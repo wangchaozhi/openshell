@@ -9,10 +9,12 @@ namespace {
 constexpr auto kLanguage = "ui/language";
 constexpr auto kMinimizeToTray = "ui/minimizeToTray";
 constexpr auto kMainWindowGeometry = "ui/mainGeometry";
+constexpr auto kUiTheme = "ui/theme";
 constexpr auto kRemoteFileOpenMode = "remoteFiles/openMode";
 constexpr auto kExternalTextEditorPath = "remoteFiles/externalTextEditorPath";
 constexpr auto kAutoUploadRemoteEdits = "remoteFiles/autoUploadEdits";
 constexpr auto kDefaultLanguage = "system";
+constexpr auto kDefaultUiTheme = "dark";
 constexpr auto kDefaultRemoteFileOpenMode = "system";
 } // namespace
 
@@ -44,6 +46,18 @@ void SettingsStore::setMinimizeToTray(bool enabled)
 {
     QSettings settings;
     settings.setValue(kMinimizeToTray, enabled);
+}
+
+QString SettingsStore::uiTheme() const
+{
+    QSettings settings;
+    return settings.value(kUiTheme, QString::fromLatin1(kDefaultUiTheme)).toString();
+}
+
+void SettingsStore::setUiTheme(const QString &theme)
+{
+    QSettings settings;
+    settings.setValue(kUiTheme, theme);
 }
 
 QString SettingsStore::remoteFileOpenMode() const

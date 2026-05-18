@@ -4,64 +4,64 @@
 <context>
     <name>AppController</name>
     <message>
-        <location filename="../src/AppController.cpp" line="294" />
-        <location filename="../src/AppController.cpp" line="485" />
-        <location filename="../src/AppController.cpp" line="511" />
-        <location filename="../src/AppController.cpp" line="553" />
-        <location filename="../src/AppController.cpp" line="612" />
+        <location filename="../src/AppController.cpp" line="310" />
+        <location filename="../src/AppController.cpp" line="501" />
+        <location filename="../src/AppController.cpp" line="527" />
+        <location filename="../src/AppController.cpp" line="569" />
+        <location filename="../src/AppController.cpp" line="628" />
         <source>Unknown connection</source>
         <translation>未知连接</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="412" />
+        <location filename="../src/AppController.cpp" line="428" />
         <source>Select file to upload</source>
         <translation>选择要上传的文件</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="417" />
+        <location filename="../src/AppController.cpp" line="433" />
         <source>Select folder to upload</source>
         <translation>选择要上传的文件夹</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="422" />
+        <location filename="../src/AppController.cpp" line="438" />
         <source>Select download folder</source>
         <translation>选择下载目录</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="613" />
+        <location filename="../src/AppController.cpp" line="629" />
         <source>Invalid permission value</source>
         <translation>权限值无效</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="428" />
+        <location filename="../src/AppController.cpp" line="444" />
         <source>Select text editor</source>
         <translation>选择文本编辑器</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="430" />
+        <location filename="../src/AppController.cpp" line="446" />
         <source>Applications (*.exe);;All files (*)</source>
         <translation>应用程序 (*.exe);;所有文件 (*)</translation>
     </message>
     <message>
         <source>Remote file saved</source>
-        <translation>远程文件已保存</translation>
+        <translation type="vanished">远程文件已保存</translation>
     </message>
     <message>
         <source>Upload failed</source>
-        <translation>上传失败</translation>
+        <translation type="vanished">上传失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="826" />
+        <location filename="../src/AppController.cpp" line="842" />
         <source>Cannot open %1</source>
         <translation>无法打开 %1</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="787" />
+        <location filename="../src/AppController.cpp" line="803" />
         <source>Cannot write %1</source>
         <translation>无法写入 %1</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="794" />
+        <location filename="../src/AppController.cpp" line="810" />
         <source>Cannot save %1</source>
         <translation>无法保存 %1</translation>
     </message>
@@ -160,6 +160,95 @@
         <location filename="../qml/ConnectionEditor.qml" line="130" />
         <source>Notes</source>
         <translation>备注</translation>
+    </message>
+</context>
+<context>
+    <name>ConnectionManagerView</name>
+    <message>
+        <location filename="../qml/ConnectionManagerView.qml" line="27" />
+        <location filename="../qml/ConnectionManagerView.qml" line="227" />
+        <source>All</source>
+        <translation>全部</translation>
+    </message>
+    <message>
+        <location filename="../qml/ConnectionManagerView.qml" line="46" />
+        <source>Connections</source>
+        <translation>连接</translation>
+    </message>
+    <message>
+        <location filename="../qml/ConnectionManagerView.qml" line="197" />
+        <source>Connection Manager</source>
+        <translation>连接管理器</translation>
+    </message>
+    <message>
+        <location filename="../qml/ConnectionManagerView.qml" line="214" />
+        <source>New connection</source>
+        <translation>新建连接</translation>
+    </message>
+    <message>
+        <location filename="../qml/ConnectionManagerView.qml" line="221" />
+        <source>Search</source>
+        <translation>搜索</translation>
+    </message>
+    <message>
+        <location filename="../qml/ConnectionManagerView.qml" line="233" />
+        <source>Theme</source>
+        <translation>主题</translation>
+    </message>
+    <message>
+        <location filename="../qml/ConnectionManagerView.qml" line="244" />
+        <source>Dark</source>
+        <translation>深色</translation>
+    </message>
+    <message>
+        <location filename="../qml/ConnectionManagerView.qml" line="245" />
+        <source>Classic</source>
+        <translation>经典</translation>
+    </message>
+    <message>
+        <location filename="../qml/ConnectionManagerView.qml" line="268" />
+        <source>Name</source>
+        <translation>名称</translation>
+    </message>
+    <message>
+        <location filename="../qml/ConnectionManagerView.qml" line="274" />
+        <source>Host</source>
+        <translation>主机</translation>
+    </message>
+    <message>
+        <location filename="../qml/ConnectionManagerView.qml" line="280" />
+        <source>Port</source>
+        <translation>端口</translation>
+    </message>
+    <message>
+        <location filename="../qml/ConnectionManagerView.qml" line="286" />
+        <source>Username</source>
+        <translation>用户名</translation>
+    </message>
+    <message>
+        <location filename="../qml/ConnectionManagerView.qml" line="365" />
+        <source>(unnamed)</source>
+        <translation>（未命名）</translation>
+    </message>
+    <message>
+        <location filename="../qml/ConnectionManagerView.qml" line="417" />
+        <source>Open Session</source>
+        <translation>打开会话</translation>
+    </message>
+    <message>
+        <location filename="../qml/ConnectionManagerView.qml" line="421" />
+        <source>Edit</source>
+        <translation>编辑</translation>
+    </message>
+    <message>
+        <location filename="../qml/ConnectionManagerView.qml" line="425" />
+        <source>Delete</source>
+        <translation>删除</translation>
+    </message>
+    <message>
+        <location filename="../qml/ConnectionManagerView.qml" line="438" />
+        <source>No connections yet. Press + to add one.</source>
+        <translation>还没有连接，点 + 添加一个。</translation>
     </message>
 </context>
 <context>
@@ -665,32 +754,36 @@
         <translation>OpenShell</translation>
     </message>
     <message>
-        <location filename="../qml/MainWindow.qml" line="100" />
+        <location filename="../qml/MainWindow.qml" line="105" />
         <source>Connected</source>
         <translation>已连接</translation>
     </message>
     <message>
-        <location filename="../qml/MainWindow.qml" line="207" />
+        <location filename="../qml/MainWindow.qml" line="234" />
         <source>No active sessions</source>
         <translation>没有活动会话</translation>
     </message>
     <message>
-        <location filename="../qml/MainWindow.qml" line="212" />
         <source>Pick a connection on the left and press Enter, or double-click it.</source>
-        <translation>从左侧挑一个连接按回车，或者双击它。</translation>
+        <translation type="vanished">从左侧挑一个连接按回车，或者双击它。</translation>
     </message>
     <message>
-        <location filename="../qml/MainWindow.qml" line="238" />
+        <location filename="../qml/MainWindow.qml" line="266" />
         <source>Sessions: %1</source>
         <translation>会话数：%1</translation>
     </message>
     <message>
-        <location filename="../qml/MainWindow.qml" line="144" />
+        <location filename="../qml/MainWindow.qml" line="188" />
         <source>Connection deleted</source>
         <translation>连接已删除</translation>
     </message>
     <message>
-        <location filename="../qml/MainWindow.qml" line="254" />
+        <location filename="../qml/MainWindow.qml" line="239" />
+        <source>Open the connection manager folder and double-click a connection.</source>
+        <translation>打开连接管理器文件夹并双击连接。</translation>
+    </message>
+    <message>
+        <location filename="../qml/MainWindow.qml" line="282" />
         <source>Connection saved</source>
         <translation>连接已保存</translation>
     </message>
@@ -698,57 +791,57 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../src/AppController.cpp" line="595" />
+        <location filename="../src/AppController.cpp" line="611" />
         <source>Upload completed</source>
         <translation>上传完成</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="644" />
+        <location filename="../src/AppController.cpp" line="660" />
         <source>Permissions updated</source>
         <translation>权限已更新</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="687" />
+        <location filename="../src/AppController.cpp" line="703" />
         <source>Download failed</source>
         <translation>下载失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="766" />
+        <location filename="../src/AppController.cpp" line="782" />
         <source>Remote file saved</source>
         <translation>远程文件已保存</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="766" />
+        <location filename="../src/AppController.cpp" line="782" />
         <source>Upload failed</source>
         <translation>上传失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="901" />
+        <location filename="../src/AppController.cpp" line="917" />
         <source>Created</source>
         <translation>已创建</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="901" />
+        <location filename="../src/AppController.cpp" line="917" />
         <source>Create failed</source>
         <translation>创建失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="931" />
+        <location filename="../src/AppController.cpp" line="947" />
         <source>Renamed</source>
         <translation>已重命名</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="931" />
+        <location filename="../src/AppController.cpp" line="947" />
         <source>Rename failed</source>
         <translation>重命名失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="960" />
+        <location filename="../src/AppController.cpp" line="976" />
         <source>Deleted</source>
         <translation>已删除</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="960" />
+        <location filename="../src/AppController.cpp" line="976" />
         <source>Delete failed</source>
         <translation>删除失败</translation>
     </message>
@@ -927,17 +1020,21 @@
 <context>
     <name>SessionTabs</name>
     <message>
-        <location filename="../qml/SessionTabs.qml" line="66" />
-        <source>System Info</source>
-        <translation>系统信息</translation>
+        <location filename="../qml/SessionTabs.qml" line="51" />
+        <source>Connection Manager</source>
+        <translation>连接管理器</translation>
     </message>
     <message>
-        <location filename="../qml/SessionTabs.qml" line="104" />
+        <source>System Info</source>
+        <translation type="vanished">系统信息</translation>
+    </message>
+    <message>
+        <location filename="../qml/SessionTabs.qml" line="120" />
         <source>session</source>
         <translation>会话</translation>
     </message>
     <message>
-        <location filename="../qml/SessionTabs.qml" line="116" />
+        <location filename="../qml/SessionTabs.qml" line="134" />
         <source>Close session</source>
         <translation>关闭会话</translation>
     </message>
@@ -945,89 +1042,124 @@
 <context>
     <name>Sidebar</name>
     <message>
-        <location filename="../qml/Sidebar.qml" line="139" />
         <source>Connections</source>
-        <translation>连接</translation>
+        <translation type="vanished">连接</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="153" />
         <source>New connection</source>
-        <translation>新建连接</translation>
+        <translation type="vanished">新建连接</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="161" />
         <source>Filter…</source>
-        <translation>过滤…</translation>
+        <translation type="vanished">过滤…</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="203" />
         <source>(unnamed)</source>
-        <translation>（未命名）</translation>
+        <translation type="vanished">（未命名）</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="236" />
         <source>Open Session</source>
-        <translation>打开会话</translation>
+        <translation type="vanished">打开会话</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="240" />
         <source>Edit</source>
-        <translation>编辑</translation>
+        <translation type="vanished">编辑</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="244" />
         <source>Delete</source>
-        <translation>删除</translation>
+        <translation type="vanished">删除</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="255" />
         <source>No connections yet. Press + to add one.</source>
-        <translation>还没有连接，点 + 添加一个。</translation>
+        <translation type="vanished">还没有连接，点 + 添加一个。</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="289" />
         <source>Current server</source>
-        <translation>当前服务器</translation>
+        <translation type="vanished">当前服务器</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="308" />
+        <location filename="../qml/Sidebar.qml" line="72" />
+        <source>Sync status</source>
+        <translation>同步状态</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="88" />
+        <source>IP  %1</source>
+        <translation>IP  %1</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="98" />
         <source>Monitor online</source>
         <translation>监控在线</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="308" />
+        <location filename="../qml/Sidebar.qml" line="98" />
         <source>Open a session to monitor.</source>
         <translation>打开会话后启用监控。</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="320" />
+        <location filename="../qml/Sidebar.qml" line="106" />
+        <source>System Information</source>
+        <translation>系统信息</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="117" />
+        <location filename="../qml/Sidebar.qml" line="145" />
         <source>CPU</source>
         <translation>CPU</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="325" />
+        <location filename="../qml/Sidebar.qml" line="122" />
         <source>Mem</source>
         <translation>内存</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="330" />
+        <location filename="../qml/Sidebar.qml" line="127" />
         <source>Swap</source>
         <translation>交换</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="339" />
+        <location filename="../qml/Sidebar.qml" line="138" />
+        <source>Memory</source>
+        <translation>内存</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="152" />
+        <source>Command</source>
+        <translation>命令</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="202" />
+        <source>No process data</source>
+        <translation>暂无进程数据</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="202" />
+        <location filename="../qml/Sidebar.qml" line="257" />
+        <source>Waiting for monitor data</source>
+        <translation>等待监控数据</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="216" />
+        <source>Path</source>
+        <translation>路径</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="257" />
+        <source>No file system data</source>
+        <translation>暂无文件系统数据</translation>
+    </message>
+    <message>
         <source>Memory %1 / %2</source>
-        <translation>内存 %1 / %2</translation>
+        <translation type="vanished">内存 %1 / %2</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="348" />
         <source>Disk %1 free at %2</source>
-        <translation>磁盘 %1 可用，挂载点 %2</translation>
+        <translation type="vanished">磁盘 %1 可用，挂载点 %2</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="349" />
         <source>Disk --</source>
-        <translation>磁盘 --</translation>
+        <translation type="vanished">磁盘 --</translation>
     </message>
 </context>
 <context>

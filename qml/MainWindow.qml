@@ -18,12 +18,14 @@ ApplicationWindow {
     property var activeSessions: appController.sessions()
     property string selectedConnectionId: appController.currentConnectionId
     property string activeSessionId: ""
-    property string activeView: "terminal"
+    property string activeView: "connections"
+    property string uiTheme: appController.uiTheme
     property string statusMessage: ""
     property var monitorSnapshot: ({})
     property string monitorError: ""
     property string monitorRequestId: ""
     property bool monitorRequestInFlight: false
+    property bool fileBrowserVisible: false
 
     readonly property var activeSession: {
         for (let i = 0; i < activeSessions.length; ++i) {
@@ -51,7 +53,7 @@ ApplicationWindow {
             }
             if (!stillThere) {
                 activeSessionId = activeSessions.length > 0 ? activeSessions[0].id : ""
-                activeView = activeSessionId.length > 0 ? activeView : "terminal"
+                activeView = activeSessionId.length > 0 ? activeView : "connections"
             }
         } else if (activeSessions.length > 0) {
             activeSessionId = activeSessions[0].id
@@ -63,6 +65,9 @@ ApplicationWindow {
         if (newId && newId.length > 0) {
             // 新开的会话自动激活。
             activeSessionId = newId
+            activeView = "terminal"
+            fileBrowserVisible = false
+            delayedFileBrowserLoad.restart()
         } else if (appController.lastError && appController.lastError.length > 0) {
             statusMessage = appController.lastError
         }
@@ -103,6 +108,9 @@ ApplicationWindow {
         function onLanguageChanged() {
             window.refreshConnections()
         }
+        function onUiThemeChanged() {
+            window.uiTheme = appController.uiTheme
+        }
         function onShowRequested() {
             window.show()
             window.raise()
@@ -130,23 +138,11 @@ ApplicationWindow {
             SplitView.preferredWidth: 280
             SplitView.minimumWidth: 220
 
-            connections: window.connections
-            selectedConnectionId: window.selectedConnectionId
             monitorSnapshot: window.monitorSnapshot
             monitorError: window.monitorError
-
-            onConnectionPicked: (id) => window.selectedConnectionId = id
-            onConnectionDoublePicked: (id) => window.openSessionFor(id)
-            onNewConnectionRequested: connectionEditor.openForNew()
-            onEditConnectionRequested: (id) => connectionEditor.openForEdit(id)
-            onDeleteConnectionRequested: (id) => {
-                if (appController.deleteConnection(id)) {
-                    window.statusMessage = qsTr("Connection deleted")
-                    window.refreshConnections()
-                } else {
-                    window.statusMessage = appController.lastError
-                }
-            }
+            uiTheme: window.uiTheme
+            hasActiveSession: window.activeSessionId.length > 0
+            onSystemInfoRequested: if (window.activeSessionId.length > 0) window.activeView = "system"
         }
 
         ColumnLayout {
@@ -159,19 +155,43 @@ ApplicationWindow {
                 sessions: window.activeSessions
                 activeSessionId: window.activeSessionId
                 activeView: window.activeView
+                uiTheme: window.uiTheme
                 onSessionActivated: (id) => {
                     window.activeSessionId = id
                     window.activeView = "terminal"
+                    window.fileBrowserVisible = false
+                    delayedFileBrowserLoad.restart()
                 }
-                onSystemInfoActivated: window.activeView = "system"
+                onConnectionManagerActivated: window.activeView = "connections"
                 onSessionClosed: (id) => appController.closeSession(id)
             }
 
             StackLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                currentIndex: window.activeSessions.length === 0 ? 2
-                              : (window.activeView === "system" ? 1 : 0)
+                currentIndex: window.activeView === "connections" ? 0
+                              : (window.activeSessions.length === 0 ? 3
+                                 : (window.activeView === "system" ? 2 : 1))
+
+                ConnectionManagerView {
+                    connections: window.connections
+                    selectedConnectionId: window.selectedConnectionId
+                    uiTheme: window.uiTheme
+
+                    onConnectionPicked: (id) => window.selectedConnectionId = id
+                    onConnectionOpenRequested: (id) => window.openSessionFor(id)
+                    onThemeChanged: (theme) => appController.uiTheme = theme
+                    onNewConnectionRequested: connectionEditor.openForNew()
+                    onEditConnectionRequested: (id) => connectionEditor.openForEdit(id)
+                    onDeleteConnectionRequested: (id) => {
+                        if (appController.deleteConnection(id)) {
+                            window.statusMessage = qsTr("Connection deleted")
+                            window.refreshConnections()
+                        } else {
+                            window.statusMessage = appController.lastError
+                        }
+                    }
+                }
 
                 SplitView {
                     orientation: Qt.Vertical
@@ -183,21 +203,28 @@ ApplicationWindow {
                         session: window.activeSession
                     }
 
-                    FileBrowser {
+                    Loader {
+                        id: fileBrowserLoader
                         SplitView.fillWidth: true
                         SplitView.preferredHeight: 220
-                        session: window.activeSession
-                        terminalRemotePath: terminalView.detectedRemotePath
+                        active: window.fileBrowserVisible && window.activeView === "terminal" && window.activeSessionId.length > 0
+                        sourceComponent: FileBrowser {
+                            session: window.activeSession
+                            terminalRemotePath: terminalView.detectedRemotePath
+                        }
                     }
                 }
 
-                SystemInfoView {
-                    snapshot: window.monitorSnapshot
-                    error: window.monitorError
+                Loader {
+                    active: window.activeView === "system"
+                    sourceComponent: SystemInfoView {
+                        snapshot: window.monitorSnapshot
+                        error: window.monitorError
+                    }
                 }
 
                 Rectangle {
-                    color: "#0f172a"
+                    color: window.uiTheme === "classic" ? "#ffffff" : "#0f172a"
 
                     ColumnLayout {
                         anchors.centerIn: parent
@@ -205,12 +232,12 @@ ApplicationWindow {
 
                         Label {
                             text: qsTr("No active sessions")
-                            color: "#cbd5f5"
+                            color: window.uiTheme === "classic" ? "#0f172a" : "#cbd5f5"
                             font.pixelSize: 18
                         }
                         Label {
-                            text: qsTr("Pick a connection on the left and press Enter, or double-click it.")
-                            color: "#94a3b8"
+                            text: qsTr("Open the connection manager folder and double-click a connection.")
+                            color: window.uiTheme === "classic" ? "#64748b" : "#94a3b8"
                             font.pixelSize: 12
                         }
                     }
@@ -220,7 +247,8 @@ ApplicationWindow {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 22
-                color: "#020617"
+                color: window.uiTheme === "classic" ? "#f8fafc" : "#020617"
+                border.color: window.uiTheme === "classic" ? "#cbd5e1" : "#020617"
 
                 RowLayout {
                     anchors.fill: parent
@@ -229,14 +257,14 @@ ApplicationWindow {
 
                     Label {
                         text: window.statusMessage
-                        color: "#94a3b8"
+                        color: window.uiTheme === "classic" ? "#475569" : "#94a3b8"
                         font.pixelSize: 11
                         Layout.fillWidth: true
                         elide: Text.ElideRight
                     }
                     Label {
                         text: qsTr("Sessions: %1").arg(window.activeSessions.length)
-                        color: "#94a3b8"
+                        color: window.uiTheme === "classic" ? "#475569" : "#94a3b8"
                         font.pixelSize: 11
                     }
                 }
@@ -276,7 +304,16 @@ ApplicationWindow {
         monitorError = ""
         monitorRequestId = ""
         monitorRequestInFlight = false
+        fileBrowserVisible = false
+        delayedFileBrowserLoad.restart()
         monitorTimer.restart()
+    }
+
+    Timer {
+        id: delayedFileBrowserLoad
+        interval: 80
+        repeat: false
+        onTriggered: window.fileBrowserVisible = window.activeView === "terminal" && window.activeSessionId.length > 0
     }
 
     Connections {
