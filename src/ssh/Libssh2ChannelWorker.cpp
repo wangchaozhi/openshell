@@ -283,6 +283,15 @@ void Libssh2ChannelWorker::pump()
         return;
     }
 
+    if (m_profile.keepaliveSec > 0) {
+        int nextSec = 0;
+        if (libssh2_keepalive_send(m_session, &nextSec) < 0) {
+            emit errorOccurred(lastSessionError());
+            stop();
+            return;
+        }
+    }
+
     if (didWork) {
         // 刚有活，立刻再问一次，避免 select 唤醒间隙丢数据
         schedulePump(0);

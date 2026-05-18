@@ -955,10 +955,19 @@ QString SftpDirectoryLister::execute(const ConnectionProfile &profile,
 
     LIBSSH2_CHANNEL *channel = libssh2_channel_open_session(connection->session);
     if (!channel) {
-        if (errorOut) {
-            *errorOut = QObject::tr("Cannot open SSH exec channel: %1").arg(lastError(connection->session));
+        // Session may have gone stale (NAT/firewall silently dropped the TCP connection).
+        // Reset the cached connection and try once more before giving up.
+        resetConnection(connection);
+        if (!ensureConnected(connection, profile, errorOut)) {
+            return QString();
         }
-        return QString();
+        channel = libssh2_channel_open_session(connection->session);
+        if (!channel) {
+            if (errorOut) {
+                *errorOut = QObject::tr("Cannot open SSH exec channel: %1").arg(lastError(connection->session));
+            }
+            return QString();
+        }
     }
 
     const QByteArray encoded = command.toUtf8();
