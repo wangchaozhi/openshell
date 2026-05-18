@@ -19,6 +19,7 @@ Rectangle {
 
     component MeterBar: Item {
         property real value: 0
+        property string detailText: ""
         implicitHeight: 16
 
         function clampedValue() {
@@ -43,10 +44,21 @@ Rectangle {
                    : (clampedValue() >= 65 ? "#f59e0b" : (root.classic ? "#bbf7d0" : "#22c55e"))
         }
         Label {
-            anchors.centerIn: parent
+            anchors.left: parent.left
+            anchors.leftMargin: 6
+            anchors.verticalCenter: parent.verticalCenter
             text: clampedValue().toFixed(1) + "%"
             color: root.classic ? "#334155" : "#e2e8f0"
             font.pixelSize: 10
+        }
+        Label {
+            anchors.right: parent.right
+            anchors.rightMargin: 6
+            anchors.verticalCenter: parent.verticalCenter
+            text: detailText
+            color: root.classic ? "#334155" : "#e2e8f0"
+            font.pixelSize: 10
+            elide: Text.ElideRight
         }
     }
 
@@ -180,11 +192,13 @@ Rectangle {
             MeterBar {
                 Layout.fillWidth: true
                 value: monitorColumn.percentValue(monitorColumn.memory, "memUsedPercent")
+                detailText: (monitorColumn.memory.memUsedText || "--") + "/" + (monitorColumn.memory.memTotalText || "--")
             }
             Label { text: qsTr("Swap"); color: root.classic ? "#0f172a" : "#93c5fd"; font.pixelSize: 11 }
             MeterBar {
                 Layout.fillWidth: true
                 value: monitorColumn.percentValue(monitorColumn.memory, "swapUsedPercent")
+                detailText: (monitorColumn.memory.swapUsedText || "--") + "/" + (monitorColumn.memory.swapTotalText || "--")
             }
         }
 
