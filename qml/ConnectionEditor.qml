@@ -24,7 +24,7 @@ Dialog {
         editingId = ""
         nameField.text = ""
         hostField.text = ""
-        portField.value = 22
+        portField.text = "22"
         userField.text = ""
         passwordField.text = ""
         keyPathField.text = ""
@@ -44,7 +44,7 @@ Dialog {
                 editingId = p.id
                 nameField.text = p.name || ""
                 hostField.text = p.host || ""
-                portField.value = p.port || 22
+                portField.text = String(p.port || 22)
                 userField.text = p.username || ""
                 passwordField.text = p.password || ""
                 keyPathField.text = p.privateKeyPath || ""
@@ -77,7 +77,7 @@ Dialog {
             "name": nameField.text.trim(),
             "protocol": protocolBox.currentText,
             "host": hostField.text.trim(),
-            "port": portField.value,
+            "port": Math.max(1, Math.min(65535, Number(portField.text) || 22)),
             "username": userField.text.trim(),
             "authType": authBox.currentText,
             "password": passwordField.text,
@@ -210,19 +210,22 @@ Dialog {
                 classic: root.classic
                 error: root.validationShown && text.trim().length === 0
                 Layout.fillWidth: true
-                placeholderText: error ? qsTr("Host is required") : "example.com"
+                placeholderText: error ? qsTr("Host is required") : qsTr("Hostname or IP")
                 onTextChanged: if (nameField.text.trim().length > 0 && hostField.text.trim().length > 0) root.validationShown = false
             }
 
             Label { text: qsTr("Port"); color: root.classic ? "#334155" : "#94a3b8"; font.pixelSize: 12 }
-            ThemedSpinBox {
+            ThemedTextField {
                 id: portField
                 classic: root.classic
-                from: 1
-                to: 65535
-                value: 22
-                editable: true
                 Layout.preferredWidth: 88
+                horizontalAlignment: TextInput.AlignHCenter
+                inputMethodHints: Qt.ImhDigitsOnly
+                validator: IntValidator { bottom: 1; top: 65535 }
+                onEditingFinished: {
+                    const port = Math.max(1, Math.min(65535, Number(text) || 22))
+                    text = String(port)
+                }
             }
 
             Label { text: qsTr("Username"); color: root.classic ? "#334155" : "#94a3b8"; font.pixelSize: 12 }
@@ -279,6 +282,12 @@ Dialog {
                     width: notesScroll.availableWidth
                     height: Math.max(notesScroll.availableHeight, implicitHeight)
                 }
+            }
+
+            Item {
+                Layout.columnSpan: 2
+                Layout.fillWidth: true
+                Layout.preferredHeight: 18
             }
         }
         } // ScrollView

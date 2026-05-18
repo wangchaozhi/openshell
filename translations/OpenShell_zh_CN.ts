@@ -97,87 +97,92 @@
 <context>
     <name>ConnectionEditor</name>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="18"/>
+        <location filename="../qml/ConnectionEditor.qml" line="19"/>
         <source>New Connection</source>
         <translation>新建连接</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="18"/>
+        <location filename="../qml/ConnectionEditor.qml" line="19"/>
         <source>Edit Connection</source>
         <translation>编辑连接</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="63"/>
+        <location filename="../qml/ConnectionEditor.qml" line="195"/>
         <source>Connection name is required</source>
-        <translation type="unfinished">请填写连接名称</translation>
+        <translation>请填写连接名称</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="68"/>
+        <location filename="../qml/ConnectionEditor.qml" line="213"/>
         <source>Host is required</source>
-        <translation type="unfinished">请填写主机地址</translation>
+        <translation>请填写主机地址</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="187"/>
+        <location filename="../qml/ConnectionEditor.qml" line="189"/>
         <source>Name</source>
         <translation>名称</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="190"/>
+        <location filename="../qml/ConnectionEditor.qml" line="199"/>
         <source>Protocol</source>
         <translation>协议</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="198"/>
+        <location filename="../qml/ConnectionEditor.qml" line="207"/>
         <source>Host</source>
         <translation>主机</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="206"/>
+        <location filename="../qml/ConnectionEditor.qml" line="213"/>
+        <source>Hostname or IP</source>
+        <translation>主机名或 IP</translation>
+    </message>
+    <message>
+        <location filename="../qml/ConnectionEditor.qml" line="217"/>
         <source>Port</source>
         <translation>端口</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="217"/>
+        <location filename="../qml/ConnectionEditor.qml" line="231"/>
         <source>Username</source>
         <translation>用户名</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="220"/>
+        <location filename="../qml/ConnectionEditor.qml" line="234"/>
         <source>Auth Method</source>
         <translation>认证方式</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="228"/>
+        <location filename="../qml/ConnectionEditor.qml" line="242"/>
         <source>Password</source>
         <translation>密码</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="238"/>
+        <location filename="../qml/ConnectionEditor.qml" line="252"/>
         <source>Private Key</source>
         <translation>私钥</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="243"/>
+        <location filename="../qml/ConnectionEditor.qml" line="257"/>
         <source>Absolute path to .pem / .ppk</source>
         <translation>私钥绝对路径（.pem / .ppk）</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="248"/>
+        <location filename="../qml/ConnectionEditor.qml" line="262"/>
         <source>Group</source>
         <translation>分组</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="252"/>
+        <location filename="../qml/ConnectionEditor.qml" line="266"/>
         <source>Notes</source>
         <translation>备注</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="157"/>
+        <location filename="../qml/ConnectionEditor.qml" line="159"/>
         <source>Cancel</source>
         <translation>取消</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="164"/>
+        <location filename="../qml/ConnectionEditor.qml" line="166"/>
         <source>OK</source>
         <translation>确定</translation>
     </message>
@@ -1045,22 +1050,22 @@
         <translation>连接管理器</translation>
     </message>
     <message>
-        <location filename="../qml/SessionTabs.qml" line="174"/>
+        <location filename="../qml/SessionTabs.qml" line="186"/>
         <source>System Info</source>
         <translation>系统信息</translation>
     </message>
     <message>
-        <location filename="../qml/SessionTabs.qml" line="123"/>
+        <location filename="../qml/SessionTabs.qml" line="135"/>
         <source>session</source>
         <translation>会话</translation>
     </message>
     <message>
-        <location filename="../qml/SessionTabs.qml" line="137"/>
+        <location filename="../qml/SessionTabs.qml" line="149"/>
         <source>Close session</source>
         <translation>关闭会话</translation>
     </message>
     <message>
-        <location filename="../qml/SessionTabs.qml" line="188"/>
+        <location filename="../qml/SessionTabs.qml" line="200"/>
         <source>Close</source>
         <translation>关闭</translation>
     </message>
@@ -1104,79 +1109,79 @@
         <translation type="vanished">当前服务器</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="73"/>
+        <location filename="../qml/Sidebar.qml" line="85"/>
         <source>Sync status</source>
         <translation>同步状态</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="92"/>
+        <location filename="../qml/Sidebar.qml" line="104"/>
         <source>IP</source>
         <translation>IP</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="109"/>
+        <location filename="../qml/Sidebar.qml" line="121"/>
         <source>Copy IP</source>
         <translation>复制 IP</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="138"/>
+        <location filename="../qml/Sidebar.qml" line="150"/>
         <source>Monitor online</source>
         <translation>监控在线</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="138"/>
+        <location filename="../qml/Sidebar.qml" line="150"/>
         <source>Open a session to monitor.</source>
         <translation>打开会话后启用监控。</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="146"/>
+        <location filename="../qml/Sidebar.qml" line="158"/>
         <source>System Information</source>
         <translation>系统信息</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="174"/>
-        <location filename="../qml/Sidebar.qml" line="202"/>
+        <location filename="../qml/Sidebar.qml" line="186"/>
+        <location filename="../qml/Sidebar.qml" line="216"/>
         <source>CPU</source>
         <translation>CPU</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="179"/>
+        <location filename="../qml/Sidebar.qml" line="191"/>
         <source>Mem</source>
         <translation>内存</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="184"/>
+        <location filename="../qml/Sidebar.qml" line="197"/>
         <source>Swap</source>
         <translation>交换</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="195"/>
+        <location filename="../qml/Sidebar.qml" line="209"/>
         <source>Memory</source>
         <translation>内存</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="209"/>
+        <location filename="../qml/Sidebar.qml" line="223"/>
         <source>Command</source>
         <translation>命令</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="259"/>
+        <location filename="../qml/Sidebar.qml" line="273"/>
         <source>No process data</source>
         <translation>暂无进程数据</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="259"/>
-        <location filename="../qml/Sidebar.qml" line="314"/>
+        <location filename="../qml/Sidebar.qml" line="273"/>
+        <location filename="../qml/Sidebar.qml" line="328"/>
         <source>Waiting for monitor data</source>
         <translation>等待监控数据</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="273"/>
+        <location filename="../qml/Sidebar.qml" line="287"/>
         <source>Path</source>
         <translation>路径</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="314"/>
+        <location filename="../qml/Sidebar.qml" line="328"/>
         <source>No file system data</source>
         <translation>暂无文件系统数据</translation>
     </message>

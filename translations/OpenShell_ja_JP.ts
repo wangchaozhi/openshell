@@ -89,87 +89,92 @@
 <context>
     <name>ConnectionEditor</name>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="18"/>
+        <location filename="../qml/ConnectionEditor.qml" line="19"/>
         <source>New Connection</source>
         <translation>新規接続</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="18"/>
+        <location filename="../qml/ConnectionEditor.qml" line="19"/>
         <source>Edit Connection</source>
         <translation>接続を編集</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="63"/>
+        <location filename="../qml/ConnectionEditor.qml" line="195"/>
         <source>Connection name is required</source>
-        <translation type="unfinished">接続名を入力してください</translation>
+        <translation>接続名を入力してください</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="68"/>
+        <location filename="../qml/ConnectionEditor.qml" line="213"/>
         <source>Host is required</source>
-        <translation type="unfinished">ホストを入力してください</translation>
+        <translation>ホストを入力してください</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="187"/>
+        <location filename="../qml/ConnectionEditor.qml" line="189"/>
         <source>Name</source>
         <translation>名前</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="190"/>
+        <location filename="../qml/ConnectionEditor.qml" line="199"/>
         <source>Protocol</source>
         <translation>プロトコル</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="198"/>
+        <location filename="../qml/ConnectionEditor.qml" line="207"/>
         <source>Host</source>
         <translation>ホスト</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="206"/>
+        <location filename="../qml/ConnectionEditor.qml" line="213"/>
+        <source>Hostname or IP</source>
+        <translation>ホスト名または IP</translation>
+    </message>
+    <message>
+        <location filename="../qml/ConnectionEditor.qml" line="217"/>
         <source>Port</source>
         <translation>ポート</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="217"/>
+        <location filename="../qml/ConnectionEditor.qml" line="231"/>
         <source>Username</source>
         <translation>ユーザー名</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="220"/>
+        <location filename="../qml/ConnectionEditor.qml" line="234"/>
         <source>Auth Method</source>
         <translation>認証方式</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="228"/>
+        <location filename="../qml/ConnectionEditor.qml" line="242"/>
         <source>Password</source>
         <translation>パスワード</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="238"/>
+        <location filename="../qml/ConnectionEditor.qml" line="252"/>
         <source>Private Key</source>
         <translation>秘密鍵</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="243"/>
+        <location filename="../qml/ConnectionEditor.qml" line="257"/>
         <source>Absolute path to .pem / .ppk</source>
         <translation>秘密鍵の絶対パス（.pem / .ppk）</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="248"/>
+        <location filename="../qml/ConnectionEditor.qml" line="262"/>
         <source>Group</source>
         <translation>グループ</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="252"/>
+        <location filename="../qml/ConnectionEditor.qml" line="266"/>
         <source>Notes</source>
         <translation>メモ</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="157"/>
+        <location filename="../qml/ConnectionEditor.qml" line="159"/>
         <source>Cancel</source>
         <translation>キャンセル</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="164"/>
+        <location filename="../qml/ConnectionEditor.qml" line="166"/>
         <source>OK</source>
         <translation>OK</translation>
     </message>
@@ -1025,22 +1030,22 @@
         <translation>接続マネージャー</translation>
     </message>
     <message>
-        <location filename="../qml/SessionTabs.qml" line="174"/>
+        <location filename="../qml/SessionTabs.qml" line="186"/>
         <source>System Info</source>
         <translation>システム情報</translation>
     </message>
     <message>
-        <location filename="../qml/SessionTabs.qml" line="123"/>
+        <location filename="../qml/SessionTabs.qml" line="135"/>
         <source>session</source>
         <translation>セッション</translation>
     </message>
     <message>
-        <location filename="../qml/SessionTabs.qml" line="137"/>
+        <location filename="../qml/SessionTabs.qml" line="149"/>
         <source>Close session</source>
         <translation>セッションを閉じる</translation>
     </message>
     <message>
-        <location filename="../qml/SessionTabs.qml" line="188"/>
+        <location filename="../qml/SessionTabs.qml" line="200"/>
         <source>Close</source>
         <translation>閉じる</translation>
     </message>
@@ -1048,79 +1053,79 @@
 <context>
     <name>Sidebar</name>
     <message>
-        <location filename="../qml/Sidebar.qml" line="73"/>
+        <location filename="../qml/Sidebar.qml" line="85"/>
         <source>Sync status</source>
         <translation>同期状態</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="92"/>
+        <location filename="../qml/Sidebar.qml" line="104"/>
         <source>IP</source>
         <translation>IP</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="109"/>
+        <location filename="../qml/Sidebar.qml" line="121"/>
         <source>Copy IP</source>
         <translation>IPをコピー</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="138"/>
+        <location filename="../qml/Sidebar.qml" line="150"/>
         <source>Monitor online</source>
         <translation>モニター稼働中</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="138"/>
+        <location filename="../qml/Sidebar.qml" line="150"/>
         <source>Open a session to monitor.</source>
         <translation>監視するにはセッションを開いてください。</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="146"/>
+        <location filename="../qml/Sidebar.qml" line="158"/>
         <source>System Information</source>
         <translation>システム情報</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="174"/>
-        <location filename="../qml/Sidebar.qml" line="202"/>
+        <location filename="../qml/Sidebar.qml" line="186"/>
+        <location filename="../qml/Sidebar.qml" line="216"/>
         <source>CPU</source>
         <translation>CPU</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="179"/>
+        <location filename="../qml/Sidebar.qml" line="191"/>
         <source>Mem</source>
         <translation>メモリ</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="184"/>
+        <location filename="../qml/Sidebar.qml" line="197"/>
         <source>Swap</source>
         <translation>スワップ</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="195"/>
+        <location filename="../qml/Sidebar.qml" line="209"/>
         <source>Memory</source>
         <translation>メモリ</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="209"/>
+        <location filename="../qml/Sidebar.qml" line="223"/>
         <source>Command</source>
         <translation>コマンド</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="259"/>
+        <location filename="../qml/Sidebar.qml" line="273"/>
         <source>No process data</source>
         <translation>プロセスデータがありません</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="259"/>
-        <location filename="../qml/Sidebar.qml" line="314"/>
+        <location filename="../qml/Sidebar.qml" line="273"/>
+        <location filename="../qml/Sidebar.qml" line="328"/>
         <source>Waiting for monitor data</source>
         <translation>モニターデータを待機中</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="273"/>
+        <location filename="../qml/Sidebar.qml" line="287"/>
         <source>Path</source>
         <translation>パス</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="314"/>
+        <location filename="../qml/Sidebar.qml" line="328"/>
         <source>No file system data</source>
         <translation>ファイルシステムデータがありません</translation>
     </message>
