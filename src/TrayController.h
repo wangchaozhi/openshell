@@ -46,6 +46,7 @@ private:
     QAction *m_systemLanguageAction = nullptr;
     QAction *m_englishLanguageAction = nullptr;
     QAction *m_chineseLanguageAction = nullptr;
+    QAction *m_japaneseLanguageAction = nullptr;
     QActionGroup *m_languageActionGroup = nullptr;
     QVector<QAction *> m_connectionActions;
 };

@@ -240,6 +240,7 @@ qt_add_qml_module(OpenShell
 qt_add_translations(OpenShell
     TS_FILES
         translations/OpenShell_zh_CN.ts
+        translations/OpenShell_ja_JP.ts
     RESOURCE_PREFIX
         /i18n
 )

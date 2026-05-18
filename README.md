@@ -1,6 +1,6 @@
 # OpenShell
 
-English | [简体中文](README-CN.md)
+English | [简体中文](README-CN.md) | [日本語](README-JP.md)
 
 OpenShell is a cross-platform SSH / SFTP terminal client built with Qt 6, QML, and C++20. It aims for a workflow similar to FinalShell: connection management on the left, multi-tab terminals in the main area, and a local/remote file browser below.
 
@@ -17,7 +17,7 @@ The project is no longer only a UI skeleton. It already includes real SSH sessio
 - Remote file opening: double-click remote files and open them with the system default app, a configured editor, or the built-in editor.
 - Edit upload-back: external editor saves can be watched and uploaded back to the original remote path; the built-in editor uploads on save.
 - System tray: show/hide window, quick-open connections, language switching, and quit.
-- Localization: Simplified Chinese is included; English currently uses source-string fallback.
+- Localization: Simplified Chinese and Japanese are included; English currently uses source-string fallback.
 
 ## Requirements
 
@@ -88,7 +88,8 @@ ctest --test-dir build
 │   ├── FileBrowser.qml
 │   └── AccentCard.qml
 ├── translations/
-│   └── OpenShell_zh_CN.ts
+│   ├── OpenShell_zh_CN.ts
+│   └── OpenShell_ja_JP.ts
 ├── tests/
 │   ├── test_connection_catalog.cpp
 │   └── test_session_controller.cpp

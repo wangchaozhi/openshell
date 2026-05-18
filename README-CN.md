@@ -1,6 +1,6 @@
 # OpenShell
 
-[English](README.md) | 简体中文
+[English](README.md) | 简体中文 | [日本語](README-JP.md)
 
 OpenShell 是一个基于 Qt 6 / QML / C++20 的跨平台 SSH / SFTP 终端工具，目标体验类似 FinalShell：左侧连接管理，中间多标签终端，下方本地/远程双栏文件管理。
 
@@ -88,7 +88,8 @@ ctest --test-dir build
 │   ├── FileBrowser.qml
 │   └── AccentCard.qml
 ├── translations/
-│   └── OpenShell_zh_CN.ts
+│   ├── OpenShell_zh_CN.ts
+│   └── OpenShell_ja_JP.ts
 ├── tests/
 │   ├── test_connection_catalog.cpp
 │   └── test_session_controller.cpp
