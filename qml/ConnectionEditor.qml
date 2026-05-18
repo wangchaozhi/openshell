@@ -18,6 +18,7 @@ Dialog {
 
     title: editingId.length === 0 ? qsTr("New Connection") : qsTr("Edit Connection")
     width: 480
+    height: 520
     padding: 0
 
     function openForNew() {
@@ -180,6 +181,7 @@ Dialog {
             Layout.minimumHeight: 0
             clip: true
             contentWidth: availableWidth
+            ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
         GridLayout {
             width: parent.width
