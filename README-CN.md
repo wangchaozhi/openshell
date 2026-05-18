@@ -6,6 +6,8 @@ OpenShell 是一个基于 Qt 6 / QML / C++20 的跨平台 SSH / SFTP 终端工�
 
 当前项目已经具备可用骨架和部分真实能力：SSH 登录、终端渲染、SFTP 浏览与传输、远程文件打开/编辑回传、系统托盘和基础多语言。
 
+![OpenShell 截图](assets/screenshots/Snipaste_2026-05-18_16-21-03.png)
+
 ## 功能
 
 - 连接 Profile 管理：名称、协议、主机、端口、用户名、密码/私钥/Agent、分组和备注。

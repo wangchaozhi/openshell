@@ -6,6 +6,8 @@ OpenShell is a cross-platform SSH / SFTP terminal client built with Qt 6, QML, a
 
 The project is no longer only a UI skeleton. It already includes real SSH sessions, terminal rendering, SFTP browsing and transfer operations, remote file open/edit/upload-back workflows, a system tray, and basic localization.
 
+![OpenShell screenshot](assets/screenshots/Snipaste_2026-05-18_16-21-31.png)
+
 ## Features
 
 - Connection profiles: name, protocol, host, port, username, password/private key/agent auth, group, and notes.
