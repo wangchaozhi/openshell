@@ -176,7 +176,8 @@ Dialog {
 
         ScrollView {
             Layout.fillWidth: true
-            Layout.preferredHeight: 440
+            Layout.fillHeight: true
+            Layout.minimumHeight: 0
             clip: true
             contentWidth: availableWidth
 
@@ -259,6 +260,9 @@ Dialog {
                 opacity: enabled ? 1.0 : 0.4
             }
 
+            Label { text: qsTr("Group"); color: root.classic ? "#334155" : "#94a3b8"; font.pixelSize: 12 }
+            ThemedTextField { id: groupField; classic: root.classic; Layout.fillWidth: true }
+
             Label {
                 text: qsTr("Notes")
                 color: root.classic ? "#334155" : "#94a3b8"
@@ -280,9 +284,6 @@ Dialog {
                     height: Math.max(notesScroll.availableHeight, implicitHeight)
                 }
             }
-
-            Label { text: qsTr("Group"); color: root.classic ? "#334155" : "#94a3b8"; font.pixelSize: 12 }
-            ThemedTextField { id: groupField; classic: root.classic; Layout.fillWidth: true }
         }
         } // ScrollView
 
