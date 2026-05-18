@@ -144,3 +144,7 @@ OpenShell は余暇に開発されています。役に立った場合は、コ�
 - パッケージング：Windows/macOS/Linux のリリースワークフローの整備。
 
 詳細なアーキテクチャについては [docs/architecture.md](docs/architecture.md) および [AGENTS.md](AGENTS.md) を参照してください。
+
+## ライセンス
+
+OpenShell は [GNU General Public License v3.0](LICENSE) のもとで公開されています。ソースコード・バイナリの再配布（改変版を含む）はすべて GPL v3 のもとで継続して公開し、対応するソースコードを同梱する必要があります。

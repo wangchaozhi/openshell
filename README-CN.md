@@ -149,3 +149,7 @@ QStandardPaths::AppDataLocation/connections/<id>.json
 - 打包发布：完善 Windows/macOS/Linux release 流程。
 
 更多设计说明见 [docs/architecture.md](docs/architecture.md) 和 [AGENTS.md](AGENTS.md)。
+
+## 开源协议
+
+OpenShell 采用 [GNU 通用公共许可证 v3.0](LICENSE) 发布。任何源码或二进制（包括修改版本）的再分发都必须以 GPL v3 继续开源，并随附完整对应源代码。

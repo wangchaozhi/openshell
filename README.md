@@ -144,3 +144,7 @@ OpenShell is built in spare time. If it saves you time, a coffee would be apprec
 - Packaging: improve Windows/macOS/Linux release workflows.
 
 See [docs/architecture.md](docs/architecture.md) and [AGENTS.md](AGENTS.md) for more project notes.
+
+## License
+
+OpenShell is released under the [GNU General Public License v3.0](LICENSE). Any redistribution of the source code or binaries — including modified versions — must remain under GPL v3 and ship the corresponding source.
