@@ -26,6 +26,7 @@ ApplicationWindow {
     property string monitorRequestId: ""
     property bool monitorRequestInFlight: false
     property bool fileBrowserVisible: false
+    property bool systemInfoTabVisible: false
 
     readonly property var activeSession: {
         for (let i = 0; i < activeSessions.length; ++i) {
@@ -34,6 +35,15 @@ ApplicationWindow {
             }
         }
         return ({})
+    }
+
+    readonly property string activeConnectionHost: {
+        const cid = activeSession.connectionId
+        if (!cid) return ""
+        for (let i = 0; i < connections.length; ++i) {
+            if (connections[i].id === cid) return connections[i].host || ""
+        }
+        return ""
     }
 
     function refreshConnections() {
@@ -142,7 +152,13 @@ ApplicationWindow {
             monitorError: window.monitorError
             uiTheme: window.uiTheme
             hasActiveSession: window.activeSessionId.length > 0
-            onSystemInfoRequested: if (window.activeSessionId.length > 0) window.activeView = "system"
+            connectionHost: window.activeConnectionHost
+            onSystemInfoRequested: {
+                if (window.activeSessionId.length > 0) {
+                    window.activeView = "system"
+                    window.systemInfoTabVisible = true
+                }
+            }
         }
 
         ColumnLayout {
@@ -156,6 +172,7 @@ ApplicationWindow {
                 activeSessionId: window.activeSessionId
                 activeView: window.activeView
                 uiTheme: window.uiTheme
+                systemInfoTabVisible: window.systemInfoTabVisible
                 onSessionActivated: (id) => {
                     window.activeSessionId = id
                     window.activeView = "terminal"
@@ -164,6 +181,12 @@ ApplicationWindow {
                 }
                 onConnectionManagerActivated: window.activeView = "connections"
                 onSessionClosed: (id) => appController.closeSession(id)
+                onSystemInfoActivated: window.activeView = "system"
+                onSystemInfoClosed: {
+                    window.systemInfoTabVisible = false
+                    if (window.activeView === "system")
+                        window.activeView = "terminal"
+                }
             }
 
             StackLayout {
@@ -277,6 +300,7 @@ ApplicationWindow {
         anchors.centerIn: parent
         modal: true
         connections: window.connections
+        uiTheme: window.uiTheme
 
         onSaved: {
             window.statusMessage = qsTr("Connection saved")
@@ -305,6 +329,8 @@ ApplicationWindow {
         monitorRequestId = ""
         monitorRequestInFlight = false
         fileBrowserVisible = false
+        systemInfoTabVisible = false
+        if (activeView === "system") activeView = "terminal"
         delayedFileBrowserLoad.restart()
         monitorTimer.restart()
     }

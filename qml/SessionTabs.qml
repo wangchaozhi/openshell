@@ -9,11 +9,14 @@ Rectangle {
     property string activeSessionId: ""
     property string activeView: "terminal"
     property string uiTheme: "dark"
+    property bool systemInfoTabVisible: false
     readonly property bool classic: uiTheme === "classic"
 
     signal sessionActivated(string id)
     signal sessionClosed(string id)
     signal connectionManagerActivated()
+    signal systemInfoActivated()
+    signal systemInfoClosed()
     color: classic ? "#f8fafc" : "#020617"
 
     component CloseIcon: Item {
@@ -134,6 +137,56 @@ Rectangle {
                         ToolTip.text: qsTr("Close session")
                         onClicked: root.sessionClosed(modelData.id)
                     }
+                }
+            }
+        }
+
+        Rectangle {
+            id: sysTab
+            visible: root.systemInfoTabVisible
+            width: sysTabRow.implicitWidth + 16
+            height: parent.height - 4
+            anchors.verticalCenter: parent.verticalCenter
+            radius: 4
+            color: root.activeView === "system"
+                   ? (root.classic ? "#e0f2fe" : "#1e293b")
+                   : (root.classic ? "#ffffff" : "#0f172a")
+            border.color: root.activeView === "system"
+                          ? "#38bdf8"
+                          : (root.classic ? "#cbd5e1" : "#1e293b")
+            border.width: 1
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.systemInfoActivated()
+            }
+
+            RowLayout {
+                id: sysTabRow
+                anchors.fill: parent
+                anchors.leftMargin: 10
+                anchors.rightMargin: 6
+                spacing: 6
+
+                Label {
+                    text: qsTr("System Info")
+                    color: root.activeView === "system"
+                           ? (root.classic ? "#0f172a" : "#f1f5f9")
+                           : (root.classic ? "#334155" : "#cbd5f5")
+                    font.pixelSize: 12
+                }
+
+                ToolButton {
+                    Layout.preferredWidth: 22
+                    Layout.preferredHeight: 22
+                    contentItem: CloseIcon {
+                        anchors.centerIn: parent
+                    }
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Close")
+                    onClicked: root.systemInfoClosed()
                 }
             }
         }

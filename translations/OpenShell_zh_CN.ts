@@ -1025,18 +1025,24 @@
         <translation>连接管理器</translation>
     </message>
     <message>
+        <location filename="../qml/SessionTabs.qml" line="174" />
         <source>System Info</source>
-        <translation type="vanished">系统信息</translation>
+        <translation>系统信息</translation>
     </message>
     <message>
-        <location filename="../qml/SessionTabs.qml" line="120" />
+        <location filename="../qml/SessionTabs.qml" line="123" />
         <source>session</source>
         <translation>会话</translation>
     </message>
     <message>
-        <location filename="../qml/SessionTabs.qml" line="134" />
+        <location filename="../qml/SessionTabs.qml" line="137" />
         <source>Close session</source>
         <translation>关闭会话</translation>
+    </message>
+    <message>
+        <location filename="../qml/SessionTabs.qml" line="188" />
+        <source>Close</source>
+        <translation>关闭</translation>
     </message>
 </context>
 <context>
@@ -1083,28 +1089,33 @@
         <translation>同步状态</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="88" />
-        <source>IP  %1</source>
-        <translation>IP  %1</translation>
+        <location filename="../qml/Sidebar.qml" line="92" />
+        <source>IP</source>
+        <translation>IP</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="98" />
+        <location filename="../qml/Sidebar.qml" line="109" />
+        <source>Copy IP</source>
+        <translation>复制 IP</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="138" />
         <source>Monitor online</source>
         <translation>监控在线</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="98" />
+        <location filename="../qml/Sidebar.qml" line="138" />
         <source>Open a session to monitor.</source>
         <translation>打开会话后启用监控。</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="106" />
+        <location filename="../qml/Sidebar.qml" line="146" />
         <source>System Information</source>
         <translation>系统信息</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="117" />
-        <location filename="../qml/Sidebar.qml" line="145" />
+        <location filename="../qml/Sidebar.qml" line="174" />
+        <location filename="../qml/Sidebar.qml" line="202" />
         <source>CPU</source>
         <translation>CPU</translation>
     </message>

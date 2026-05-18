@@ -9,6 +9,7 @@ Rectangle {
     property string monitorError: ""
     property string uiTheme: "dark"
     property bool hasActiveSession: false
+    property string connectionHost: ""
     readonly property bool classic: uiTheme === "classic"
 
     signal systemInfoRequested()
@@ -83,12 +84,51 @@ Rectangle {
             }
         }
 
-        Label {
+        RowLayout {
             Layout.fillWidth: true
-            text: qsTr("IP  %1").arg(root.monitorSnapshot.info && root.monitorSnapshot.info.hostname ? root.monitorSnapshot.info.hostname : "-")
-            color: root.classic ? "#0f172a" : "#cbd5e1"
-            font.pixelSize: 11
-            elide: Text.ElideRight
+            spacing: 4
+
+            Label {
+                text: qsTr("IP")
+                color: root.classic ? "#0f172a" : "#93c5fd"
+                font.pixelSize: 11
+            }
+            Label {
+                id: ipLabel
+                Layout.fillWidth: true
+                text: root.connectionHost.length > 0 ? root.connectionHost : "-"
+                color: root.classic ? "#0f172a" : "#cbd5e1"
+                font.pixelSize: 11
+                elide: Text.ElideRight
+            }
+            ToolButton {
+                implicitWidth: 20
+                implicitHeight: 20
+                visible: ipLabel.text !== "-"
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Copy IP")
+                contentItem: Item {
+                    Rectangle {
+                        x: 3; y: 5; width: 10; height: 8
+                        color: "transparent"
+                        border.color: root.classic ? "#64748b" : "#94a3b8"
+                        border.width: 1.5
+                        radius: 1
+                    }
+                    Rectangle {
+                        x: 6; y: 3; width: 10; height: 8
+                        color: root.classic ? "#f8fafc" : "#0b1220"
+                        border.color: root.classic ? "#64748b" : "#94a3b8"
+                        border.width: 1.5
+                        radius: 1
+                    }
+                }
+                background: Rectangle {
+                    radius: 3
+                    color: parent.hovered ? (root.classic ? "#e2e8f0" : "#1e293b") : "transparent"
+                }
+                onClicked: appController.copyTextToClipboard(ipLabel.text)
+            }
         }
 
         Label {
@@ -106,6 +146,23 @@ Rectangle {
             text: qsTr("System Information")
             enabled: root.hasActiveSession
             onClicked: root.systemInfoRequested()
+            implicitHeight: 28
+            background: Rectangle {
+                radius: 4
+                color: !parent.enabled ? (root.classic ? "#f1f5f9" : "#0f172a")
+                       : parent.hovered ? (root.classic ? "#e0f2fe" : "#1e3a5f")
+                       : (root.classic ? "#ffffff" : "#1e293b")
+                border.color: root.classic ? (parent.enabled ? "#cbd5e1" : "#e2e8f0")
+                                           : (parent.enabled ? "#475569" : "#1e293b")
+            }
+            contentItem: Label {
+                text: parent.text
+                color: !parent.enabled ? (root.classic ? "#94a3b8" : "#475569")
+                       : (root.classic ? "#334155" : "#cbd5e1")
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                font.pixelSize: 12
+            }
         }
 
         GridLayout {
@@ -139,14 +196,14 @@ Rectangle {
                 color: "#ffffff"
                 horizontalAlignment: Text.AlignHCenter
                 background: Rectangle { color: "#60a5fa" }
-                Layout.fillWidth: true
+                Layout.preferredWidth: 66
             }
             Label {
                 text: qsTr("CPU")
                 color: "#ffffff"
                 horizontalAlignment: Text.AlignHCenter
                 background: Rectangle { color: "#ef4444" }
-                Layout.fillWidth: true
+                Layout.preferredWidth: 42
             }
             Label {
                 text: qsTr("Command")
