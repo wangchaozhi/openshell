@@ -6,6 +6,8 @@ set "ROOT_DIR=%ROOT_DIR:~0,-1%"
 set "BUILD_DIR=%ROOT_DIR%\build-vs"
 set "APP_EXE=%BUILD_DIR%\bin\Debug\OpenShell.exe"
 
+call :stop_running_app "%APP_EXE%"
+
 if not defined CMAKE_EXE (
     for /f "delims=" %%C in ('where cmake.exe 2^>nul') do if not defined CMAKE_EXE set "CMAKE_EXE=%%C"
 )
@@ -45,3 +47,9 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 
 start "" "%APP_EXE%"
+exit /b 0
+
+:stop_running_app
+set "TARGET_EXE=%~f1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$target = [System.IO.Path]::GetFullPath('%TARGET_EXE%'); Get-Process OpenShell -ErrorAction SilentlyContinue | Where-Object { $_.Path -and ([System.IO.Path]::GetFullPath($_.Path) -ieq $target) } | ForEach-Object { Write-Host ('Stopping running OpenShell.exe: ' + $_.Path); Stop-Process -Id $_.Id -Force }"
+exit /b 0

@@ -235,6 +235,11 @@ qt_add_qml_module(OpenShell
         qml/SystemInfoView.qml
         qml/FileBrowser.qml
         qml/AccentCard.qml
+        qml/ThemedTextField.qml
+        qml/ThemedTextArea.qml
+        qml/ThemedComboBox.qml
+        qml/ThemedSpinBox.qml
+        qml/ThemedButton.qml
 )
 
 qt_add_translations(OpenShell
