@@ -3,6 +3,7 @@
 #include "ConnectionCatalog.h"
 #include "SessionController.h"
 #include "SettingsStore.h"
+#include "SystemMonitorController.h"
 #include "ssh/SftpDirectoryLister.h"
 #include "TrayController.h"
 #include "TranslationManager.h"
@@ -94,6 +95,7 @@ AppController::AppController(QObject *parent)
     , m_settings(new SettingsStore(this))
     , m_catalog(new ConnectionCatalog(this))
     , m_sessions(new SessionController(this))
+    , m_monitor(new SystemMonitorController(this))
     , m_translations(new TranslationManager(this))
     , m_tray(new TrayController(this))
     , m_remoteEditWatcher(new QFileSystemWatcher(this))
@@ -114,6 +116,8 @@ AppController::AppController(QObject *parent)
             &AppController::sessionScreenUpdated);
     connect(m_sessions, &SessionController::sessionStatusChanged, this,
             &AppController::sessionStatusChanged);
+    connect(m_monitor, &SystemMonitorController::snapshotReady, this,
+            &AppController::systemMonitorSnapshotReady);
     connect(m_remoteEditWatcher, &QFileSystemWatcher::fileChanged, this,
             &AppController::handleWatchedRemoteEditChanged);
 }
@@ -684,6 +688,11 @@ QString AppController::requestRemoteDownload(const QString &connectionId,
         return result;
     }));
     return requestId;
+}
+
+QString AppController::requestSystemMonitorSnapshot(const QString &connectionId)
+{
+    return m_monitor->requestSnapshot(connectionId, m_catalog->profileById(connectionId));
 }
 
 QString AppController::requestOpenRemotePath(const QString &connectionId,

@@ -1,69 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE TS>
+<!DOCTYPE TS []>
 <TS version="2.1" language="zh_CN">
 <context>
     <name>AppController</name>
     <message>
-        <location filename="../src/AppController.cpp" line="171"/>
-        <location filename="../src/AppController.cpp" line="329"/>
-        <location filename="../src/AppController.cpp" line="355"/>
-        <location filename="../src/AppController.cpp" line="397"/>
-        <location filename="../src/AppController.cpp" line="445"/>
+        <location filename="../src/AppController.cpp" line="294" />
+        <location filename="../src/AppController.cpp" line="485" />
+        <location filename="../src/AppController.cpp" line="511" />
+        <location filename="../src/AppController.cpp" line="553" />
+        <location filename="../src/AppController.cpp" line="612" />
         <source>Unknown connection</source>
         <translation>未知连接</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="269"/>
+        <location filename="../src/AppController.cpp" line="412" />
         <source>Select file to upload</source>
         <translation>选择要上传的文件</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="274"/>
+        <location filename="../src/AppController.cpp" line="417" />
         <source>Select folder to upload</source>
         <translation>选择要上传的文件夹</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="279"/>
+        <location filename="../src/AppController.cpp" line="422" />
         <source>Select download folder</source>
         <translation>选择下载目录</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="446"/>
+        <location filename="../src/AppController.cpp" line="613" />
         <source>Invalid permission value</source>
         <translation>权限值无效</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="0"/>
+        <location filename="../src/AppController.cpp" line="428" />
         <source>Select text editor</source>
         <translation>选择文本编辑器</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="0"/>
+        <location filename="../src/AppController.cpp" line="430" />
         <source>Applications (*.exe);;All files (*)</source>
         <translation>应用程序 (*.exe);;所有文件 (*)</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="0"/>
         <source>Remote file saved</source>
         <translation>远程文件已保存</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="0"/>
         <source>Upload failed</source>
         <translation>上传失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="0"/>
+        <location filename="../src/AppController.cpp" line="826" />
         <source>Cannot open %1</source>
         <translation>无法打开 %1</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="0"/>
+        <location filename="../src/AppController.cpp" line="787" />
         <source>Cannot write %1</source>
         <translation>无法写入 %1</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="0"/>
+        <location filename="../src/AppController.cpp" line="794" />
         <source>Cannot save %1</source>
         <translation>无法保存 %1</translation>
     </message>
@@ -71,27 +69,27 @@
 <context>
     <name>ConnectionCatalog</name>
     <message>
-        <location filename="../src/ConnectionCatalog.cpp" line="117"/>
+        <location filename="../src/ConnectionCatalog.cpp" line="117" />
         <source>Connection name is required</source>
         <translation>请填写连接名称</translation>
     </message>
     <message>
-        <location filename="../src/ConnectionCatalog.cpp" line="123"/>
+        <location filename="../src/ConnectionCatalog.cpp" line="123" />
         <source>Host is required</source>
         <translation>请填写主机地址</translation>
     </message>
     <message>
-        <location filename="../src/ConnectionCatalog.cpp" line="143"/>
+        <location filename="../src/ConnectionCatalog.cpp" line="143" />
         <source>Unknown connection</source>
         <translation>未知连接</translation>
     </message>
     <message>
-        <location filename="../src/ConnectionCatalog.cpp" line="151"/>
+        <location filename="../src/ConnectionCatalog.cpp" line="151" />
         <source>Failed to delete connection file</source>
         <translation>删除连接文件失败</translation>
     </message>
     <message>
-        <location filename="../src/ConnectionCatalog.cpp" line="182"/>
+        <location filename="../src/ConnectionCatalog.cpp" line="182" />
         <source>Cannot write %1</source>
         <translation>无法写入 %1</translation>
     </message>
@@ -99,67 +97,67 @@
 <context>
     <name>ConnectionEditor</name>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="14"/>
+        <location filename="../qml/ConnectionEditor.qml" line="14" />
         <source>New Connection</source>
         <translation>新建连接</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="14"/>
+        <location filename="../qml/ConnectionEditor.qml" line="14" />
         <source>Edit Connection</source>
         <translation>编辑连接</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="85"/>
+        <location filename="../qml/ConnectionEditor.qml" line="85" />
         <source>Name</source>
         <translation>名称</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="88"/>
+        <location filename="../qml/ConnectionEditor.qml" line="88" />
         <source>Protocol</source>
         <translation>协议</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="95"/>
+        <location filename="../qml/ConnectionEditor.qml" line="95" />
         <source>Host</source>
         <translation>主机</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="98"/>
+        <location filename="../qml/ConnectionEditor.qml" line="98" />
         <source>Port</source>
         <translation>端口</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="101"/>
+        <location filename="../qml/ConnectionEditor.qml" line="101" />
         <source>Username</source>
         <translation>用户名</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="104"/>
+        <location filename="../qml/ConnectionEditor.qml" line="104" />
         <source>Auth Method</source>
         <translation>认证方式</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="111"/>
+        <location filename="../qml/ConnectionEditor.qml" line="111" />
         <source>Password</source>
         <translation>密码</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="119"/>
+        <location filename="../qml/ConnectionEditor.qml" line="119" />
         <source>Private Key</source>
         <translation>私钥</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="123"/>
+        <location filename="../qml/ConnectionEditor.qml" line="123" />
         <source>Absolute path to .pem / .ppk</source>
         <translation>私钥绝对路径（.pem / .ppk）</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="127"/>
+        <location filename="../qml/ConnectionEditor.qml" line="127" />
         <source>Group</source>
         <translation>分组</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="130"/>
+        <location filename="../qml/ConnectionEditor.qml" line="130" />
         <source>Notes</source>
         <translation>备注</translation>
     </message>
@@ -167,345 +165,353 @@
 <context>
     <name>FileBrowser</name>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="375"/>
+        <location filename="../qml/FileBrowser.qml" line="530" />
         <source>Change File Permissions</source>
         <translation>修改文件权限</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="455"/>
+        <location filename="../qml/FileBrowser.qml" line="610" />
         <source>Read</source>
         <translation>读</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="456"/>
+        <location filename="../qml/FileBrowser.qml" line="611" />
         <source>Write</source>
         <translation>写</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="457"/>
+        <location filename="../qml/FileBrowser.qml" line="612" />
         <source>Exec</source>
         <translation>执行</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="459"/>
+        <location filename="../qml/FileBrowser.qml" line="614" />
         <source>Owner</source>
         <translation>所有者</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="464"/>
+        <location filename="../qml/FileBrowser.qml" line="619" />
         <source>Group</source>
         <translation>组</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="469"/>
+        <location filename="../qml/FileBrowser.qml" line="624" />
         <source>Other</source>
         <translation>其他</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="482"/>
+        <location filename="../qml/FileBrowser.qml" line="637" />
         <source>Apply recursively</source>
         <translation>递归应用</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="485"/>
+        <location filename="../qml/FileBrowser.qml" line="640" />
         <source>Apply to files and folders</source>
         <translation>应用于文件和文件夹</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="489"/>
+        <location filename="../qml/FileBrowser.qml" line="644" />
         <source>Apply to files only</source>
         <translation>仅应用于文件</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="492"/>
+        <location filename="../qml/FileBrowser.qml" line="647" />
         <source>Apply to folders only</source>
         <translation>仅应用于文件夹</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="500"/>
+        <location filename="../qml/FileBrowser.qml" line="655" />
         <source>OK</source>
         <translation>确定</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="504"/>
+        <location filename="../qml/FileBrowser.qml" line="659" />
         <source>Cancel</source>
         <translation>取消</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="521"/>
-        <location filename="../qml/FileBrowser.qml" line="1297"/>
+        <location filename="../qml/FileBrowser.qml" line="674" />
+        <location filename="../qml/FileBrowser.qml" line="2037" />
         <source>Rename</source>
         <translation>重命名</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="521"/>
-        <location filename="../qml/FileBrowser.qml" line="1285"/>
+        <location filename="../qml/FileBrowser.qml" line="674" />
+        <location filename="../qml/FileBrowser.qml" line="2025" />
         <source>New</source>
         <translation>新建</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="531"/>
+        <location filename="../qml/FileBrowser.qml" line="684" />
         <source>Folder name</source>
         <translation>文件夹名</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="532"/>
+        <location filename="../qml/FileBrowser.qml" line="685" />
         <source>File name</source>
         <translation>文件名</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="533"/>
+        <location filename="../qml/FileBrowser.qml" line="686" />
         <source>New name</source>
         <translation>新名称</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="573"/>
+        <location filename="../qml/FileBrowser.qml" line="815" />
         <source>Remote listing timed out. Try refresh again.</source>
         <translation>远程目录加载超时，请重试。</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="595"/>
+        <location filename="../qml/FileBrowser.qml" line="826" />
         <source>User/Group</source>
         <translation>用户/组</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="949"/>
+        <location filename="../qml/FileBrowser.qml" line="1562" />
         <source>Local</source>
         <translation>本地</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="962"/>
-        <location filename="../qml/FileBrowser.qml" line="1120"/>
+        <location filename="../qml/FileBrowser.qml" line="1575" />
+        <location filename="../qml/FileBrowser.qml" line="1760" />
         <source>Parent folder</source>
         <translation>上一级</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="976"/>
-        <location filename="../qml/FileBrowser.qml" line="1136"/>
-        <location filename="../qml/FileBrowser.qml" line="1241"/>
+        <location filename="../qml/FileBrowser.qml" line="1589" />
+        <location filename="../qml/FileBrowser.qml" line="1776" />
+        <location filename="../qml/FileBrowser.qml" line="1953" />
         <source>Refresh</source>
         <translation>刷新</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1635"/>
+        <location filename="../qml/FileBrowser.qml" line="1798" />
         <source>Sync with terminal folder: on</source>
         <translation>同步终端目录：开</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1636"/>
+        <location filename="../qml/FileBrowser.qml" line="1799" />
         <source>Sync with terminal folder: off</source>
         <translation>同步终端目录：关</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="593"/>
+        <location filename="../qml/FileBrowser.qml" line="824" />
         <source>Name</source>
         <translation>名称</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="594"/>
+        <location filename="../qml/FileBrowser.qml" line="825" />
         <source>Size</source>
         <translation>大小</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="596"/>
+        <location filename="../qml/FileBrowser.qml" line="827" />
         <source>Perm</source>
         <translation>权限</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="597"/>
+        <location filename="../qml/FileBrowser.qml" line="828" />
         <source>Modified</source>
         <translation>修改时间</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1077"/>
+        <location filename="../qml/FileBrowser.qml" line="2177" />
+        <source>%1%</source>
+        <translation>%1%</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="2251" />
         <source>Upload to %1</source>
         <translation>上传到 %1</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1077"/>
+        <location filename="../qml/FileBrowser.qml" line="1717" />
+        <location filename="../qml/FileBrowser.qml" line="2252" />
         <source>Upload to Remote</source>
         <translation>上传到远端</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1105"/>
+        <location filename="../qml/FileBrowser.qml" line="1745" />
         <source>Remote</source>
         <translation>远程</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1246"/>
+        <location filename="../qml/FileBrowser.qml" line="1958" />
         <source>Open</source>
         <translation>打开</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1251"/>
+        <location filename="../qml/FileBrowser.qml" line="1963" />
         <source>Open With</source>
         <translation>打开方式</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1253"/>
         <source>Not configured</source>
-        <translation>未配置</translation>
+        <translation type="vanished">未配置</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1256"/>
+        <location filename="../qml/FileBrowser.qml" line="1988" />
         <source>Select Text Editor</source>
         <translation>选择文本编辑器</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1258"/>
-        <location filename="../qml/FileBrowser.qml" line="1281"/>
+        <location filename="../qml/FileBrowser.qml" line="2021" />
         <source>Coming soon</source>
         <translation>即将推出</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1262"/>
+        <location filename="../qml/FileBrowser.qml" line="2002" />
         <source>Copy Path</source>
         <translation>复制路径</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1267"/>
+        <location filename="../qml/FileBrowser.qml" line="2007" />
+        <location filename="../qml/FileBrowser.qml" line="2160" />
         <source>Download</source>
         <translation>下载</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1271"/>
+        <location filename="../qml/FileBrowser.qml" line="2011" />
         <source>Upload...</source>
         <translation>上传…</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1279"/>
+        <location filename="../qml/FileBrowser.qml" line="2019" />
         <source>Transfer Package</source>
         <translation>传输套件</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1287"/>
+        <location filename="../qml/FileBrowser.qml" line="2027" />
         <source>File</source>
         <translation>文件</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1291"/>
+        <location filename="../qml/FileBrowser.qml" line="2031" />
         <source>Folder</source>
         <translation>文件夹</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1301"/>
+        <location filename="../qml/FileBrowser.qml" line="2041" />
         <source>Delete</source>
         <translation>删除</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1305"/>
+        <location filename="../qml/FileBrowser.qml" line="2045" />
         <source>Quick Delete (rm)</source>
         <translation>快速删除 (rm)</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1310"/>
+        <location filename="../qml/FileBrowser.qml" line="2050" />
         <source>Permissions (%1)</source>
         <translation>权限 (%1)</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1310"/>
+        <location filename="../qml/FileBrowser.qml" line="2050" />
         <source>?</source>
         <translation>?</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1323"/>
+        <location filename="../qml/FileBrowser.qml" line="2081" />
         <source>Loading...</source>
         <translation>加载中…</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="584"/>
-        <location filename="../qml/FileBrowser.qml" line="764"/>
+        <location filename="../qml/FileBrowser.qml" line="1023" />
+        <location filename="../qml/FileBrowser.qml" line="1172" />
         <source>Open a session to enable SFTP browsing.</source>
         <translation>打开一个会话以启用 SFTP 浏览。</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1452"/>
-        <location filename="../qml/FileBrowser.qml" line="1741"/>
+        <location filename="../qml/FileBrowser.qml" line="1823" />
+        <location filename="../qml/FileBrowser.qml" line="2113" />
         <source>Transfer tasks</source>
         <translation>传输任务</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1750"/>
         <source>Clear</source>
-        <translation>清理</translation>
+        <translation type="vanished">清理</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1752"/>
+        <location filename="../qml/FileBrowser.qml" line="2126" />
         <source>Clear finished tasks</source>
         <translation>清理已完成任务</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1786"/>
+        <location filename="../qml/FileBrowser.qml" line="2160" />
         <source>Upload</source>
         <translation>上传</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1800"/>
+        <location filename="../qml/FileBrowser.qml" line="2174" />
         <source>Failed</source>
         <translation>失败</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1802"/>
+        <location filename="../qml/FileBrowser.qml" line="2176" />
         <source>Done</source>
         <translation>完成</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="1821"/>
+        <location filename="../qml/FileBrowser.qml" line="2195" />
         <source>Unknown</source>
         <translation>未知</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <location filename="../qml/FileBrowser.qml" line="715" />
         <source>Remote File Open</source>
         <translation>远程文件打开</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <location filename="../qml/FileBrowser.qml" line="726" />
         <source>Open remote files with</source>
         <translation>远程文件打开方式</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <location filename="../qml/FileBrowser.qml" line="737" />
+        <location filename="../qml/FileBrowser.qml" line="1966" />
         <source>System default app</source>
         <translation>系统默认应用</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <location filename="../qml/FileBrowser.qml" line="738" />
+        <location filename="../qml/FileBrowser.qml" line="1973" />
         <source>Specified text editor</source>
         <translation>指定文本编辑器</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <location filename="../qml/FileBrowser.qml" line="739" />
+        <location filename="../qml/FileBrowser.qml" line="779" />
+        <location filename="../qml/FileBrowser.qml" line="1980" />
         <source>Built-in editor</source>
         <translation>内置编辑器</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <location filename="../qml/FileBrowser.qml" line="751" />
         <source>Text editor path</source>
         <translation>文本编辑器路径</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <location filename="../qml/FileBrowser.qml" line="754" />
         <source>Browse</source>
         <translation>浏览</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <location filename="../qml/FileBrowser.qml" line="766" />
         <source>Auto upload after external edits</source>
         <translation>外部编辑后自动上传</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <location filename="../qml/FileBrowser.qml" line="1809" />
         <source>Remote file open settings</source>
         <translation>远程文件打开设置</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <location filename="../qml/FileBrowser.qml" line="1992" />
         <source>Browse...</source>
         <translation>浏览...</translation>
     </message>
     <message>
-        <location filename="../qml/FileBrowser.qml" line="0"/>
+        <location filename="../qml/FileBrowser.qml" line="1996" />
         <source>Open settings</source>
         <translation>打开设置</translation>
     </message>
@@ -513,140 +519,140 @@
 <context>
     <name>Libssh2ChannelWorker</name>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="169"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="169" />
         <source>libssh2_init failed</source>
         <translation>libssh2_init 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="170"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="170" />
         <source>Initialization failed</source>
         <translation>初始化失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="179"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="179" />
         <source>Connection failed</source>
         <translation>连接失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="196"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="196" />
         <source>Disconnected</source>
         <translation>已断开</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="298"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="311" />
         <source>WSAStartup failed</source>
         <translation>WSAStartup 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="310"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="323" />
         <source>socket() failed</source>
         <translation>socket() 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="317"/>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="606"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="330" />
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="627" />
         <source>Failed to switch socket to non-blocking mode</source>
         <translation>切换 socket 到非阻塞模式失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="341"/>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="381"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="354" />
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="394" />
         <source>Failed to switch socket to blocking mode</source>
         <translation>切换 socket 到阻塞模式失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="389"/>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="407"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="402" />
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="420" />
         <source>connect() to %1:%2 failed (errno=%3)</source>
         <translation>连接 %1:%2 失败 (errno=%3)</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="398"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="411" />
         <source>connect() to %1:%2 timed out after %3 seconds</source>
         <translation>连接 %1:%2 超时（%3 秒）</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="419"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="432" />
         <source>libssh2_session_init failed</source>
         <translation>libssh2_session_init 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="429"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="442" />
         <source>SSH handshake failed: %1</source>
         <translation>SSH 握手失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="449"/>
-        <source>Unknown auth type &apos;%1&apos;</source>
-        <translation>未知认证方式 &apos;%1&apos;</translation>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="462" />
+        <source>Unknown auth type '%1'</source>
+        <translation>未知认证方式 '%1'</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="453"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="466" />
         <source>Authentication failed</source>
         <translation>认证失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="468"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="481" />
         <source>Password auth failed: %1</source>
         <translation>密码认证失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="487"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="500" />
         <source>Keyboard-interactive auth failed: %1</source>
         <translation>键盘交互认证失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="498"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="511" />
         <source>Private key path is empty</source>
         <translation>私钥路径为空</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="513"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="526" />
         <source>Key auth failed: %1</source>
         <translation>公钥认证失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="525"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="538" />
         <source>libssh2_agent_init failed</source>
         <translation>libssh2_agent_init 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="537"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="550" />
         <source>Cannot connect to ssh-agent</source>
         <translation>无法连接 ssh-agent</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="544"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="557" />
         <source>ssh-agent: list_identities failed</source>
         <translation>ssh-agent：list_identities 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="570"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="583" />
         <source>ssh-agent: no identity accepted by server</source>
         <translation>ssh-agent：服务器未接受任何身份</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="581"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="594" />
         <source>channel_open_session failed: %1</source>
         <translation>channel_open_session 失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="588"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="608" />
         <source>request_pty failed: %1</source>
         <translation>request_pty 失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="595"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="616" />
         <source>channel_shell failed: %1</source>
         <translation>channel_shell 失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="646"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="685" />
         <source>(no session)</source>
         <translation>(无会话)</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="654"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="693" />
         <source>(unknown libssh2 error)</source>
         <translation>(未知 libssh2 错误)</translation>
     </message>
@@ -654,38 +660,37 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../qml/MainWindow.qml" line="14"/>
-        <location filename="../qml/MainWindow.qml" line="98"/>
+        <location filename="../qml/MainWindow.qml" line="14" />
         <source>OpenShell</source>
         <translation>OpenShell</translation>
     </message>
     <message>
-        <location filename="../qml/MainWindow.qml" line="94"/>
+        <location filename="../qml/MainWindow.qml" line="100" />
         <source>Connected</source>
         <translation>已连接</translation>
     </message>
     <message>
-        <location filename="../qml/MainWindow.qml" line="187"/>
+        <location filename="../qml/MainWindow.qml" line="207" />
         <source>No active sessions</source>
         <translation>没有活动会话</translation>
     </message>
     <message>
-        <location filename="../qml/MainWindow.qml" line="192"/>
+        <location filename="../qml/MainWindow.qml" line="212" />
         <source>Pick a connection on the left and press Enter, or double-click it.</source>
         <translation>从左侧挑一个连接按回车，或者双击它。</translation>
     </message>
     <message>
-        <location filename="../qml/MainWindow.qml" line="218"/>
+        <location filename="../qml/MainWindow.qml" line="238" />
         <source>Sessions: %1</source>
         <translation>会话数：%1</translation>
     </message>
     <message>
-        <location filename="../qml/MainWindow.qml" line="137"/>
+        <location filename="../qml/MainWindow.qml" line="144" />
         <source>Connection deleted</source>
         <translation>连接已删除</translation>
     </message>
     <message>
-        <location filename="../qml/MainWindow.qml" line="234"/>
+        <location filename="../qml/MainWindow.qml" line="254" />
         <source>Connection saved</source>
         <translation>连接已保存</translation>
     </message>
@@ -693,197 +698,228 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../src/AppController.cpp" line="428"/>
+        <location filename="../src/AppController.cpp" line="595" />
         <source>Upload completed</source>
         <translation>上传完成</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="477"/>
+        <location filename="../src/AppController.cpp" line="644" />
         <source>Permissions updated</source>
         <translation>权限已更新</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="508"/>
+        <location filename="../src/AppController.cpp" line="687" />
         <source>Download failed</source>
         <translation>下载失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="564"/>
+        <location filename="../src/AppController.cpp" line="766" />
+        <source>Remote file saved</source>
+        <translation>远程文件已保存</translation>
+    </message>
+    <message>
+        <location filename="../src/AppController.cpp" line="766" />
+        <source>Upload failed</source>
+        <translation>上传失败</translation>
+    </message>
+    <message>
+        <location filename="../src/AppController.cpp" line="901" />
         <source>Created</source>
         <translation>已创建</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="564"/>
+        <location filename="../src/AppController.cpp" line="901" />
         <source>Create failed</source>
         <translation>创建失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="594"/>
+        <location filename="../src/AppController.cpp" line="931" />
         <source>Renamed</source>
         <translation>已重命名</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="594"/>
+        <location filename="../src/AppController.cpp" line="931" />
         <source>Rename failed</source>
         <translation>重命名失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="623"/>
+        <location filename="../src/AppController.cpp" line="960" />
         <source>Deleted</source>
         <translation>已删除</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="623"/>
+        <location filename="../src/AppController.cpp" line="960" />
         <source>Delete failed</source>
         <translation>删除失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="90"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="90" />
         <source>libssh2_init failed</source>
         <translation>libssh2_init 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="101"/>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="217"/>
+        <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="101" />
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="217" />
         <source>Cannot resolve host %1: %2</source>
         <translation>无法解析主机 %1：%2</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="252"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="252" />
         <source>WSAStartup failed</source>
         <translation>WSAStartup 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="268"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="268" />
         <source>socket() failed</source>
         <translation>socket() 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="276"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="276" />
         <source>Failed to switch SFTP socket to non-blocking mode</source>
         <translation>切换 SFTP socket 到非阻塞模式失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="302"/>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="339"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="302" />
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="339" />
         <source>Failed to switch SFTP socket to blocking mode</source>
         <translation>切换 SFTP socket 到阻塞模式失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="349"/>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="362"/>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="373"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="349" />
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="362" />
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="373" />
         <source>connect() to %1:%2 failed (errno=%3)</source>
         <translation>连接 %1:%2 失败 (errno=%3)</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="359"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="359" />
         <source>connect() to %1:%2 timed out after %3 seconds</source>
         <translation>连接 %1:%2 超时（%3 秒）</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="403"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="403" />
         <source>SFTP key auth failed: %1</source>
         <translation>SFTP 公钥认证失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="423"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="423" />
         <source>SFTP password auth failed: %1</source>
         <translation>SFTP 密码认证失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="446"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="446" />
         <source>libssh2_session_init failed</source>
         <translation>libssh2_session_init 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="457"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="457" />
         <source>SFTP handshake failed: %1</source>
         <translation>SFTP 握手失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="472"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="472" />
         <source>SFTP init failed: %1</source>
         <translation>SFTP 初始化失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="519"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="545" />
         <source>Cannot read local file %1</source>
         <translation>无法读取本地文件 %1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="533"/>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="960"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="559" />
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="1172" />
         <source>Cannot create remote file %1</source>
         <translation>无法创建远端文件 %1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="548"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="574" />
         <source>Failed to write remote file %1</source>
         <translation>写入远端文件 %1 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="569"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="604" />
         <source>Cannot create remote directory %1</source>
         <translation>无法创建远端目录 %1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="614"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="703" />
         <source>Cannot open remote file %1</source>
         <translation>无法打开远端文件 %1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="623"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="712" />
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="734" />
         <source>Cannot write local file %1</source>
         <translation>无法写入本地文件 %1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="637"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="726" />
         <source>Failed to read remote file %1</source>
         <translation>读取远端文件 %1 失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="662"/>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="711"/>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="775"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="767" />
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="819" />
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="883" />
         <source>Cannot open remote directory %1</source>
         <translation>无法打开远端目录 %1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="702"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="810" />
         <source>Cannot delete remote file %1</source>
         <translation>无法删除远端文件 %1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="736"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="844" />
         <source>Cannot delete remote directory %1</source>
         <translation>无法删除远端目录 %1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="852"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="959" />
+        <source>Cannot open SSH exec channel: %1</source>
+        <translation>无法打开 SSH 执行通道：%1</translation>
+    </message>
+    <message>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="967" />
+        <source>Cannot execute remote command: %1</source>
+        <translation>无法执行远程命令：%1</translation>
+    </message>
+    <message>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="1007" />
+        <source>Remote command exited with status %1</source>
+        <translation>远程命令退出，状态码 %1</translation>
+    </message>
+    <message>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="1035" />
         <source>Local path does not exist: %1</source>
         <translation>本地路径不存在：%1</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="888"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="1085" />
         <source>Failed to change permissions for %1</source>
         <translation>修改 %1 的权限失败</translation>
     </message>
     <message>
-        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="985"/>
+        <location filename="../src/ssh/SftpDirectoryLister.cpp" line="1197" />
         <source>Cannot rename %1</source>
         <translation>无法重命名 %1</translation>
+    </message>
+    <message>
+        <location filename="../src/SystemMonitorController.cpp" line="242" />
+        <source>Unknown connection</source>
+        <translation>未知连接</translation>
     </message>
 </context>
 <context>
     <name>SessionController</name>
     <message>
-        <location filename="../src/SessionController.cpp" line="34"/>
+        <location filename="../src/SessionController.cpp" line="35" />
         <source>Cannot open session without a connection</source>
         <translation>必须先选择一个连接才能打开会话</translation>
     </message>
     <message>
-        <location filename="../src/SessionController.cpp" line="43"/>
+        <location filename="../src/SessionController.cpp" line="44" />
         <source>Worker factory returned null</source>
         <translation>Worker 工厂返回空值</translation>
     </message>
@@ -891,12 +927,17 @@
 <context>
     <name>SessionTabs</name>
     <message>
-        <location filename="../qml/SessionTabs.qml" line="72"/>
+        <location filename="../qml/SessionTabs.qml" line="66" />
+        <source>System Info</source>
+        <translation>系统信息</translation>
+    </message>
+    <message>
+        <location filename="../qml/SessionTabs.qml" line="104" />
         <source>session</source>
         <translation>会话</translation>
     </message>
     <message>
-        <location filename="../qml/SessionTabs.qml" line="84"/>
+        <location filename="../qml/SessionTabs.qml" line="116" />
         <source>Close session</source>
         <translation>关闭会话</translation>
     </message>
@@ -904,81 +945,356 @@
 <context>
     <name>Sidebar</name>
     <message>
-        <location filename="../qml/Sidebar.qml" line="103"/>
+        <location filename="../qml/Sidebar.qml" line="139" />
         <source>Connections</source>
         <translation>连接</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="117"/>
+        <location filename="../qml/Sidebar.qml" line="153" />
         <source>New connection</source>
         <translation>新建连接</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="125"/>
+        <location filename="../qml/Sidebar.qml" line="161" />
         <source>Filter…</source>
         <translation>过滤…</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="166"/>
+        <location filename="../qml/Sidebar.qml" line="203" />
         <source>(unnamed)</source>
         <translation>（未命名）</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="199"/>
+        <location filename="../qml/Sidebar.qml" line="236" />
         <source>Open Session</source>
         <translation>打开会话</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="203"/>
+        <location filename="../qml/Sidebar.qml" line="240" />
         <source>Edit</source>
         <translation>编辑</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="207"/>
+        <location filename="../qml/Sidebar.qml" line="244" />
         <source>Delete</source>
         <translation>删除</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="218"/>
+        <location filename="../qml/Sidebar.qml" line="255" />
         <source>No connections yet. Press + to add one.</source>
         <translation>还没有连接，点 + 添加一个。</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="289" />
+        <source>Current server</source>
+        <translation>当前服务器</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="308" />
+        <source>Monitor online</source>
+        <translation>监控在线</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="308" />
+        <source>Open a session to monitor.</source>
+        <translation>打开会话后启用监控。</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="320" />
+        <source>CPU</source>
+        <translation>CPU</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="325" />
+        <source>Mem</source>
+        <translation>内存</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="330" />
+        <source>Swap</source>
+        <translation>交换</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="339" />
+        <source>Memory %1 / %2</source>
+        <translation>内存 %1 / %2</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="348" />
+        <source>Disk %1 free at %2</source>
+        <translation>磁盘 %1 可用，挂载点 %2</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="349" />
+        <source>Disk --</source>
+        <translation>磁盘 --</translation>
+    </message>
+</context>
+<context>
+    <name>SystemInfoView</name>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="44" />
+        <source>System Information</source>
+        <translation>系统信息</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="52" />
+        <source>Updated %1</source>
+        <translation>已更新 %1</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="52" />
+        <source>Waiting for monitor data</source>
+        <translation>等待监控数据</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="67" />
+        <source>Operating system</source>
+        <translation>操作系统</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="68" />
+        <source>Kernel</source>
+        <translation>内核</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="69" />
+        <source>Kernel release</source>
+        <translation>内核版本</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="70" />
+        <source>Architecture</source>
+        <translation>硬件架构</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="71" />
+        <source>Hostname</source>
+        <translation>主机名称</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="72" />
+        <source>Uptime</source>
+        <translation>运行时间</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="101" />
+        <location filename="../qml/SystemInfoView.qml" line="170" />
+        <source>CPU</source>
+        <translation>CPU</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="106" />
+        <source>CPU Details</source>
+        <translation>CPU 详情</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="107" />
+        <location filename="../qml/SystemInfoView.qml" line="152" />
+        <location filename="../qml/SystemInfoView.qml" line="160" />
+        <source>Name</source>
+        <translation>名称</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="107" />
+        <source>Cores</source>
+        <translation>核心数</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="107" />
+        <source>Frequency</source>
+        <translation>频率</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="107" />
+        <source>Cache</source>
+        <translation>缓存</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="107" />
+        <source>BogoMips</source>
+        <translation>BogoMips</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="116" />
+        <source>CPU Usage</source>
+        <translation>CPU占用</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="117" />
+        <source>User</source>
+        <translation>用户</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="117" />
+        <source>System</source>
+        <translation>系统</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="117" />
+        <source>Nice</source>
+        <translation>Nice</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="117" />
+        <source>Idle</source>
+        <translation>空闲</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="117" />
+        <source>IO</source>
+        <translation>IO</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="117" />
+        <source>Hardware IRQ</source>
+        <translation>硬件中断</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="117" />
+        <source>Software IRQ</source>
+        <translation>软件中断</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="117" />
+        <source>Realtime</source>
+        <translation>实时</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="138" />
+        <location filename="../qml/SystemInfoView.qml" line="170" />
+        <source>Memory</source>
+        <translation>内存</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="139" />
+        <source>Used %1 / %2</source>
+        <translation>已使用 %1 / %2</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="140" />
+        <source>Memory used</source>
+        <translation>内存已用</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="142" />
+        <location filename="../qml/SystemInfoView.qml" line="160" />
+        <source>Available</source>
+        <translation>可用</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="144" />
+        <source>Swap used</source>
+        <translation>交换已用</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="146" />
+        <source>Swap</source>
+        <translation>交换</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="147" />
+        <source>%1 / %2</source>
+        <translation>%1 / %2</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="151" />
+        <source>Network Interfaces</source>
+        <translation>网络接口</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="152" />
+        <source>Received</source>
+        <translation>接收</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="152" />
+        <source>Sent</source>
+        <translation>发送</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="159" />
+        <source>File Systems</source>
+        <translation>文件系统</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="160" />
+        <source>Size</source>
+        <translation>大小</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="160" />
+        <source>Used</source>
+        <translation>已用</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="160" />
+        <source>Use</source>
+        <translation>占用</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="160" />
+        <source>Mount</source>
+        <translation>挂载点</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="169" />
+        <source>Top Processes</source>
+        <translation>进程排行</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="170" />
+        <source>PID</source>
+        <translation>PID</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="170" />
+        <source>Command</source>
+        <translation>命令</translation>
+    </message>
+    <message>
+        <location filename="../qml/SystemInfoView.qml" line="170" />
+        <source>RSS</source>
+        <translation>RSS</translation>
     </message>
 </context>
 <context>
     <name>TerminalView</name>
     <message>
-        <location filename="../qml/TerminalView.qml" line="117"/>
-        <location filename="../qml/TerminalView.qml" line="218"/>
+        <location filename="../qml/TerminalView.qml" line="154" />
         <source>(no session)</source>
         <translation>（无会话）</translation>
     </message>
     <message>
-        <location filename="../qml/TerminalView.qml" line="154"/>
         <source>Open a connection to start a session.</source>
-        <translation>打开一个连接来启动会话。</translation>
+        <translation type="vanished">打开一个连接来启动会话。</translation>
     </message>
     <message>
-        <location filename="../qml/TerminalView.qml" line="217"/>
         <source>Type a command and press Enter</source>
-        <translation>输入命令并按回车</translation>
+        <translation type="vanished">输入命令并按回车</translation>
     </message>
     <message>
-        <location filename="../qml/TerminalView.qml" line="310"/>
+        <location filename="../qml/TerminalView.qml" line="216" />
         <source>Copy</source>
         <translation>复制</translation>
     </message>
     <message>
-        <location filename="../qml/TerminalView.qml" line="307"/>
+        <location filename="../qml/TerminalView.qml" line="227" />
         <source>Paste</source>
         <translation>粘贴</translation>
     </message>
     <message>
-        <location filename="../qml/TerminalView.qml" line="307"/>
+        <location filename="../qml/TerminalView.qml" line="243" />
         <source>Select All</source>
         <translation>全选</translation>
     </message>
     <message>
-        <location filename="../qml/TerminalView.qml" line="310"/>
+        <location filename="../qml/TerminalView.qml" line="255" />
+        <source>Send Ctrl+C</source>
+        <translation>发送 Ctrl+C</translation>
+    </message>
+    <message>
+        <location filename="../qml/TerminalView.qml" line="270" />
         <source>Clear Screen</source>
         <translation>清屏</translation>
     </message>
@@ -986,52 +1302,52 @@
 <context>
     <name>TrayController</name>
     <message>
-        <location filename="../src/TrayController.cpp" line="131"/>
+        <location filename="../src/TrayController.cpp" line="144" />
         <source>Show OpenShell</source>
         <translation>显示 OpenShell</translation>
     </message>
     <message>
-        <location filename="../src/TrayController.cpp" line="132"/>
+        <location filename="../src/TrayController.cpp" line="145" />
         <source>Hide to Tray</source>
         <translation>隐藏到托盘</translation>
     </message>
     <message>
-        <location filename="../src/TrayController.cpp" line="133"/>
+        <location filename="../src/TrayController.cpp" line="146" />
         <source>Connections</source>
         <translation>连接</translation>
     </message>
     <message>
-        <location filename="../src/TrayController.cpp" line="60"/>
+        <location filename="../src/TrayController.cpp" line="136" />
         <source>(no connections)</source>
         <translation>（无连接）</translation>
     </message>
     <message>
-        <location filename="../src/TrayController.cpp" line="134"/>
+        <location filename="../src/TrayController.cpp" line="147" />
         <source>Language</source>
         <translation>语言</translation>
     </message>
     <message>
-        <location filename="../src/TrayController.cpp" line="135"/>
+        <location filename="../src/TrayController.cpp" line="148" />
         <source>System</source>
         <translation>跟随系统</translation>
     </message>
     <message>
-        <location filename="../src/TrayController.cpp" line="136"/>
+        <location filename="../src/TrayController.cpp" line="149" />
         <source>English</source>
         <translation>英语</translation>
     </message>
     <message>
-        <location filename="../src/TrayController.cpp" line="137"/>
+        <location filename="../src/TrayController.cpp" line="150" />
         <source>Simplified Chinese</source>
         <translation>简体中文</translation>
     </message>
     <message>
-        <location filename="../src/TrayController.cpp" line="138"/>
+        <location filename="../src/TrayController.cpp" line="151" />
         <source>Quit</source>
         <translation>退出</translation>
     </message>
     <message>
-        <location filename="../src/TrayController.cpp" line="139"/>
+        <location filename="../src/TrayController.cpp" line="152" />
         <source>OpenShell</source>
         <translation>OpenShell</translation>
     </message>

@@ -939,6 +939,80 @@ QVariantList SftpDirectoryLister::list(const ConnectionProfile &profile,
     return rows;
 }
 
+QString SftpDirectoryLister::execute(const ConnectionProfile &profile,
+                                     const QString &command,
+                                     QString *errorOut)
+{
+    if (!ensureLibssh2(errorOut)) {
+        return QString();
+    }
+
+    CachedSftpConnection *connection = acquireConnection(cacheKey(profile));
+    QMutexLocker locker(&connection->mutex);
+    if (!ensureConnected(connection, profile, errorOut)) {
+        return QString();
+    }
+
+    LIBSSH2_CHANNEL *channel = libssh2_channel_open_session(connection->session);
+    if (!channel) {
+        if (errorOut) {
+            *errorOut = QObject::tr("Cannot open SSH exec channel: %1").arg(lastError(connection->session));
+        }
+        return QString();
+    }
+
+    const QByteArray encoded = command.toUtf8();
+    if (libssh2_channel_exec(channel, encoded.constData()) != 0) {
+        if (errorOut) {
+            *errorOut = QObject::tr("Cannot execute remote command: %1").arg(lastError(connection->session));
+        }
+        libssh2_channel_free(channel);
+        return QString();
+    }
+
+    QByteArray output;
+    char buffer[4096];
+    while (true) {
+        const ssize_t n = libssh2_channel_read(channel, buffer, sizeof(buffer));
+        if (n > 0) {
+            output.append(buffer, static_cast<int>(n));
+            continue;
+        }
+        if (n == LIBSSH2_ERROR_EAGAIN) {
+            continue;
+        }
+        break;
+    }
+
+    QByteArray errorOutput;
+    while (true) {
+        const ssize_t n = libssh2_channel_read_stderr(channel, buffer, sizeof(buffer));
+        if (n > 0) {
+            errorOutput.append(buffer, static_cast<int>(n));
+            continue;
+        }
+        if (n == LIBSSH2_ERROR_EAGAIN) {
+            continue;
+        }
+        break;
+    }
+
+    libssh2_channel_close(channel);
+    const int exitStatus = libssh2_channel_get_exit_status(channel);
+    libssh2_channel_free(channel);
+
+    if (exitStatus != 0 && errorOut) {
+        *errorOut = QString::fromUtf8(errorOutput).trimmed();
+        if (errorOut->isEmpty()) {
+            *errorOut = QObject::tr("Remote command exited with status %1").arg(exitStatus);
+        }
+    } else if (errorOut) {
+        errorOut->clear();
+    }
+
+    return QString::fromUtf8(output);
+}
+
 bool SftpDirectoryLister::upload(const ConnectionProfile &profile,
                                  const QString &localPath,
                                  const QString &remoteDirectory,

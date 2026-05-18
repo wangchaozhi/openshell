@@ -18,7 +18,12 @@ ApplicationWindow {
     property var activeSessions: appController.sessions()
     property string selectedConnectionId: appController.currentConnectionId
     property string activeSessionId: ""
+    property string activeView: "terminal"
     property string statusMessage: ""
+    property var monitorSnapshot: ({})
+    property string monitorError: ""
+    property string monitorRequestId: ""
+    property bool monitorRequestInFlight: false
 
     readonly property var activeSession: {
         for (let i = 0; i < activeSessions.length; ++i) {
@@ -46,6 +51,7 @@ ApplicationWindow {
             }
             if (!stillThere) {
                 activeSessionId = activeSessions.length > 0 ? activeSessions[0].id : ""
+                activeView = activeSessionId.length > 0 ? activeView : "terminal"
             }
         } else if (activeSessions.length > 0) {
             activeSessionId = activeSessions[0].id
@@ -126,6 +132,8 @@ ApplicationWindow {
 
             connections: window.connections
             selectedConnectionId: window.selectedConnectionId
+            monitorSnapshot: window.monitorSnapshot
+            monitorError: window.monitorError
 
             onConnectionPicked: (id) => window.selectedConnectionId = id
             onConnectionDoublePicked: (id) => window.openSessionFor(id)
@@ -150,14 +158,20 @@ ApplicationWindow {
                 Layout.preferredHeight: 36
                 sessions: window.activeSessions
                 activeSessionId: window.activeSessionId
-                onSessionActivated: (id) => window.activeSessionId = id
+                activeView: window.activeView
+                onSessionActivated: (id) => {
+                    window.activeSessionId = id
+                    window.activeView = "terminal"
+                }
+                onSystemInfoActivated: window.activeView = "system"
                 onSessionClosed: (id) => appController.closeSession(id)
             }
 
             StackLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                currentIndex: window.activeSessions.length > 0 ? 0 : 1
+                currentIndex: window.activeSessions.length === 0 ? 2
+                              : (window.activeView === "system" ? 1 : 0)
 
                 SplitView {
                     orientation: Qt.Vertical
@@ -175,6 +189,11 @@ ApplicationWindow {
                         session: window.activeSession
                         terminalRemotePath: terminalView.detectedRemotePath
                     }
+                }
+
+                SystemInfoView {
+                    snapshot: window.monitorSnapshot
+                    error: window.monitorError
                 }
 
                 Rectangle {
@@ -236,5 +255,39 @@ ApplicationWindow {
             window.refreshConnections()
         }
         onSaveFailed: (message) => window.statusMessage = message
+    }
+
+    Timer {
+        id: monitorTimer
+        interval: 5000
+        repeat: true
+        running: window.activeSession && window.activeSession.connectionId
+        triggeredOnStart: true
+        onTriggered: {
+            if (window.activeSession && window.activeSession.connectionId && !window.monitorRequestInFlight) {
+                window.monitorRequestInFlight = true
+                window.monitorRequestId = appController.requestSystemMonitorSnapshot(window.activeSession.connectionId)
+            }
+        }
+    }
+
+    onActiveSessionIdChanged: {
+        monitorSnapshot = ({})
+        monitorError = ""
+        monitorRequestId = ""
+        monitorRequestInFlight = false
+        monitorTimer.restart()
+    }
+
+    Connections {
+        target: appController
+        function onSystemMonitorSnapshotReady(requestId, connectionId, snapshot, error) {
+            if (requestId !== window.monitorRequestId) {
+                return
+            }
+            window.monitorRequestInFlight = false
+            window.monitorSnapshot = snapshot || ({})
+            window.monitorError = error || ""
+        }
     }
 }

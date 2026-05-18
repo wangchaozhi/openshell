@@ -13,6 +13,9 @@ public:
     static QVariantList list(const ConnectionProfile &profile,
                              const QString &remotePath,
                              QString *errorOut = nullptr);
+    static QString execute(const ConnectionProfile &profile,
+                           const QString &command,
+                           QString *errorOut = nullptr);
     static bool upload(const ConnectionProfile &profile,
                        const QString &localPath,
                        const QString &remoteDirectory,

@@ -186,6 +186,8 @@ set(OPENSHELL_SOURCES
     src/SessionController.h
     src/SettingsStore.cpp
     src/SettingsStore.h
+    src/SystemMonitorController.cpp
+    src/SystemMonitorController.h
     src/TranslationManager.cpp
     src/TranslationManager.h
     src/TrayController.cpp
@@ -229,6 +231,7 @@ qt_add_qml_module(OpenShell
         qml/ConnectionEditor.qml
         qml/SessionTabs.qml
         qml/TerminalView.qml
+        qml/SystemInfoView.qml
         qml/FileBrowser.qml
         qml/AccentCard.qml
 )

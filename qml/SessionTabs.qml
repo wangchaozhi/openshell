@@ -7,9 +7,11 @@ Rectangle {
 
     property var sessions: []
     property string activeSessionId: ""
+    property string activeView: "terminal"
 
     signal sessionActivated(string id)
     signal sessionClosed(string id)
+    signal systemInfoActivated()
 
     color: "#020617"
 
@@ -39,6 +41,36 @@ Rectangle {
         anchors.leftMargin: 4
         spacing: 2
 
+        Rectangle {
+            width: systemTabRow.implicitWidth + 18
+            height: parent.height - 4
+            anchors.verticalCenter: parent.verticalCenter
+            radius: 4
+            visible: root.activeSessionId !== ""
+            color: root.activeView === "system" ? "#1e293b" : "#0f172a"
+            border.color: root.activeView === "system" ? "#38bdf8" : "#1e293b"
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.systemInfoActivated()
+            }
+
+            RowLayout {
+                id: systemTabRow
+                anchors.fill: parent
+                anchors.leftMargin: 10
+                anchors.rightMargin: 10
+
+                Label {
+                    text: qsTr("System Info")
+                    color: root.activeView === "system" ? "#f1f5f9" : "#cbd5f5"
+                    font.bold: root.activeView === "system"
+                    font.pixelSize: 12
+                }
+            }
+        }
+
         Repeater {
             model: root.sessions
             delegate: Rectangle {
@@ -50,8 +82,8 @@ Rectangle {
 
                 readonly property bool isActive: modelData.id === root.activeSessionId
 
-                color: isActive ? "#1e293b" : "#0f172a"
-                border.color: isActive ? "#38bdf8" : "#1e293b"
+                color: isActive && root.activeView === "terminal" ? "#1e293b" : "#0f172a"
+                border.color: isActive && root.activeView === "terminal" ? "#38bdf8" : "#1e293b"
                 border.width: 1
 
                 MouseArea {
@@ -70,7 +102,7 @@ Rectangle {
 
                     Label {
                         text: modelData.title || qsTr("session")
-                        color: tab.isActive ? "#f1f5f9" : "#cbd5f5"
+                        color: tab.isActive && root.activeView === "terminal" ? "#f1f5f9" : "#cbd5f5"
                         font.pixelSize: 12
                     }
 

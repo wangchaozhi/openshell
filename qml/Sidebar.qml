@@ -7,6 +7,8 @@ Rectangle {
 
     property var connections: []
     property string selectedConnectionId: ""
+    property var monitorSnapshot: ({})
+    property string monitorError: ""
 
     signal connectionPicked(string id)
     signal connectionDoublePicked(string id)
@@ -91,6 +93,40 @@ Rectangle {
         }
     }
 
+    component MeterBar: Item {
+        property real value: 0
+        implicitHeight: 16
+
+        function clampedValue() {
+            const current = Number(value)
+            if (!isFinite(current)) {
+                return 0
+            }
+            return Math.max(0, Math.min(100, current))
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            radius: 2
+            color: "#111827"
+            border.color: "#334155"
+        }
+        Rectangle {
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: parent.width * clampedValue() / 100
+            radius: 2
+            color: clampedValue() >= 85 ? "#ef4444" : (clampedValue() >= 65 ? "#f59e0b" : "#22c55e")
+        }
+        Label {
+            anchors.centerIn: parent
+            text: clampedValue().toFixed(1) + "%"
+            color: "#e2e8f0"
+            font.pixelSize: 10
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 12
@@ -128,6 +164,7 @@ Rectangle {
         ListView {
             id: list
             Layout.fillWidth: true
+            Layout.preferredHeight: Math.max(160, parent.height * 0.48)
             Layout.fillHeight: true
             clip: true
             spacing: 4
@@ -220,6 +257,122 @@ Rectangle {
             font.pixelSize: 12
             wrapMode: Text.WordWrap
             horizontalAlignment: Text.AlignHCenter
+        }
+
+        Rectangle {
+            id: monitorPanel
+
+            Layout.fillWidth: true
+            Layout.preferredHeight: 230
+            color: "#020617"
+            border.color: "#1e293b"
+            radius: 6
+
+            readonly property var cpu: root.monitorSnapshot && root.monitorSnapshot.cpu ? root.monitorSnapshot.cpu : ({})
+            readonly property var memory: root.monitorSnapshot && root.monitorSnapshot.memory ? root.monitorSnapshot.memory : ({})
+            readonly property var processes: root.monitorSnapshot && root.monitorSnapshot.processes ? root.monitorSnapshot.processes : []
+            readonly property var filesystems: root.monitorSnapshot && root.monitorSnapshot.filesystems ? root.monitorSnapshot.filesystems : []
+
+            function percentValue(source, key) {
+                const current = Number(source && source[key] !== undefined ? source[key] : 0)
+                return isFinite(current) ? current : 0
+            }
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 10
+                spacing: 7
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Label {
+                        text: qsTr("Current server")
+                        color: "#e2e8f0"
+                        font.bold: true
+                        font.pixelSize: 12
+                        Layout.fillWidth: true
+                    }
+                    Rectangle {
+                        width: 8
+                        height: 8
+                        radius: 4
+                        color: root.monitorError.length > 0 ? "#f87171"
+                              : root.monitorSnapshot.updatedAt ? "#22c55e" : "#64748b"
+                    }
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    text: root.monitorError.length > 0
+                          ? root.monitorError
+                          : (root.monitorSnapshot.updatedAt ? qsTr("Monitor online") : qsTr("Open a session to monitor."))
+                    color: root.monitorError.length > 0 ? "#fca5a5" : "#94a3b8"
+                    font.pixelSize: 11
+                    elide: Text.ElideRight
+                }
+
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: 2
+                    columnSpacing: 8
+                    rowSpacing: 5
+
+                    Label { text: qsTr("CPU"); color: "#93c5fd"; font.pixelSize: 11 }
+                    MeterBar {
+                        Layout.fillWidth: true
+                        value: monitorPanel.percentValue(monitorPanel.cpu, "busyPercent")
+                    }
+                    Label { text: qsTr("Mem"); color: "#93c5fd"; font.pixelSize: 11 }
+                    MeterBar {
+                        Layout.fillWidth: true
+                        value: monitorPanel.percentValue(monitorPanel.memory, "memUsedPercent")
+                    }
+                    Label { text: qsTr("Swap"); color: "#93c5fd"; font.pixelSize: 11 }
+                    MeterBar {
+                        Layout.fillWidth: true
+                        value: monitorPanel.percentValue(monitorPanel.memory, "swapUsedPercent")
+                    }
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Memory %1 / %2").arg(monitorPanel.memory.memUsedText || "--").arg(monitorPanel.memory.memTotalText || "--")
+                    color: "#cbd5e1"
+                    font.pixelSize: 11
+                    elide: Text.ElideRight
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    text: monitorPanel.filesystems.length > 0
+                          ? qsTr("Disk %1 free at %2").arg(monitorPanel.filesystems[0].available || "--").arg(monitorPanel.filesystems[0].mount || "/")
+                          : qsTr("Disk --")
+                    color: "#cbd5e1"
+                    font.pixelSize: 11
+                    elide: Text.ElideRight
+                }
+
+                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#1e293b" }
+
+                Repeater {
+                    model: monitorPanel.processes.slice(0, 4)
+                    delegate: RowLayout {
+                        Layout.fillWidth: true
+                        Label {
+                            text: modelData.name || ""
+                            color: "#dbeafe"
+                            font.pixelSize: 11
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                        }
+                        Label {
+                            text: (modelData.cpu || 0).toFixed(1) + "%"
+                            color: "#fca5a5"
+                            font.pixelSize: 11
+                        }
+                    }
+                }
+            }
         }
     }
 }

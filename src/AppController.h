@@ -13,6 +13,7 @@ class ConnectionCatalog;
 class QFileSystemWatcher;
 class SessionController;
 class SettingsStore;
+class SystemMonitorController;
 class TrayController;
 class TranslationManager;
 
@@ -107,6 +108,7 @@ public:
     Q_INVOKABLE QString requestDeleteRemotePath(const QString &connectionId,
                                                 const QString &remotePath,
                                                 bool recursive);
+    Q_INVOKABLE QString requestSystemMonitorSnapshot(const QString &connectionId);
     Q_INVOKABLE QString remoteSiblingPath(const QString &path, const QString &name) const;
     Q_INVOKABLE void copyTextToClipboard(const QString &text) const;
     Q_INVOKABLE QString clipboardText() const;
@@ -149,6 +151,10 @@ signals:
                                           const QString &localPath,
                                           const QString &text,
                                           const QString &error);
+    void systemMonitorSnapshotReady(const QString &requestId,
+                                    const QString &connectionId,
+                                    const QVariantMap &snapshot,
+                                    const QString &error);
 
 private:
     struct RemoteEditWatch
@@ -157,7 +163,6 @@ private:
         QString remotePath;
         QDateTime lastKnownModified;
     };
-
     void setLastError(const QString &message);
     void openDownloadedRemoteFile(const QString &connectionId,
                                   const QString &remotePath,
@@ -172,6 +177,7 @@ private:
     SettingsStore *m_settings = nullptr;
     ConnectionCatalog *m_catalog = nullptr;
     SessionController *m_sessions = nullptr;
+    SystemMonitorController *m_monitor = nullptr;
     TranslationManager *m_translations = nullptr;
     TrayController *m_tray = nullptr;
     QFileSystemWatcher *m_remoteEditWatcher = nullptr;
