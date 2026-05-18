@@ -62,25 +62,37 @@ Rectangle {
                               : (root.classic ? "#cbd5e1" : "#1e293b")
             }
             contentItem: Item {
-                Rectangle {
-                    x: 7
-                    y: 13
-                    width: 22
-                    height: 13
-                    radius: 2
-                    color: "transparent"
-                    border.color: root.classic ? "#0284c7" : "#38bdf8"
-                    border.width: 2
-                }
-                Rectangle {
-                    x: 8
-                    y: 9
-                    width: 10
-                    height: 6
-                    radius: 1
-                    color: "transparent"
-                    border.color: root.classic ? "#0284c7" : "#38bdf8"
-                    border.width: 2
+                Item {
+                    width: 20
+                    height: 18
+                    anchors.centerIn: parent
+
+                    Rectangle {
+                        x: 2
+                        y: 2
+                        width: 16
+                        height: 11
+                        radius: 2
+                        color: "transparent"
+                        border.color: root.classic ? "#0284c7" : "#38bdf8"
+                        border.width: 2
+                    }
+                    Rectangle {
+                        x: 8
+                        y: 13
+                        width: 4
+                        height: 3
+                        radius: 1
+                        color: root.classic ? "#0284c7" : "#38bdf8"
+                    }
+                    Rectangle {
+                        x: 5
+                        y: 16
+                        width: 10
+                        height: 2
+                        radius: 1
+                        color: root.classic ? "#0284c7" : "#38bdf8"
+                    }
                 }
             }
             onClicked: root.connectionManagerActivated()
