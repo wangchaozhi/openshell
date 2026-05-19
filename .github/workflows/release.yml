@@ -344,6 +344,49 @@ jobs:
         shell: bash
         run: cmake --build build-android-arm64 --config "${BUILD_TYPE}" --parallel
 
+      # CI 用 Release 构建，Qt 的 androiddeployqt 在没传 keystore 时产出的是
+      # 未签名 APK，装到设备上会报 "安装包无效"。这里用 GH Secrets 提供的
+      # keystore 用 apksigner 重新签一遍。secrets 缺失就让步骤失败而不是
+      # 静默产出装不上的包。
+      - name: Sign Android APK
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ANDROID_KEYSTORE_BASE64:-}" ]; then
+            echo "ANDROID_KEYSTORE_BASE64 secret is empty; set up the keystore secrets first." >&2
+            exit 1
+          fi
+
+          keystore="${RUNNER_TEMP}/release.keystore"
+          printf '%s' "${ANDROID_KEYSTORE_BASE64}" | base64 -d > "${keystore}"
+
+          apk="$(find build-android-arm64/android-build -type f -name 'OpenShell.apk' -print -quit)"
+          if [ -z "${apk}" ]; then
+            echo "OpenShell.apk not found under build-android-arm64/android-build" >&2
+            exit 1
+          fi
+
+          apksigner="$(ls -d "${ANDROID_SDK_ROOT}"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)"
+          if [ -z "${apksigner}" ]; then
+            echo "apksigner not found under ${ANDROID_SDK_ROOT}/build-tools" >&2
+            exit 1
+          fi
+
+          "${apksigner}" sign \
+            --ks "${keystore}" \
+            --ks-pass "pass:${ANDROID_KEYSTORE_PASSWORD}" \
+            --ks-key-alias "${ANDROID_KEY_ALIAS}" \
+            --key-pass "pass:${ANDROID_KEY_PASSWORD}" \
+            "${apk}"
+
+          "${apksigner}" verify --verbose "${apk}"
+          rm -f "${keystore}" "${apk}.idsig"
+
       - name: Package Android APK
         shell: bash
         run: |
