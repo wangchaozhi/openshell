@@ -2,7 +2,6 @@
 
 #include "VtScreen.h"
 
-#include <QDebug>
 #include <QFontMetricsF>
 #include <QGuiApplication>
 #include <QElapsedTimer>
@@ -12,9 +11,6 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QWheelEvent>
-#include <QFile>
-#include <QTextStream>
-#include <QStandardPaths>
 #include <QStyleHints>
 
 namespace {
@@ -210,6 +206,10 @@ void TerminalScreenItem::sendText(const QString &text)
 void TerminalScreenItem::requestFocus()
 {
     forceActiveFocus(Qt::OtherFocusReason);
+    updateInputMethod(Qt::ImEnabled | Qt::ImHints | Qt::ImCursorRectangle);
+#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+    showSoftKeyboard();
+#endif
 }
 
 void TerminalScreenItem::selectAll()
@@ -250,6 +250,8 @@ void TerminalScreenItem::scrollToBottom()
 
 void TerminalScreenItem::showSoftKeyboard()
 {
+    forceActiveFocus(Qt::OtherFocusReason);
+    updateInputMethod(Qt::ImEnabled | Qt::ImHints | Qt::ImCursorRectangle);
     if (auto *im = QGuiApplication::inputMethod()) {
         im->show();
     }
@@ -264,11 +266,12 @@ void TerminalScreenItem::inputMethodEvent(QInputMethodEvent *event)
     if (m_scrollOffset != 0) {
         setScrollOffset(0);
     }
+    sendImeDeletion(event->replacementStart(), event->replacementLength());
     const QString commit = event->commitString();
     if (!commit.isEmpty()) {
-        // 软键盘提交的字符串原样转 unichar 发给 vterm。
-        m_screen->sendKey(0, Qt::NoModifier, commit);
+        sendCommittedText(commit);
     }
+    updateInputMethod(Qt::ImCursorRectangle | Qt::ImSurroundingText | Qt::ImCursorPosition);
     event->accept();
 }
 
@@ -278,9 +281,27 @@ QVariant TerminalScreenItem::inputMethodQuery(Qt::InputMethodQuery query) const
     case Qt::ImEnabled:
         return true;
     case Qt::ImHints:
-        // 终端：禁用自动大写 / 预测 / 拼写检查，避免 IME 自作主张帮你补全或纠错。
-        return QVariant(int(Qt::ImhNoAutoUppercase | Qt::ImhNoPredictiveText
-                             | Qt::ImhSensitiveData));
+        // 终端里不能让输入法自动大写、联想纠错或学习输入内容；否则命令、
+        // 密码、路径都会被 IME 自作主张改写。
+        return QVariant(int(Qt::ImhNoAutoUppercase
+                            | Qt::ImhNoPredictiveText
+                            | Qt::ImhSensitiveData));
+    case Qt::ImCursorRectangle:
+        return cursorRectangle();
+    case Qt::ImFont:
+        return QVariant::fromValue(m_font);
+    case Qt::ImCursorPosition:
+        return 0;
+    case Qt::ImSurroundingText:
+        return QString();
+    case Qt::ImCurrentSelection:
+        return QString();
+    case Qt::ImMaximumTextLength:
+        return -1;
+    case Qt::ImAnchorPosition:
+        return 0;
+    case Qt::ImInputItemClipRectangle:
+        return QRectF(0, 0, width(), height());
     default:
         return QQuickPaintedItem::inputMethodQuery(query);
     }
@@ -290,6 +311,7 @@ void TerminalScreenItem::geometryChange(const QRectF &newGeometry, const QRectF 
 {
     QQuickPaintedItem::geometryChange(newGeometry, oldGeometry);
     emitDesiredGrid();
+    updateInputMethod(Qt::ImCursorRectangle | Qt::ImInputItemClipRectangle);
 }
 
 void TerminalScreenItem::keyPressEvent(QKeyEvent *event)
@@ -299,24 +321,11 @@ void TerminalScreenItem::keyPressEvent(QKeyEvent *event)
         setScrollOffset(0);
     }
 
-    QString logMsg = QString("KEY EVENT: key=%1 modifiers=%2 text=[%3] focus=%4")
-        .arg(event->key()).arg((int)event->modifiers()).arg(event->text()).arg(hasActiveFocus());
-
-    QFile logFile(QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/openshell_keyboard.log");
-    logFile.open(QIODevice::Append | QIODevice::Text);
-    QTextStream out(&logFile);
-    out << logMsg << "\n";
-    logFile.close();
-
     if (!m_screen) {
         QQuickPaintedItem::keyPressEvent(event);
         return;
     }
     const bool handled = m_screen->sendKey(event->key(), event->modifiers(), event->text());
-    logFile.open(QIODevice::Append | QIODevice::Text);
-    out.setDevice(&logFile);
-    out << "  -> handled: " << handled << "\n";
-    logFile.close();
 
     if (handled) {
         event->accept();
@@ -443,6 +452,7 @@ void TerminalScreenItem::focusInEvent(QFocusEvent *event)
     QQuickPaintedItem::focusInEvent(event);
     m_cursorOn = true;
     m_cursorTimer.start();
+    updateInputMethod(Qt::ImEnabled | Qt::ImHints | Qt::ImCursorRectangle);
 #if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
     // 移动端：拿到焦点就主动调起软键盘。覆盖切到 Terminal 页时（QML 调
     // requestFocus）这条路径，那次没有 mouse press 事件兜底。
@@ -477,6 +487,7 @@ void TerminalScreenItem::onScreenDamaged(const QRect &cellRect)
 void TerminalScreenItem::onScreenCursorMoved()
 {
     m_cursorOn = true;
+    updateInputMethod(Qt::ImCursorRectangle);
     update();
 }
 
@@ -556,7 +567,87 @@ void TerminalScreenItem::setScrollOffset(int offset)
         return;
     }
     m_scrollOffset = clamped;
+    updateInputMethod(Qt::ImCursorRectangle);
     update();
+}
+
+void TerminalScreenItem::sendCommittedText(const QString &text)
+{
+    if (!m_screen || text.isEmpty()) {
+        return;
+    }
+
+    QString printableRun;
+    const auto flushPrintableRun = [this, &printableRun]() {
+        if (!printableRun.isEmpty()) {
+            m_screen->sendKey(0, Qt::NoModifier, printableRun);
+            printableRun.clear();
+        }
+    };
+
+    for (const QChar &ch : text) {
+        switch (ch.unicode()) {
+        case '\r':
+        case '\n':
+            flushPrintableRun();
+            m_screen->sendKey(Qt::Key_Return, Qt::NoModifier, QString());
+            break;
+        case '\t':
+            flushPrintableRun();
+            m_screen->sendKey(Qt::Key_Tab, Qt::NoModifier, QString());
+            break;
+        case '\b':
+        case 0x7f:
+            flushPrintableRun();
+            m_screen->sendKey(Qt::Key_Backspace, Qt::NoModifier, QString());
+            break;
+        case 0x1b:
+            flushPrintableRun();
+            m_screen->sendKey(Qt::Key_Escape, Qt::NoModifier, QString());
+            break;
+        default:
+            printableRun.append(ch);
+            break;
+        }
+    }
+    flushPrintableRun();
+}
+
+void TerminalScreenItem::sendImeDeletion(int replacementStart, int replacementLength)
+{
+    if (!m_screen || replacementLength <= 0) {
+        return;
+    }
+
+    const int key = replacementStart < 0 ? Qt::Key_Backspace : Qt::Key_Delete;
+    for (int i = 0; i < replacementLength; ++i) {
+        m_screen->sendKey(key, Qt::NoModifier, QString());
+    }
+}
+
+QRectF TerminalScreenItem::cursorRectangle() const
+{
+    const int cellW = qMax(1, m_cellW);
+    const int cellH = qMax(1, m_cellH);
+    if (!m_screen) {
+        return QRectF(0, 0, cellW, cellH);
+    }
+
+    const QPoint cp = m_screen->cursorPosition();
+    const qreal maxX = qMax<qreal>(0, width() - cellW);
+    const qreal maxY = qMax<qreal>(0, height() - cellH);
+    const qreal x = qBound<qreal>(0, cp.x() * cellW, maxX);
+    const qreal y = qBound<qreal>(0, (cp.y() + m_scrollOffset) * cellH, maxY);
+    return QRectF(x, y, cellW, cellH);
+}
+
+void TerminalScreenItem::updateInputMethod(Qt::InputMethodQueries queries) const
+{
+    if (hasActiveFocus()) {
+        if (auto *im = QGuiApplication::inputMethod()) {
+            im->update(queries);
+        }
+    }
 }
 
 void TerminalScreenItem::updateAutoScroll()

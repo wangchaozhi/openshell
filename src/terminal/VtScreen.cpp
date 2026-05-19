@@ -2,7 +2,6 @@
 
 #include <vterm.h>
 
-#include <QDebug>
 #include <QString>
 
 #include <algorithm>
@@ -156,16 +155,6 @@ void VtScreen::enqueueRaw(const QByteArray &data)
     if (data.isEmpty()) {
         return;
     }
-    FILE *f = fopen("C:\\Users\\86131\\AppData\\Local\\Temp\\vterm_output.log", "a");
-    if (f) {
-        fprintf(f, "enqueueRaw: %d bytes: ", (int)data.size());
-        for (int i = 0; i < data.size() && i < 20; i++) {
-            fprintf(f, "%02x ", (unsigned char)data[i]);
-        }
-        fprintf(f, "\n");
-        fflush(f);
-        fclose(f);
-    }
     m_pendingOutput.append(data);
     emit outputReady();
 }
@@ -203,11 +192,7 @@ void VtScreen::clear()
 
 bool VtScreen::sendKey(int qtKey, Qt::KeyboardModifiers modifiers, const QString &text)
 {
-    qWarning() << "VtScreen::sendKey qtKey=" << qtKey << "Qt::Key_C=" << Qt::Key_C
-               << "modifiers=" << (int)modifiers << "text=[" << text << "]";
-
     if (!m_vt) {
-        qWarning() << "  -> m_vt is null, returning false";
         return false;
     }
 

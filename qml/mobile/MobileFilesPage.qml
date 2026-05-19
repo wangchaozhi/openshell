@@ -480,10 +480,11 @@ Rectangle {
             enabled: contextMenu.targetPath.length > 0
             onTriggered: {
                 chmodDialog.targetPath = contextMenu.targetPath
-                chmodField.text = contextMenu.targetPermissions
-                                  && contextMenu.targetPermissions.length > 0
-                                  ? contextMenu.targetPermissions
-                                  : (contextMenu.targetIsDir ? "755" : "644")
+                chmodDialog.targetIsDir = contextMenu.targetIsDir
+                chmodDialog.applyOctal(contextMenu.targetPermissions
+                                       && contextMenu.targetPermissions.length > 0
+                                       ? contextMenu.targetPermissions
+                                       : (contextMenu.targetIsDir ? "755" : "644"))
                 chmodDialog.open()
             }
         }
@@ -558,14 +559,19 @@ Rectangle {
     Dialog {
         id: renameDialog
         anchors.centerIn: parent
+        width: Math.min(parent.width - 64, 360)
         modal: true
         title: qsTr("Rename")
         standardButtons: Dialog.Ok | Dialog.Cancel
 
-        TextField {
-            id: renameField
-            width: 280
-            placeholderText: qsTr("New name")
+        ColumnLayout {
+            width: parent.width
+
+            TextField {
+                id: renameField
+                Layout.fillWidth: true
+                placeholderText: qsTr("New name")
+            }
         }
 
         onAccepted: {
@@ -580,6 +586,7 @@ Rectangle {
     Dialog {
         id: deleteDialog
         anchors.centerIn: parent
+        width: Math.min(parent.width - 64, 360)
         modal: true
         title: qsTr("Delete")
         standardButtons: Dialog.Yes | Dialog.No
@@ -590,7 +597,7 @@ Rectangle {
         Label {
             text: qsTr("Delete %1?").arg(deleteDialog.targetPath)
             wrapMode: Text.WordWrap
-            width: 280
+            width: parent.width
         }
 
         onAccepted: {
@@ -604,60 +611,144 @@ Rectangle {
     Dialog {
         id: chmodDialog
         anchors.centerIn: parent
+        width: Math.min(parent.width - 64, 360)
         modal: true
         title: qsTr("Permissions")
         standardButtons: Dialog.Ok | Dialog.Cancel
 
         property string targetPath: ""
+        property bool targetIsDir: false
+
+        function applyOctal(value) {
+            const normalized = (value && value.length > 0 ? value : "755").slice(-3)
+            const owner = parseInt(normalized.charAt(0))
+            const group = parseInt(normalized.charAt(1))
+            const other = parseInt(normalized.charAt(2))
+            ownerRead.checked = (owner & 4) !== 0
+            ownerWrite.checked = (owner & 2) !== 0
+            ownerExec.checked = (owner & 1) !== 0
+            groupRead.checked = (group & 4) !== 0
+            groupWrite.checked = (group & 2) !== 0
+            groupExec.checked = (group & 1) !== 0
+            otherRead.checked = (other & 4) !== 0
+            otherWrite.checked = (other & 2) !== 0
+            otherExec.checked = (other & 1) !== 0
+            updateSymbolic()
+        }
+
+        function octalText() {
+            const owner = (ownerRead.checked ? 4 : 0)
+                        + (ownerWrite.checked ? 2 : 0)
+                        + (ownerExec.checked ? 1 : 0)
+            const group = (groupRead.checked ? 4 : 0)
+                        + (groupWrite.checked ? 2 : 0)
+                        + (groupExec.checked ? 1 : 0)
+            const other = (otherRead.checked ? 4 : 0)
+                        + (otherWrite.checked ? 2 : 0)
+                        + (otherExec.checked ? 1 : 0)
+            return "" + owner + group + other
+        }
+
+        function updateSymbolic() {
+            const prefix = chmodDialog.targetIsDir ? "d" : "-"
+            const owner = (ownerRead.checked ? "r" : "-")
+                        + (ownerWrite.checked ? "w" : "-")
+                        + (ownerExec.checked ? "x" : "-")
+            const group = (groupRead.checked ? "r" : "-")
+                        + (groupWrite.checked ? "w" : "-")
+                        + (groupExec.checked ? "x" : "-")
+            const other = (otherRead.checked ? "r" : "-")
+                        + (otherWrite.checked ? "w" : "-")
+                        + (otherExec.checked ? "x" : "-")
+            symbolicLabel.text = prefix + owner + group + other
+            octalLabel.text = octalText()
+        }
 
         ColumnLayout {
-            width: 280
+            width: parent.width
             spacing: 8
 
-            Label {
+            RowLayout {
                 Layout.fillWidth: true
-                text: chmodDialog.targetPath
-                color: "#cbd5f5"
-                font.pixelSize: 11
-                elide: Text.ElideMiddle
+
+                Label {
+                    Layout.fillWidth: true
+                    text: chmodDialog.targetPath
+                    color: "#cbd5f5"
+                    font.pixelSize: 11
+                    elide: Text.ElideMiddle
+                }
+
+                Label {
+                    id: octalLabel
+                    text: "755"
+                    color: "#38bdf8"
+                    font.pixelSize: 13
+                    font.bold: true
+                }
             }
 
-            TextField {
-                id: chmodField
+            Label {
+                id: symbolicLabel
                 Layout.fillWidth: true
-                placeholderText: qsTr("Octal (e.g. 755)")
-                inputMethodHints: Qt.ImhDigitsOnly
-                validator: RegularExpressionValidator { regularExpression: /^[0-7]{3,4}$/ }
+                text: "----------"
+                color: "#94a3b8"
+                font.family: "Courier New"
+                font.pixelSize: 13
+                font.bold: true
             }
 
-            Label {
+            GridLayout {
                 Layout.fillWidth: true
-                text: qsTr("Examples: 755 (rwxr-xr-x), 644 (rw-r--r--)")
-                color: "#64748b"
-                font.pixelSize: 10
-                wrapMode: Text.WordWrap
+                columns: 4
+                columnSpacing: 2
+                rowSpacing: 0
+
+                Item { Layout.preferredWidth: 48 }
+                Label { Layout.alignment: Qt.AlignHCenter; text: qsTr("Read"); color: "#cbd5f5"; font.pixelSize: 11 }
+                Label { Layout.alignment: Qt.AlignHCenter; text: qsTr("Write"); color: "#cbd5f5"; font.pixelSize: 11 }
+                Label { Layout.alignment: Qt.AlignHCenter; text: qsTr("Exec"); color: "#cbd5f5"; font.pixelSize: 11 }
+
+                Label { text: qsTr("Owner"); color: "#cbd5f5"; font.pixelSize: 12 }
+                CheckBox { id: ownerRead; Layout.alignment: Qt.AlignHCenter; onCheckedChanged: chmodDialog.updateSymbolic() }
+                CheckBox { id: ownerWrite; Layout.alignment: Qt.AlignHCenter; onCheckedChanged: chmodDialog.updateSymbolic() }
+                CheckBox { id: ownerExec; Layout.alignment: Qt.AlignHCenter; onCheckedChanged: chmodDialog.updateSymbolic() }
+
+                Label { text: qsTr("Group"); color: "#cbd5f5"; font.pixelSize: 12 }
+                CheckBox { id: groupRead; Layout.alignment: Qt.AlignHCenter; onCheckedChanged: chmodDialog.updateSymbolic() }
+                CheckBox { id: groupWrite; Layout.alignment: Qt.AlignHCenter; onCheckedChanged: chmodDialog.updateSymbolic() }
+                CheckBox { id: groupExec; Layout.alignment: Qt.AlignHCenter; onCheckedChanged: chmodDialog.updateSymbolic() }
+
+                Label { text: qsTr("Other"); color: "#cbd5f5"; font.pixelSize: 12 }
+                CheckBox { id: otherRead; Layout.alignment: Qt.AlignHCenter; onCheckedChanged: chmodDialog.updateSymbolic() }
+                CheckBox { id: otherWrite; Layout.alignment: Qt.AlignHCenter; onCheckedChanged: chmodDialog.updateSymbolic() }
+                CheckBox { id: otherExec; Layout.alignment: Qt.AlignHCenter; onCheckedChanged: chmodDialog.updateSymbolic() }
             }
         }
 
         onAccepted: {
-            if (chmodField.text.length === 0) return
             appController.requestRemoteChmod(root.connectionId,
                                              chmodDialog.targetPath,
-                                             chmodField.text)
+                                             chmodDialog.octalText())
         }
     }
 
     Dialog {
         id: newFolderDialog
         anchors.centerIn: parent
+        width: Math.min(parent.width - 64, 360)
         modal: true
         title: qsTr("New Folder")
         standardButtons: Dialog.Ok | Dialog.Cancel
 
-        TextField {
-            id: newFolderField
-            width: 280
-            placeholderText: qsTr("Folder name")
+        ColumnLayout {
+            width: parent.width
+
+            TextField {
+                id: newFolderField
+                Layout.fillWidth: true
+                placeholderText: qsTr("Folder name")
+            }
         }
 
         onAccepted: {

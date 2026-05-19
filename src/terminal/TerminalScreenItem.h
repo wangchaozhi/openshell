@@ -117,6 +117,10 @@ private:
     int maxScrollOffset() const;
     void setScrollOffset(int offset);
     void updateAutoScroll();
+    void sendCommittedText(const QString &text);
+    void sendImeDeletion(int replacementStart, int replacementLength);
+    QRectF cursorRectangle() const;
+    void updateInputMethod(Qt::InputMethodQueries queries) const;
 
     QPointer<VtScreen> m_screen;
     int m_cols = 0;

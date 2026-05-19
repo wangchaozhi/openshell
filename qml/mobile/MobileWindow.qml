@@ -182,6 +182,7 @@ ApplicationWindow {
 
             MobileTerminalPage {
                 session: window.activeSession
+                pageActive: window.activePage === "terminal"
                 onBackRequested: window.activePage = "connections"
             }
 
