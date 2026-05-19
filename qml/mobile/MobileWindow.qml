@@ -19,6 +19,19 @@ ApplicationWindow {
     Material.background: "#0b1220"
     Material.foreground: "#f8fafc"
 
+    // Android 上 system BACK 会让 Qt 默认关闭 ApplicationWindow，但
+    // QGuiApplication 设了 setQuitOnLastWindowClosed(false)，导致进程
+    // 留着、Activity 重建时却没有 window —— 整屏白且打不回来。这里拦截
+    // 关闭：先尝试把 task 推到后台（等同 home），失败才允许关。iOS 没
+    // moveTaskToBack 等效，但 iOS 平台上系统的"上滑回主屏"已经走的
+    // applicationDidEnterBackground 路径不会触发 onClosing，这里基本是
+    // Android 专属保护。
+    onClosing: (close) => {
+        if (appController.moveAppToBackground()) {
+            close.accepted = false
+        }
+    }
+
     property var connections: appController.connectionProfiles()
     property var activeSessions: appController.sessions()
     property string activePage: "connections"

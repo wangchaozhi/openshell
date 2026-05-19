@@ -120,6 +120,10 @@ public:
     Q_INVOKABLE void showWindow();
     Q_INVOKABLE void hideWindow();
     Q_INVOKABLE void quit();
+    // 把 app 任务发送到后台（等效于按 home），仅 Android 有意义；其他平台
+    // 返回 false 不做事。给移动端拦截系统 BACK 用，避免 Qt 把唯一窗口关掉
+    // 之后再切回来变白屏。
+    Q_INVOKABLE bool moveAppToBackground();
 
 signals:
     void languageChanged();
