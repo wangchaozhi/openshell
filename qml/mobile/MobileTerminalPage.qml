@@ -68,8 +68,7 @@ Rectangle {
                 spacing: 8
 
                 Button {
-                    Layout.preferredWidth: 64
-                    Layout.preferredHeight: 32
+                    Layout.preferredHeight: 36
                     text: qsTr("Back")
                     onClicked: root.backRequested()
                 }
@@ -130,29 +129,43 @@ Rectangle {
                 anchors.margins: 6
                 spacing: 6
 
+                // 之前每个按钮固定 54-64 dp，比 Material Filled 的横向
+                // padding 还小，文字直接 elide 没。改 fillWidth + 收紧 padding。
                 Button {
-                    Layout.preferredWidth: 54
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 36
+                    leftPadding: 8
+                    rightPadding: 8
                     text: "Esc"
                     enabled: root.sessionId.length > 0
                     onClicked: root.sendText("\u001b")
                 }
 
                 Button {
-                    Layout.preferredWidth: 54
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 36
+                    leftPadding: 8
+                    rightPadding: 8
                     text: "Tab"
                     enabled: root.sessionId.length > 0
                     onClicked: root.sendText("\t")
                 }
 
                 Button {
-                    Layout.preferredWidth: 64
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 36
+                    leftPadding: 8
+                    rightPadding: 8
                     text: "Ctrl+C"
                     enabled: root.sessionId.length > 0
                     onClicked: appController.sendSessionCtrlC(root.sessionId)
                 }
 
                 Button {
-                    Layout.preferredWidth: 64
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 36
+                    leftPadding: 8
+                    rightPadding: 8
                     text: qsTr("Paste")
                     enabled: root.sessionId.length > 0
                     onClicked: root.sendText(appController.clipboardText())
@@ -180,7 +193,9 @@ Rectangle {
                 }
 
                 Button {
-                    Layout.preferredWidth: 72
+                    Layout.preferredHeight: 40
+                    leftPadding: 12
+                    rightPadding: 12
                     text: qsTr("Send")
                     enabled: root.sessionId.length > 0
                     onClicked: root.sendCommand()

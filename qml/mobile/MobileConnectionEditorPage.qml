@@ -93,8 +93,7 @@ Rectangle {
                 spacing: 8
 
                 Button {
-                    Layout.preferredWidth: 64
-                    Layout.preferredHeight: 34
+                    Layout.preferredHeight: 38
                     text: qsTr("Back")
                     onClicked: root.canceled()
                 }
@@ -109,8 +108,7 @@ Rectangle {
                 }
 
                 Button {
-                    Layout.preferredWidth: 68
-                    Layout.preferredHeight: 34
+                    Layout.preferredHeight: 38
                     text: qsTr("Save")
                     onClicked: root.save()
                 }

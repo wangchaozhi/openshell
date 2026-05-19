@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls.Material
 import QtQuick.Layouts
 
 ApplicationWindow {
@@ -10,6 +11,13 @@ ApplicationWindow {
     visible: true
     title: qsTr("OpenShell")
     color: "#0b1220"
+    // 整个移动端走 Material Dark：默认 Light 主题在我们 #0b1220 的深底上
+    // 让 TextField / ComboBox 的文字几乎不可见。
+    Material.theme: Material.Dark
+    Material.accent: "#38bdf8"
+    Material.primary: "#1e3a8a"
+    Material.background: "#0b1220"
+    Material.foreground: "#f8fafc"
 
     property var connections: appController.connectionProfiles()
     property var activeSessions: appController.sessions()
@@ -194,9 +202,7 @@ ApplicationWindow {
 
             RowLayout {
                 anchors.fill: parent
-                anchors.leftMargin: 8
-                anchors.rightMargin: 8
-                spacing: 6
+                spacing: 0
 
                 Repeater {
                     model: [
@@ -206,14 +212,48 @@ ApplicationWindow {
                         { key: "files", label: qsTr("Files") }
                     ]
 
-                    delegate: Button {
+                    // 自绘 tab：Material Button 的水平 padding ~48dp，单 tab 宽 ~95dp
+                    // 时会把标签 elide 成 "Conn..."；这里直接用 Item + Label 控制。
+                    delegate: Item {
                         required property var modelData
 
+                        readonly property bool tabEnabled: modelData.key === "connections"
+                                                          || window.activeSessionId.length > 0
+                        readonly property bool tabActive: window.activePage === modelData.key
+
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 42
-                        text: modelData.label
-                        enabled: modelData.key === "connections" || window.activeSessionId.length > 0
-                        onClicked: window.activePage = modelData.key
+                        Layout.fillHeight: true
+                        opacity: tabEnabled ? 1.0 : 0.35
+
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.topMargin: 6
+                            anchors.bottomMargin: 6
+                            anchors.leftMargin: 4
+                            anchors.rightMargin: 4
+                            radius: 10
+                            color: tabMouse.pressed
+                                   ? "#1d4ed8"
+                                   : (parent.tabActive ? "#1e3a8a" : "transparent")
+                        }
+
+                        Label {
+                            anchors.fill: parent
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            text: parent.modelData.label
+                            color: parent.tabActive ? "#f8fafc" : "#cbd5f5"
+                            font.pixelSize: 12
+                            font.bold: parent.tabActive
+                            elide: Text.ElideNone
+                        }
+
+                        MouseArea {
+                            id: tabMouse
+                            anchors.fill: parent
+                            enabled: parent.tabEnabled
+                            onClicked: window.activePage = parent.modelData.key
+                        }
                     }
                 }
             }

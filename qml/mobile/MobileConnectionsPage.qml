@@ -62,16 +62,16 @@ Rectangle {
                 }
             }
 
+            // 不固定宽度，让 Material 按钮按文字内容自适应——之前的 48 / 72
+            // 比 Material Filled 按钮的左右 padding 合计还小，会把文字 elide 掉。
             Button {
-                Layout.preferredWidth: 48
-                Layout.preferredHeight: 38
-                text: "+"
+                Layout.preferredHeight: 40
+                text: qsTr("New")
                 onClicked: root.newConnectionRequested()
             }
 
             Button {
-                Layout.preferredWidth: 72
-                Layout.preferredHeight: 38
+                Layout.preferredHeight: 40
                 text: qsTr("Refresh")
                 onClicked: root.refreshRequested()
             }
@@ -153,15 +153,13 @@ Rectangle {
                         spacing: 4
 
                         Button {
-                            Layout.preferredWidth: 58
-                            Layout.preferredHeight: 30
+                            Layout.preferredHeight: 34
                             text: qsTr("Edit")
                             onClicked: root.connectionEditRequested(row.modelData.id)
                         }
 
                         Button {
-                            Layout.preferredWidth: 58
-                            Layout.preferredHeight: 30
+                            Layout.preferredHeight: 34
                             text: qsTr("Delete")
                             onClicked: root.connectionDeleteRequested(row.modelData.id)
                         }
