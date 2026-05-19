@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag, for example v0.1.0"
-        required: true
+        description: "Release tag, e.g. v0.1.0. Leave empty to auto-bump the latest tag's patch (v0.5.1 -> v0.5.2)."
+        required: false
         type: string
       prerelease:
         description: "Mark this GitHub release as a prerelease"
@@ -22,8 +22,43 @@ env:
   BUILD_TYPE: Release
 
 jobs:
+  prepare:
+    name: Resolve release tag
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tag
+        id: resolve
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+          if [ -n "${INPUT_TAG}" ]; then
+            tag="${INPUT_TAG}"
+          else
+            # 选语义化 vX.Y.Z 的最新 tag 做基准；找不到就从 v0.0.0 起步。
+            latest="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1 || true)"
+            if [ -z "${latest}" ]; then
+              latest="v0.0.0"
+            fi
+            stripped="${latest#v}"
+            IFS='.' read -r major minor patch <<<"${stripped}"
+            patch=$((patch + 1))
+            tag="v${major}.${minor}.${patch}"
+            echo "Latest tag: ${latest}, auto-bumped to: ${tag}"
+          fi
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+
   build:
     name: Build ${{ matrix.asset_name }}
+    needs: prepare
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -216,7 +251,7 @@ jobs:
 
           export APPIMAGE_EXTRACT_AND_RUN=1
           export QMAKE="${QT_ROOT}/bin/qmake"
-          export VERSION="${{ inputs.tag }}"
+          export VERSION="${{ needs.prepare.outputs.tag }}"
           export PATH="${PWD}/tools:${PATH}"
           # linuxdeploy-plugin-qt 用 qmlimportscanner 扫描这些路径下的 .qml，
           # 才会把 QtQuick / QtQuick.Controls / OpenShell 自家模块打进 AppImage。
@@ -248,6 +283,7 @@ jobs:
 
   build-android:
     name: Build OpenShell-android-arm64
+    needs: prepare
     runs-on: ubuntu-24.04
     env:
       ANDROID_ABI: arm64-v8a
@@ -411,6 +447,7 @@ jobs:
 
   build-ios:
     name: Build OpenShell-ios-${{ matrix.target.name }}
+    needs: prepare
     runs-on: macos-15
     strategy:
       fail-fast: false
@@ -552,6 +589,7 @@ jobs:
     name: Publish GitHub Release
     runs-on: ubuntu-24.04
     needs:
+      - prepare
       - build
       - build-android
       - build-ios
@@ -570,7 +608,7 @@ jobs:
 
       - name: Create or update tag
         env:
-          TAG_NAME: ${{ inputs.tag }}
+          TAG_NAME: ${{ needs.prepare.outputs.tag }}
         run: |
           set -euo pipefail
           git fetch --tags
@@ -586,7 +624,7 @@ jobs:
       - name: Publish release assets
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG_NAME: ${{ inputs.tag }}
+          TAG_NAME: ${{ needs.prepare.outputs.tag }}
           PRERELEASE: ${{ inputs.prerelease }}
         run: |
           set -euo pipefail
