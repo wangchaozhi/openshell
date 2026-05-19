@@ -180,6 +180,8 @@ ApplicationWindow {
 
             MobileFilesPage {
                 hasSession: window.activeSessionId.length > 0
+                connectionId: window.activeSession && window.activeSession.connectionId
+                              ? window.activeSession.connectionId : ""
             }
 
             MobileConnectionEditorPage {
