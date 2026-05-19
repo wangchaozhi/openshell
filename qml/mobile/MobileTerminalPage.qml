@@ -8,7 +8,6 @@ Rectangle {
 
     property var session: ({})
     readonly property string sessionId: session && session.id ? session.id : ""
-    property string commandText: ""
 
     signal backRequested()
 
@@ -32,15 +31,6 @@ Rectangle {
         }
         appController.sendSessionInput(sessionId, text)
         terminal.requestFocus()
-    }
-
-    function sendCommand() {
-        const text = commandField.text
-        if (text.length === 0) {
-            return
-        }
-        sendText(text + "\n")
-        commandField.text = ""
     }
 
     onSessionIdChanged: bindScreen()
@@ -173,34 +163,9 @@ Rectangle {
             }
         }
 
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 54
-            color: "#111827"
-            border.color: "#1e293b"
-
-            RowLayout {
-                anchors.fill: parent
-                anchors.margins: 8
-                spacing: 8
-
-                TextField {
-                    id: commandField
-                    Layout.fillWidth: true
-                    placeholderText: qsTr("Command")
-                    enabled: root.sessionId.length > 0
-                    onAccepted: root.sendCommand()
-                }
-
-                Button {
-                    Layout.preferredHeight: 40
-                    leftPadding: 12
-                    rightPadding: 12
-                    text: qsTr("Send")
-                    enabled: root.sessionId.length > 0
-                    onClicked: root.sendCommand()
-                }
-            }
-        }
+        // 之前底部还有一行 "Command 输入框 + Send"，移动端直接点 terminal
+        // 就能弹软键盘逐字符发到 SSH，那一行的"前置编辑再回车整段发"心智
+        // 在 vim / nano / 交互式 prompt 下走不通，砍掉留给 terminal 更多
+        // 垂直空间。特殊键还在上面那条工具栏里（Esc / Tab / Ctrl+C / Paste）。
     }
 }

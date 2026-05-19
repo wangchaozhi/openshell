@@ -63,6 +63,8 @@ public:
     Q_INVOKABLE void clearSelection();
     Q_INVOKABLE void scrollByLines(int delta);
     Q_INVOKABLE void scrollToBottom();
+    // 移动端调起软键盘。仅 Android / iOS 有实际效果，桌面是 no-op。
+    Q_INVOKABLE void showSoftKeyboard();
 
 signals:
     void screenChanged();
@@ -83,6 +85,10 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
     void focusInEvent(QFocusEvent *event) override;
     void focusOutEvent(QFocusEvent *event) override;
+    // 软键盘 commit 字符走这里——Android/iOS 上软键盘大多走 IME，
+    // 不直接发 keyPressEvent。这里把 commitString 转发给 VtScreen。
+    void inputMethodEvent(QInputMethodEvent *event) override;
+    QVariant inputMethodQuery(Qt::InputMethodQuery query) const override;
 
 private slots:
     void onScreenDamaged(const QRect &cellRect);

@@ -15,8 +15,16 @@ Rectangle {
     property bool loading: false
     property string pendingRequestId: ""
     property string errorMessage: ""
-    property string pendingOp: ""        // "delete" | "rename" | "create" — refresh-pending
+    property string pendingOp: ""        // "delete" | "rename" | "create" | "upload" — refresh-pending
     property string renameTargetPath: ""
+
+    // 上传/下载进度——监听 remoteOperationProgress 同步更新
+    property string activeTransferRequestId: ""
+    property string activeTransferOp: ""     // "upload" / "download"
+    property string activeTransferLabel: ""
+    property real activeTransferBytesDone: 0
+    property real activeTransferBytesTotal: 0
+    property real activeTransferSpeed: 0
 
     color: "#0b1220"
 
@@ -63,6 +71,16 @@ Rectangle {
         return dir + "/" + name
     }
 
+    function transferProgress() {
+        if (activeTransferBytesTotal <= 0) return 0
+        return Math.min(1, activeTransferBytesDone / activeTransferBytesTotal)
+    }
+
+    function formatSpeed(bytesPerSec) {
+        if (!bytesPerSec || bytesPerSec < 0) return ""
+        return formatSize(bytesPerSec) + "/s"
+    }
+
     onHasSessionChanged: {
         if (hasSession && currentPath.length === 0 && connectionId.length > 0) {
             navigateHome()
@@ -107,6 +125,14 @@ Rectangle {
         }
 
         function onRemoteOperationFinished(requestId, connId, operation, path, ok, message) {
+            if (requestId === root.activeTransferRequestId) {
+                root.activeTransferRequestId = ""
+                root.activeTransferOp = ""
+                root.activeTransferLabel = ""
+                root.activeTransferBytesDone = 0
+                root.activeTransferBytesTotal = 0
+                root.activeTransferSpeed = 0
+            }
             if (!ok) {
                 root.errorMessage = message && message.length > 0
                                     ? message
@@ -114,9 +140,21 @@ Rectangle {
                 return
             }
             if (operation === "delete" || operation === "rename"
-                    || operation === "create" || operation === "upload") {
+                    || operation === "create" || operation === "upload"
+                    || operation === "chmod") {
                 root.refresh()
             }
+        }
+
+        function onRemoteOperationProgress(requestId, connId, operation, path,
+                                           bytesDone, bytesTotal, speedBytesPerSec) {
+            if (requestId !== root.activeTransferRequestId) {
+                return
+            }
+            root.activeTransferOp = operation
+            root.activeTransferBytesDone = bytesDone
+            root.activeTransferBytesTotal = bytesTotal
+            root.activeTransferSpeed = speedBytesPerSec
         }
     }
 
@@ -185,6 +223,67 @@ Rectangle {
                     elide: Text.ElideMiddle
                     horizontalAlignment: Text.AlignLeft
                     verticalAlignment: Text.AlignVCenter
+                }
+            }
+        }
+
+        // 上传/下载进度条
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 56
+            visible: root.activeTransferRequestId.length > 0
+            radius: 6
+            color: "#0f172a"
+            border.color: "#1e293b"
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 8
+                spacing: 4
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+
+                    Label {
+                        Layout.fillWidth: true
+                        text: {
+                            const verb = root.activeTransferOp === "upload" ? qsTr("Uploading")
+                                       : root.activeTransferOp === "download" ? qsTr("Downloading")
+                                       : qsTr("Transferring")
+                            return root.activeTransferLabel.length > 0
+                                   ? verb + " " + root.activeTransferLabel
+                                   : verb
+                        }
+                        color: "#e2e8f0"
+                        font.pixelSize: 12
+                        elide: Text.ElideMiddle
+                    }
+
+                    Label {
+                        text: {
+                            if (root.activeTransferBytesTotal <= 0) {
+                                return root.formatSize(root.activeTransferBytesDone)
+                            }
+                            const pct = Math.round(root.transferProgress() * 100)
+                            return pct + "%   "
+                                 + root.formatSize(root.activeTransferBytesDone)
+                                 + " / " + root.formatSize(root.activeTransferBytesTotal)
+                                 + (root.activeTransferSpeed > 0
+                                    ? "   " + root.formatSpeed(root.activeTransferSpeed) : "")
+                        }
+                        color: "#94a3b8"
+                        font.pixelSize: 11
+                    }
+                }
+
+                ProgressBar {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 6
+                    from: 0
+                    to: 1
+                    value: root.transferProgress()
+                    indeterminate: root.activeTransferBytesTotal <= 0
                 }
             }
         }
@@ -308,12 +407,20 @@ Rectangle {
                                 root.loadDirectory(row.entryPath)
                             } else {
                                 contextMenu.targetPath = row.entryPath
+                                contextMenu.targetPermissions = row.modelData
+                                                                && row.modelData.permissions
+                                                                ? String(row.modelData.permissions)
+                                                                : ""
                                 contextMenu.targetIsDir = false
                                 contextMenu.popup()
                             }
                         }
                         onPressAndHold: {
                             contextMenu.targetPath = row.entryPath
+                            contextMenu.targetPermissions = row.modelData
+                                                            && row.modelData.permissions
+                                                            ? String(row.modelData.permissions)
+                                                            : ""
                             contextMenu.targetIsDir = row.isDir
                             contextMenu.popup()
                         }
@@ -336,9 +443,25 @@ Rectangle {
         id: contextMenu
 
         property string targetPath: ""
+        property string targetPermissions: ""
         property bool targetIsDir: false
 
+        width: 180
+
         MenuItem {
+            width: parent.width
+            height: 36
+            text: qsTr("Copy Path")
+            enabled: contextMenu.targetPath.length > 0
+            onTriggered: {
+                appController.copyTextToClipboard(contextMenu.targetPath)
+                root.errorMessage = ""
+            }
+        }
+        MenuSeparator {}
+        MenuItem {
+            width: parent.width
+            height: 36
             text: qsTr("Rename")
             enabled: contextMenu.targetPath.length > 0
             onTriggered: {
@@ -351,6 +474,23 @@ Rectangle {
             }
         }
         MenuItem {
+            width: parent.width
+            height: 36
+            text: qsTr("Permissions")
+            enabled: contextMenu.targetPath.length > 0
+            onTriggered: {
+                chmodDialog.targetPath = contextMenu.targetPath
+                chmodField.text = contextMenu.targetPermissions
+                                  && contextMenu.targetPermissions.length > 0
+                                  ? contextMenu.targetPermissions
+                                  : (contextMenu.targetIsDir ? "755" : "644")
+                chmodDialog.open()
+            }
+        }
+        MenuSeparator {}
+        MenuItem {
+            width: parent.width
+            height: 36
             text: qsTr("Delete")
             enabled: contextMenu.targetPath.length > 0
             onTriggered: {
@@ -404,7 +544,14 @@ Rectangle {
                 return
             }
             root.pendingOp = "upload"
-            appController.requestUploadLocalPath(root.connectionId, local, root.currentPath)
+            const slash = local.lastIndexOf("/")
+            root.activeTransferLabel = slash >= 0 ? local.substring(slash + 1) : local
+            root.activeTransferOp = "upload"
+            root.activeTransferBytesDone = 0
+            root.activeTransferBytesTotal = 0
+            root.activeTransferSpeed = 0
+            root.activeTransferRequestId = appController.requestUploadLocalPath(
+                root.connectionId, local, root.currentPath)
         }
     }
 
@@ -451,6 +598,52 @@ Rectangle {
             appController.requestDeleteRemotePath(root.connectionId,
                                                   deleteDialog.targetPath,
                                                   deleteDialog.targetIsDir)
+        }
+    }
+
+    Dialog {
+        id: chmodDialog
+        anchors.centerIn: parent
+        modal: true
+        title: qsTr("Permissions")
+        standardButtons: Dialog.Ok | Dialog.Cancel
+
+        property string targetPath: ""
+
+        ColumnLayout {
+            width: 280
+            spacing: 8
+
+            Label {
+                Layout.fillWidth: true
+                text: chmodDialog.targetPath
+                color: "#cbd5f5"
+                font.pixelSize: 11
+                elide: Text.ElideMiddle
+            }
+
+            TextField {
+                id: chmodField
+                Layout.fillWidth: true
+                placeholderText: qsTr("Octal (e.g. 755)")
+                inputMethodHints: Qt.ImhDigitsOnly
+                validator: RegularExpressionValidator { regularExpression: /^[0-7]{3,4}$/ }
+            }
+
+            Label {
+                Layout.fillWidth: true
+                text: qsTr("Examples: 755 (rwxr-xr-x), 644 (rw-r--r--)")
+                color: "#64748b"
+                font.pixelSize: 10
+                wrapMode: Text.WordWrap
+            }
+        }
+
+        onAccepted: {
+            if (chmodField.text.length === 0) return
+            appController.requestRemoteChmod(root.connectionId,
+                                             chmodDialog.targetPath,
+                                             chmodField.text)
         }
     }
 

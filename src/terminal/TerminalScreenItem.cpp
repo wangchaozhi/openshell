@@ -6,6 +6,8 @@
 #include <QFontMetricsF>
 #include <QGuiApplication>
 #include <QElapsedTimer>
+#include <QInputMethod>
+#include <QInputMethodEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
@@ -246,6 +248,44 @@ void TerminalScreenItem::scrollToBottom()
     setScrollOffset(0);
 }
 
+void TerminalScreenItem::showSoftKeyboard()
+{
+    if (auto *im = QGuiApplication::inputMethod()) {
+        im->show();
+    }
+}
+
+void TerminalScreenItem::inputMethodEvent(QInputMethodEvent *event)
+{
+    if (!m_screen) {
+        QQuickPaintedItem::inputMethodEvent(event);
+        return;
+    }
+    if (m_scrollOffset != 0) {
+        setScrollOffset(0);
+    }
+    const QString commit = event->commitString();
+    if (!commit.isEmpty()) {
+        // 软键盘提交的字符串原样转 unichar 发给 vterm。
+        m_screen->sendKey(0, Qt::NoModifier, commit);
+    }
+    event->accept();
+}
+
+QVariant TerminalScreenItem::inputMethodQuery(Qt::InputMethodQuery query) const
+{
+    switch (query) {
+    case Qt::ImEnabled:
+        return true;
+    case Qt::ImHints:
+        // 终端：禁用自动大写 / 预测 / 拼写检查，避免 IME 自作主张帮你补全或纠错。
+        return QVariant(int(Qt::ImhNoAutoUppercase | Qt::ImhNoPredictiveText
+                             | Qt::ImhSensitiveData));
+    default:
+        return QQuickPaintedItem::inputMethodQuery(query);
+    }
+}
+
 void TerminalScreenItem::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry)
 {
     QQuickPaintedItem::geometryChange(newGeometry, oldGeometry);
@@ -288,6 +328,12 @@ void TerminalScreenItem::keyPressEvent(QKeyEvent *event)
 void TerminalScreenItem::mousePressEvent(QMouseEvent *event)
 {
     forceActiveFocus(Qt::MouseFocusReason);
+#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+    // 移动端：点 terminal 主动调起软键盘，否则光设 focus 也不弹。
+    if (auto *im = QGuiApplication::inputMethod()) {
+        im->show();
+    }
+#endif
     if (event->button() == Qt::LeftButton && m_screen) {
         const QPoint cell = cellAtPosition(event->position());
         const qint64 now = monotonicMs();
@@ -397,6 +443,13 @@ void TerminalScreenItem::focusInEvent(QFocusEvent *event)
     QQuickPaintedItem::focusInEvent(event);
     m_cursorOn = true;
     m_cursorTimer.start();
+#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+    // 移动端：拿到焦点就主动调起软键盘。覆盖切到 Terminal 页时（QML 调
+    // requestFocus）这条路径，那次没有 mouse press 事件兜底。
+    if (auto *im = QGuiApplication::inputMethod()) {
+        im->show();
+    }
+#endif
     update();
 }
 
