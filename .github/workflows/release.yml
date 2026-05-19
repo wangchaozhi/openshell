@@ -367,14 +367,27 @@ jobs:
           if-no-files-found: error
 
   build-ios:
-    name: Build OpenShell-ios-simulator-x86_64
+    name: Build OpenShell-ios-${{ matrix.target.name }}
     runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          # Qt 6.x 预编译 iOS kit 是经典 fat：x86_64-simulator + arm64-device。
+          # 所以 simulator 必须 x86_64，device 必须 arm64 才能链接通过。
+          - name: simulator-x86_64
+            sysroot: iphonesimulator
+            arch: x86_64
+            package: zip
+          - name: device-arm64
+            sysroot: iphoneos
+            arch: arm64
+            package: ipa
     env:
-      # Qt 6.11.x 的 iOS 预编译 kit 用经典 fat：x86_64-simulator + arm64-device，
-      # 没有 arm64-simulator slice。所以 simulator 构建只能走 x86_64（Apple
-      # Silicon runner 通过 Rosetta 跑 sim）。
-      IOS_ASSET_NAME: OpenShell-ios-simulator-x86_64
-      IOS_ARCH: x86_64
+      IOS_ASSET_NAME: OpenShell-ios-${{ matrix.target.name }}
+      IOS_SYSROOT: ${{ matrix.target.sysroot }}
+      IOS_ARCH: ${{ matrix.target.arch }}
+      IOS_PACKAGE: ${{ matrix.target.package }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -385,7 +398,7 @@ jobs:
           set -euo pipefail
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           xcodebuild -version
-          xcrun --sdk iphonesimulator --show-sdk-version
+          xcrun --sdk "${IOS_SYSROOT}" --show-sdk-version
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -442,33 +455,54 @@ jobs:
             -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
             -DQT_HOST_PATH="${QT_HOST_ROOT}" \
             -DCMAKE_SYSTEM_NAME=iOS \
-            -DCMAKE_OSX_SYSROOT=iphonesimulator \
+            -DCMAKE_OSX_SYSROOT="${IOS_SYSROOT}" \
             -DCMAKE_OSX_ARCHITECTURES="${IOS_ARCH}"
 
-      - name: Build iOS simulator app
+      - name: Build iOS app
         shell: bash
         run: |
           set -euo pipefail
-          "${QT_IOS_ROOT}/bin/qt-cmake" --build build-ios
+          # 注意：qt-cmake 在 6.10 等版本只支持配置期参数，不接 --build。
+          # 直接用 cmake --build 走 ninja。
+          cmake --build build-ios
 
-      - name: Package iOS simulator app
+      - name: Package iOS artifact
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p package
           app_path="$(find build-ios -type d -name "${APP_NAME}.app" -print -quit)"
           if [ -z "${app_path}" ]; then
-            echo "iOS simulator app bundle was not found." >&2
+            echo "iOS app bundle was not found." >&2
             exit 1
           fi
+          # Ad-hoc 签名。simulator 不严格需要，但保持一致；device 上的 .ipa
+          # 拿这个伪签只能跑在越狱设备 / TrollStore / AltStore（本地重签）这类
+          # 场景，正常 iPhone 安装会被系统拒绝。
           codesign --force --deep --sign - "${app_path}"
-          ditto -c -k --sequesterRsrc --keepParent "${app_path}" "package/${IOS_ASSET_NAME}.zip"
+          case "${IOS_PACKAGE}" in
+            ipa)
+              staging="$(mktemp -d)"
+              mkdir -p "${staging}/Payload"
+              cp -R "${app_path}" "${staging}/Payload/"
+              (cd "${staging}" && zip -qry "${GITHUB_WORKSPACE}/package/${IOS_ASSET_NAME}.ipa" Payload)
+              ;;
+            zip)
+              ditto -c -k --sequesterRsrc --keepParent "${app_path}" "package/${IOS_ASSET_NAME}.zip"
+              ;;
+            *)
+              echo "Unknown IOS_PACKAGE=${IOS_PACKAGE}" >&2
+              exit 1
+              ;;
+          esac
 
       - name: Upload iOS package
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.IOS_ASSET_NAME }}
-          path: package/*.zip
+          path: |
+            package/*.zip
+            package/*.ipa
           if-no-files-found: error
 
   release:

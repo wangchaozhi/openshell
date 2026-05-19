@@ -52,9 +52,23 @@ detect_ninja() {
     fi
 }
 
+detect_cmake() {
+    if [[ -n "${CMAKE_EXE:-}" && -x "$CMAKE_EXE" ]]; then
+        return
+    fi
+    if [[ -x "$HOME/Qt/Tools/CMake/CMake.app/Contents/bin/cmake" ]]; then
+        CMAKE_EXE="$HOME/Qt/Tools/CMake/CMake.app/Contents/bin/cmake"
+        return
+    fi
+    if command -v cmake >/dev/null 2>&1; then
+        CMAKE_EXE="$(command -v cmake)"
+    fi
+}
+
 detect_qt_root ios   QT_IOS_ROOT
 detect_qt_root macos QT_HOST_ROOT
 detect_ninja
+detect_cmake
 
 if [[ -z "${QT_IOS_ROOT:-}" ]]; then
     echo "Qt iOS kit not found. Set QT_IOS_ROOT, e.g.:" >&2
@@ -68,6 +82,10 @@ if [[ -z "${QT_HOST_ROOT:-}" ]]; then
 fi
 if [[ -z "${NINJA_EXE:-}" ]]; then
     echo "Ninja not found. Install Ninja or set NINJA_EXE." >&2
+    exit 1
+fi
+if [[ -z "${CMAKE_EXE:-}" ]]; then
+    echo "CMake not found. Install it or set CMAKE_EXE." >&2
     exit 1
 fi
 if ! command -v xcrun >/dev/null 2>&1; then
@@ -96,11 +114,30 @@ echo "  ARCH          = $IOS_ARCH"
     -DCMAKE_OSX_ARCHITECTURES="$IOS_ARCH"
 
 echo "Building $APP_NAME ($BUILD_TYPE)..."
-"$QT_IOS_ROOT/bin/qt-cmake" --build "$BUILD_DIR"
+# 注意：qt-cmake 在某些 Qt 版本（如 6.10）只接配置期参数，不支持 --build。
+# 直接用 cmake --build 走 ninja，跨版本更稳。
+"$CMAKE_EXE" --build "$BUILD_DIR"
 
 app_path="$(find "$BUILD_DIR" -type d -name "${APP_NAME}.app" -print -quit)"
 if [[ -z "$app_path" ]]; then
-    echo "iOS simulator app bundle was not found." >&2
+    echo "iOS app bundle was not found." >&2
     exit 1
 fi
-echo "iOS Simulator .app: $app_path"
+echo "iOS .app: $app_path"
+
+# MAKE_IPA=1 ./build-ios.sh 时打个 ad-hoc 签名的 .ipa。device 目标（iphoneos）
+# 出来的 .ipa 能用在越狱 / TrollStore / AltStore 重签场景；simulator 目标也能
+# 打但意义不大，simulator 只装 .app。
+if [[ "${MAKE_IPA:-0}" = "1" ]]; then
+    asset_name="${IPA_NAME:-OpenShell-ios-${IOS_SYSROOT}-${IOS_ARCH}}"
+    ipa_path="$BUILD_DIR/${asset_name}.ipa"
+    echo "Ad-hoc signing $app_path..."
+    codesign --force --deep --sign - "$app_path"
+    staging="$(mktemp -d)"
+    mkdir -p "$staging/Payload"
+    cp -R "$app_path" "$staging/Payload/"
+    rm -f "$ipa_path"
+    (cd "$staging" && zip -qry "$ipa_path" Payload)
+    rm -rf "$staging"
+    echo "iOS .ipa:  $ipa_path"
+fi
