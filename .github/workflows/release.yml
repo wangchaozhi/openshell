@@ -296,7 +296,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/Qt
-          key: qt-v2-openshell-android-${{ env.QT_VERSION }}-android_arm64_v8a
+          key: qt-v3-openshell-android-${{ env.QT_VERSION }}-linux_gcc_64-android_arm64_v8a
 
       - name: Install Qt Android
         if: steps.cache-qt-android.outputs.cache-hit != 'true'
@@ -304,18 +304,26 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install aqtinstall
+          python -m aqt install-qt linux desktop "${QT_VERSION}" linux_gcc_64 -O "${RUNNER_TEMP}/Qt"
           python -m aqt install-qt linux android "${QT_VERSION}" android_arm64_v8a -O "${RUNNER_TEMP}/Qt"
 
       - name: Configure Qt Android environment
         shell: bash
         run: |
           qt_root="${RUNNER_TEMP}/Qt/${QT_VERSION}/android_arm64_v8a"
+          host_qt_root="${RUNNER_TEMP}/Qt/${QT_VERSION}/gcc_64"
           if [ ! -d "${qt_root}" ]; then
             echo "Qt Android root was not found: ${qt_root}" >&2
             exit 1
           fi
+          if [ ! -d "${host_qt_root}" ]; then
+            echo "Qt host root was not found: ${host_qt_root}" >&2
+            exit 1
+          fi
           echo "QT_ANDROID_ROOT=${qt_root}" >> "${GITHUB_ENV}"
+          echo "QT_HOST_ROOT=${host_qt_root}" >> "${GITHUB_ENV}"
           echo "${qt_root}/bin" >> "${GITHUB_PATH}"
+          echo "${host_qt_root}/bin" >> "${GITHUB_PATH}"
 
       - name: Configure Android
         shell: bash
@@ -329,6 +337,7 @@ jobs:
             -DANDROID_NDK_ROOT="${ANDROID_NDK_ROOT}" \
             -DANDROID_ABI="${ANDROID_ABI}" \
             -DANDROID_PLATFORM="${ANDROID_PLATFORM}" \
+            -DQT_HOST_PATH="${QT_HOST_ROOT}" \
             -DCMAKE_BUILD_TYPE="${BUILD_TYPE}"
 
       - name: Build Android
