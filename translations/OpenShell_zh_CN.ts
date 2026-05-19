@@ -4,41 +4,41 @@
 <context>
     <name>AppController</name>
     <message>
-        <location filename="../src/AppController.cpp" line="310"/>
-        <location filename="../src/AppController.cpp" line="501"/>
-        <location filename="../src/AppController.cpp" line="527"/>
-        <location filename="../src/AppController.cpp" line="569"/>
-        <location filename="../src/AppController.cpp" line="628"/>
+        <location filename="../src/AppController.cpp" line="334"/>
+        <location filename="../src/AppController.cpp" line="525"/>
+        <location filename="../src/AppController.cpp" line="551"/>
+        <location filename="../src/AppController.cpp" line="593"/>
+        <location filename="../src/AppController.cpp" line="652"/>
         <source>Unknown connection</source>
         <translation>未知连接</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="428"/>
+        <location filename="../src/AppController.cpp" line="452"/>
         <source>Select file to upload</source>
         <translation>选择要上传的文件</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="433"/>
+        <location filename="../src/AppController.cpp" line="457"/>
         <source>Select folder to upload</source>
         <translation>选择要上传的文件夹</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="438"/>
+        <location filename="../src/AppController.cpp" line="462"/>
         <source>Select download folder</source>
         <translation>选择下载目录</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="629"/>
+        <location filename="../src/AppController.cpp" line="653"/>
         <source>Invalid permission value</source>
         <translation>权限值无效</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="444"/>
+        <location filename="../src/AppController.cpp" line="468"/>
         <source>Select text editor</source>
         <translation>选择文本编辑器</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="446"/>
+        <location filename="../src/AppController.cpp" line="470"/>
         <source>Applications (*.exe);;All files (*)</source>
         <translation>应用程序 (*.exe);;所有文件 (*)</translation>
     </message>
@@ -51,17 +51,17 @@
         <translation type="vanished">上传失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="842"/>
+        <location filename="../src/AppController.cpp" line="866"/>
         <source>Cannot open %1</source>
         <translation>无法打开 %1</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="803"/>
+        <location filename="../src/AppController.cpp" line="827"/>
         <source>Cannot write %1</source>
         <translation>无法写入 %1</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="810"/>
+        <location filename="../src/AppController.cpp" line="834"/>
         <source>Cannot save %1</source>
         <translation>无法保存 %1</translation>
     </message>
@@ -107,82 +107,82 @@
         <translation>编辑连接</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="195"/>
+        <location filename="../qml/ConnectionEditor.qml" line="198"/>
         <source>Connection name is required</source>
         <translation>请填写连接名称</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="213"/>
+        <location filename="../qml/ConnectionEditor.qml" line="216"/>
         <source>Host is required</source>
         <translation>请填写主机地址</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="189"/>
+        <location filename="../qml/ConnectionEditor.qml" line="192"/>
         <source>Name</source>
         <translation>名称</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="199"/>
+        <location filename="../qml/ConnectionEditor.qml" line="202"/>
         <source>Protocol</source>
         <translation>协议</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="207"/>
+        <location filename="../qml/ConnectionEditor.qml" line="210"/>
         <source>Host</source>
         <translation>主机</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="213"/>
+        <location filename="../qml/ConnectionEditor.qml" line="216"/>
         <source>Hostname or IP</source>
         <translation>主机名或 IP</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="217"/>
+        <location filename="../qml/ConnectionEditor.qml" line="220"/>
         <source>Port</source>
         <translation>端口</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="231"/>
+        <location filename="../qml/ConnectionEditor.qml" line="234"/>
         <source>Username</source>
         <translation>用户名</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="234"/>
+        <location filename="../qml/ConnectionEditor.qml" line="237"/>
         <source>Auth Method</source>
         <translation>认证方式</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="242"/>
+        <location filename="../qml/ConnectionEditor.qml" line="245"/>
         <source>Password</source>
         <translation>密码</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="252"/>
+        <location filename="../qml/ConnectionEditor.qml" line="255"/>
         <source>Private Key</source>
         <translation>私钥</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="257"/>
+        <location filename="../qml/ConnectionEditor.qml" line="260"/>
         <source>Absolute path to .pem / .ppk</source>
         <translation>私钥绝对路径（.pem / .ppk）</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="262"/>
+        <location filename="../qml/ConnectionEditor.qml" line="265"/>
         <source>Group</source>
         <translation>分组</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="266"/>
+        <location filename="../qml/ConnectionEditor.qml" line="269"/>
         <source>Notes</source>
         <translation>备注</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="159"/>
+        <location filename="../qml/ConnectionEditor.qml" line="160"/>
         <source>Cancel</source>
         <translation>取消</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="166"/>
+        <location filename="../qml/ConnectionEditor.qml" line="167"/>
         <source>OK</source>
         <translation>确定</translation>
     </message>
@@ -814,59 +814,349 @@
     </message>
 </context>
 <context>
+    <name>MobileConnectionEditorPage</name>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="49"/>
+        <source>Connection name is required</source>
+        <translation>请填写连接名称</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="54"/>
+        <source>Host is required</source>
+        <translation>请填写主机地址</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="98"/>
+        <source>Back</source>
+        <translation>返回</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="104"/>
+        <source>New Connection</source>
+        <translation>新建连接</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="104"/>
+        <source>Edit Connection</source>
+        <translation>编辑连接</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="114"/>
+        <source>Save</source>
+        <translation>保存</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="145"/>
+        <source>Name</source>
+        <translation>名称</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="148"/>
+        <source>Protocol</source>
+        <translation>协议</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="157"/>
+        <source>Host</source>
+        <translation>主机</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="163"/>
+        <source>Hostname or IP</source>
+        <translation>主机名或 IP</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="166"/>
+        <source>Port</source>
+        <translation>端口</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="177"/>
+        <source>Username</source>
+        <translation>用户名</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="180"/>
+        <source>Auth Method</source>
+        <translation>认证方式</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="189"/>
+        <source>Password</source>
+        <translation>密码</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="200"/>
+        <source>Private Key</source>
+        <translation>私钥</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="206"/>
+        <source>Absolute path to .pem / .ppk</source>
+        <translation>私钥绝对路径（.pem / .ppk）</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="211"/>
+        <source>Group</source>
+        <translation>分组</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="214"/>
+        <source>Notes</source>
+        <translation>备注</translation>
+    </message>
+</context>
+<context>
+    <name>MobileConnectionsPage</name>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionsPage.qml" line="26"/>
+        <source>(unnamed)</source>
+        <translation>（未命名）</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionsPage.qml" line="51"/>
+        <source>Connections</source>
+        <translation>连接</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionsPage.qml" line="59"/>
+        <source>%1 saved</source>
+        <translation>已保存 %1 个</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionsPage.qml" line="75"/>
+        <source>Refresh</source>
+        <translation>刷新</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionsPage.qml" line="158"/>
+        <source>Edit</source>
+        <translation>编辑</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionsPage.qml" line="165"/>
+        <source>Delete</source>
+        <translation>删除</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionsPage.qml" line="183"/>
+        <source>No connections yet</source>
+        <translation>还没有连接</translation>
+    </message>
+</context>
+<context>
+    <name>MobileFilesPage</name>
+    <message>
+        <location filename="../qml/mobile/MobileFilesPage.qml" line="19"/>
+        <source>Files</source>
+        <translation>文件</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileFilesPage.qml" line="39"/>
+        <source>Mobile SFTP page is planned.</source>
+        <translation>移动端 SFTP 页面已纳入规划。</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileFilesPage.qml" line="39"/>
+        <source>Open a session first</source>
+        <translation>请先打开一个会话</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileFilesPage.qml" line="49"/>
+        <source>The first mobile version will use a single-column remote file browser.</source>
+        <translation>移动端第一版将使用单栏远程文件浏览器。</translation>
+    </message>
+</context>
+<context>
+    <name>MobileSystemPage</name>
+    <message>
+        <location filename="../qml/mobile/MobileSystemPage.qml" line="29"/>
+        <source>System</source>
+        <translation>系统</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileSystemPage.qml" line="38"/>
+        <source>Waiting for monitor data</source>
+        <translation>等待监控数据</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileSystemPage.qml" line="38"/>
+        <source>Open a session first</source>
+        <translation>请先打开一个会话</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileSystemPage.qml" line="46"/>
+        <source>Host</source>
+        <translation>主机</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileSystemPage.qml" line="47"/>
+        <source>CPU</source>
+        <translation>CPU</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileSystemPage.qml" line="48"/>
+        <source>Memory</source>
+        <translation>内存</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileSystemPage.qml" line="48"/>
+        <location filename="../qml/mobile/MobileSystemPage.qml" line="49"/>
+        <source>%1 / %2</source>
+        <translation>%1 / %2</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileSystemPage.qml" line="49"/>
+        <source>Swap</source>
+        <translation>交换</translation>
+    </message>
+</context>
+<context>
+    <name>MobileTerminalPage</name>
+    <message>
+        <location filename="../qml/mobile/MobileTerminalPage.qml" line="73"/>
+        <source>Back</source>
+        <translation>返回</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileTerminalPage.qml" line="83"/>
+        <source>No session</source>
+        <translation>无会话</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileTerminalPage.qml" line="156"/>
+        <source>Paste</source>
+        <translation>粘贴</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileTerminalPage.qml" line="177"/>
+        <source>Command</source>
+        <translation>命令</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileTerminalPage.qml" line="184"/>
+        <source>Send</source>
+        <translation>发送</translation>
+    </message>
+</context>
+<context>
+    <name>MobileWindow</name>
+    <message>
+        <location filename="../qml/mobile/MobileWindow.qml" line="11"/>
+        <location filename="../qml/mobile/MobileWindow.qml" line="137"/>
+        <source>OpenShell</source>
+        <translation>OpenShell</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileWindow.qml" line="50"/>
+        <source>Session opened</source>
+        <translation>会话已打开</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileWindow.qml" line="79"/>
+        <source>Connection deleted</source>
+        <translation>连接已删除</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileWindow.qml" line="180"/>
+        <source>Connection saved</source>
+        <translation>连接已保存</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileWindow.qml" line="203"/>
+        <source>Connections</source>
+        <translation>连接</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileWindow.qml" line="204"/>
+        <source>Terminal</source>
+        <translation>终端</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileWindow.qml" line="205"/>
+        <source>System</source>
+        <translation>系统</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileWindow.qml" line="206"/>
+        <source>Files</source>
+        <translation>文件</translation>
+    </message>
+    <message>
+        <source>Mobile shell</source>
+        <translation type="vanished">移动端 Shell</translation>
+    </message>
+    <message>
+        <source>Mobile entry is ready. Connection, terminal, monitor and file pages will be added here.</source>
+        <translation type="vanished">移动端入口已就绪。后续将在这里添加连接、终端、监控和文件页面。</translation>
+    </message>
+    <message>
+        <source>Saved connections</source>
+        <translation type="vanished">已保存连接</translation>
+    </message>
+    <message>
+        <source>Desktop profiles are reused on mobile.</source>
+        <translation type="vanished">移动端复用桌面端连接配置。</translation>
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation type="vanished">刷新</translation>
+    </message>
+</context>
+<context>
     <name>QObject</name>
     <message>
-        <location filename="../src/AppController.cpp" line="611"/>
+        <location filename="../src/AppController.cpp" line="635"/>
         <source>Upload completed</source>
         <translation>上传完成</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="660"/>
+        <location filename="../src/AppController.cpp" line="684"/>
         <source>Permissions updated</source>
         <translation>权限已更新</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="703"/>
+        <location filename="../src/AppController.cpp" line="727"/>
         <source>Download failed</source>
         <translation>下载失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="782"/>
+        <location filename="../src/AppController.cpp" line="806"/>
         <source>Remote file saved</source>
         <translation>远程文件已保存</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="782"/>
+        <location filename="../src/AppController.cpp" line="806"/>
         <source>Upload failed</source>
         <translation>上传失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="917"/>
+        <location filename="../src/AppController.cpp" line="941"/>
         <source>Created</source>
         <translation>已创建</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="917"/>
+        <location filename="../src/AppController.cpp" line="941"/>
         <source>Create failed</source>
         <translation>创建失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="947"/>
+        <location filename="../src/AppController.cpp" line="971"/>
         <source>Renamed</source>
         <translation>已重命名</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="947"/>
+        <location filename="../src/AppController.cpp" line="971"/>
         <source>Rename failed</source>
         <translation>重命名失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="976"/>
+        <location filename="../src/AppController.cpp" line="1000"/>
         <source>Deleted</source>
         <translation>已删除</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="976"/>
+        <location filename="../src/AppController.cpp" line="1000"/>
         <source>Delete failed</source>
         <translation>删除失败</translation>
     </message>

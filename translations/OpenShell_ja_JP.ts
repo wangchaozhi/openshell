@@ -4,56 +4,56 @@
 <context>
     <name>AppController</name>
     <message>
-        <location filename="../src/AppController.cpp" line="310"/>
-        <location filename="../src/AppController.cpp" line="501"/>
-        <location filename="../src/AppController.cpp" line="527"/>
-        <location filename="../src/AppController.cpp" line="569"/>
-        <location filename="../src/AppController.cpp" line="628"/>
+        <location filename="../src/AppController.cpp" line="334"/>
+        <location filename="../src/AppController.cpp" line="525"/>
+        <location filename="../src/AppController.cpp" line="551"/>
+        <location filename="../src/AppController.cpp" line="593"/>
+        <location filename="../src/AppController.cpp" line="652"/>
         <source>Unknown connection</source>
         <translation>不明な接続</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="428"/>
+        <location filename="../src/AppController.cpp" line="452"/>
         <source>Select file to upload</source>
         <translation>アップロードするファイルを選択</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="433"/>
+        <location filename="../src/AppController.cpp" line="457"/>
         <source>Select folder to upload</source>
         <translation>アップロードするフォルダーを選択</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="438"/>
+        <location filename="../src/AppController.cpp" line="462"/>
         <source>Select download folder</source>
         <translation>ダウンロード先フォルダーを選択</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="629"/>
+        <location filename="../src/AppController.cpp" line="653"/>
         <source>Invalid permission value</source>
         <translation>無効なパーミッション値</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="444"/>
+        <location filename="../src/AppController.cpp" line="468"/>
         <source>Select text editor</source>
         <translation>テキストエディターを選択</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="446"/>
+        <location filename="../src/AppController.cpp" line="470"/>
         <source>Applications (*.exe);;All files (*)</source>
         <translation>アプリケーション (*.exe);;すべてのファイル (*)</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="842"/>
+        <location filename="../src/AppController.cpp" line="866"/>
         <source>Cannot open %1</source>
         <translation>%1 を開けません</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="803"/>
+        <location filename="../src/AppController.cpp" line="827"/>
         <source>Cannot write %1</source>
         <translation>%1 に書き込めません</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="810"/>
+        <location filename="../src/AppController.cpp" line="834"/>
         <source>Cannot save %1</source>
         <translation>%1 を保存できません</translation>
     </message>
@@ -99,82 +99,82 @@
         <translation>接続を編集</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="195"/>
+        <location filename="../qml/ConnectionEditor.qml" line="198"/>
         <source>Connection name is required</source>
         <translation>接続名を入力してください</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="213"/>
+        <location filename="../qml/ConnectionEditor.qml" line="216"/>
         <source>Host is required</source>
         <translation>ホストを入力してください</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="189"/>
+        <location filename="../qml/ConnectionEditor.qml" line="192"/>
         <source>Name</source>
         <translation>名前</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="199"/>
+        <location filename="../qml/ConnectionEditor.qml" line="202"/>
         <source>Protocol</source>
         <translation>プロトコル</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="207"/>
+        <location filename="../qml/ConnectionEditor.qml" line="210"/>
         <source>Host</source>
         <translation>ホスト</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="213"/>
+        <location filename="../qml/ConnectionEditor.qml" line="216"/>
         <source>Hostname or IP</source>
         <translation>ホスト名または IP</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="217"/>
+        <location filename="../qml/ConnectionEditor.qml" line="220"/>
         <source>Port</source>
         <translation>ポート</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="231"/>
+        <location filename="../qml/ConnectionEditor.qml" line="234"/>
         <source>Username</source>
         <translation>ユーザー名</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="234"/>
+        <location filename="../qml/ConnectionEditor.qml" line="237"/>
         <source>Auth Method</source>
         <translation>認証方式</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="242"/>
+        <location filename="../qml/ConnectionEditor.qml" line="245"/>
         <source>Password</source>
         <translation>パスワード</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="252"/>
+        <location filename="../qml/ConnectionEditor.qml" line="255"/>
         <source>Private Key</source>
         <translation>秘密鍵</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="257"/>
+        <location filename="../qml/ConnectionEditor.qml" line="260"/>
         <source>Absolute path to .pem / .ppk</source>
         <translation>秘密鍵の絶対パス（.pem / .ppk）</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="262"/>
+        <location filename="../qml/ConnectionEditor.qml" line="265"/>
         <source>Group</source>
         <translation>グループ</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="266"/>
+        <location filename="../qml/ConnectionEditor.qml" line="269"/>
         <source>Notes</source>
         <translation>メモ</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="159"/>
+        <location filename="../qml/ConnectionEditor.qml" line="160"/>
         <source>Cancel</source>
         <translation>キャンセル</translation>
     </message>
     <message>
-        <location filename="../qml/ConnectionEditor.qml" line="166"/>
+        <location filename="../qml/ConnectionEditor.qml" line="167"/>
         <source>OK</source>
         <translation>OK</translation>
     </message>
@@ -794,59 +794,333 @@
     </message>
 </context>
 <context>
+    <name>MobileConnectionEditorPage</name>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="49"/>
+        <source>Connection name is required</source>
+        <translation type="unfinished">接続名を入力してください</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="54"/>
+        <source>Host is required</source>
+        <translation type="unfinished">ホストを入力してください</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="98"/>
+        <source>Back</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="104"/>
+        <source>New Connection</source>
+        <translation type="unfinished">新規接続</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="104"/>
+        <source>Edit Connection</source>
+        <translation type="unfinished">接続を編集</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="114"/>
+        <source>Save</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="145"/>
+        <source>Name</source>
+        <translation type="unfinished">名前</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="148"/>
+        <source>Protocol</source>
+        <translation type="unfinished">プロトコル</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="157"/>
+        <source>Host</source>
+        <translation type="unfinished">ホスト</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="163"/>
+        <source>Hostname or IP</source>
+        <translation type="unfinished">ホスト名または IP</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="166"/>
+        <source>Port</source>
+        <translation type="unfinished">ポート</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="177"/>
+        <source>Username</source>
+        <translation type="unfinished">ユーザー名</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="180"/>
+        <source>Auth Method</source>
+        <translation type="unfinished">認証方式</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="189"/>
+        <source>Password</source>
+        <translation type="unfinished">パスワード</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="200"/>
+        <source>Private Key</source>
+        <translation type="unfinished">秘密鍵</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="206"/>
+        <source>Absolute path to .pem / .ppk</source>
+        <translation type="unfinished">秘密鍵の絶対パス（.pem / .ppk）</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="211"/>
+        <source>Group</source>
+        <translation type="unfinished">グループ</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="214"/>
+        <source>Notes</source>
+        <translation type="unfinished">メモ</translation>
+    </message>
+</context>
+<context>
+    <name>MobileConnectionsPage</name>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionsPage.qml" line="26"/>
+        <source>(unnamed)</source>
+        <translation type="unfinished">（名称未設定）</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionsPage.qml" line="51"/>
+        <source>Connections</source>
+        <translation type="unfinished">接続</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionsPage.qml" line="59"/>
+        <source>%1 saved</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionsPage.qml" line="75"/>
+        <source>Refresh</source>
+        <translation type="unfinished">更新</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionsPage.qml" line="158"/>
+        <source>Edit</source>
+        <translation type="unfinished">編集</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionsPage.qml" line="165"/>
+        <source>Delete</source>
+        <translation type="unfinished">削除</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileConnectionsPage.qml" line="183"/>
+        <source>No connections yet</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>MobileFilesPage</name>
+    <message>
+        <location filename="../qml/mobile/MobileFilesPage.qml" line="19"/>
+        <source>Files</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileFilesPage.qml" line="39"/>
+        <source>Mobile SFTP page is planned.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileFilesPage.qml" line="39"/>
+        <source>Open a session first</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileFilesPage.qml" line="49"/>
+        <source>The first mobile version will use a single-column remote file browser.</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>MobileSystemPage</name>
+    <message>
+        <location filename="../qml/mobile/MobileSystemPage.qml" line="29"/>
+        <source>System</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileSystemPage.qml" line="38"/>
+        <source>Waiting for monitor data</source>
+        <translation type="unfinished">モニターデータを待機中</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileSystemPage.qml" line="38"/>
+        <source>Open a session first</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileSystemPage.qml" line="46"/>
+        <source>Host</source>
+        <translation type="unfinished">ホスト</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileSystemPage.qml" line="47"/>
+        <source>CPU</source>
+        <translation type="unfinished">CPU</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileSystemPage.qml" line="48"/>
+        <source>Memory</source>
+        <translation type="unfinished">メモリ</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileSystemPage.qml" line="48"/>
+        <location filename="../qml/mobile/MobileSystemPage.qml" line="49"/>
+        <source>%1 / %2</source>
+        <translation type="unfinished">%1 / %2</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileSystemPage.qml" line="49"/>
+        <source>Swap</source>
+        <translation type="unfinished">スワップ</translation>
+    </message>
+</context>
+<context>
+    <name>MobileTerminalPage</name>
+    <message>
+        <location filename="../qml/mobile/MobileTerminalPage.qml" line="73"/>
+        <source>Back</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileTerminalPage.qml" line="83"/>
+        <source>No session</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileTerminalPage.qml" line="156"/>
+        <source>Paste</source>
+        <translation type="unfinished">貼り付け</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileTerminalPage.qml" line="177"/>
+        <source>Command</source>
+        <translation type="unfinished">コマンド</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileTerminalPage.qml" line="184"/>
+        <source>Send</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>MobileWindow</name>
+    <message>
+        <location filename="../qml/mobile/MobileWindow.qml" line="11"/>
+        <location filename="../qml/mobile/MobileWindow.qml" line="137"/>
+        <source>OpenShell</source>
+        <translation type="unfinished">OpenShell</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileWindow.qml" line="50"/>
+        <source>Session opened</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileWindow.qml" line="79"/>
+        <source>Connection deleted</source>
+        <translation type="unfinished">接続を削除しました</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileWindow.qml" line="180"/>
+        <source>Connection saved</source>
+        <translation type="unfinished">接続を保存しました</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileWindow.qml" line="203"/>
+        <source>Connections</source>
+        <translation type="unfinished">接続</translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileWindow.qml" line="204"/>
+        <source>Terminal</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileWindow.qml" line="205"/>
+        <source>System</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../qml/mobile/MobileWindow.qml" line="206"/>
+        <source>Files</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation type="obsolete">更新</translation>
+    </message>
+</context>
+<context>
     <name>QObject</name>
     <message>
-        <location filename="../src/AppController.cpp" line="611"/>
+        <location filename="../src/AppController.cpp" line="635"/>
         <source>Upload completed</source>
         <translation>アップロードが完了しました</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="660"/>
+        <location filename="../src/AppController.cpp" line="684"/>
         <source>Permissions updated</source>
         <translation>パーミッションを更新しました</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="703"/>
+        <location filename="../src/AppController.cpp" line="727"/>
         <source>Download failed</source>
         <translation>ダウンロードに失敗しました</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="782"/>
+        <location filename="../src/AppController.cpp" line="806"/>
         <source>Remote file saved</source>
         <translation>リモートファイルを保存しました</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="782"/>
+        <location filename="../src/AppController.cpp" line="806"/>
         <source>Upload failed</source>
         <translation>アップロードに失敗しました</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="917"/>
+        <location filename="../src/AppController.cpp" line="941"/>
         <source>Created</source>
         <translation>作成しました</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="917"/>
+        <location filename="../src/AppController.cpp" line="941"/>
         <source>Create failed</source>
         <translation>作成に失敗しました</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="947"/>
+        <location filename="../src/AppController.cpp" line="971"/>
         <source>Renamed</source>
         <translation>名前を変更しました</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="947"/>
+        <location filename="../src/AppController.cpp" line="971"/>
         <source>Rename failed</source>
         <translation>名前の変更に失敗しました</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="976"/>
+        <location filename="../src/AppController.cpp" line="1000"/>
         <source>Deleted</source>
         <translation>削除しました</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="976"/>
+        <location filename="../src/AppController.cpp" line="1000"/>
         <source>Delete failed</source>
         <translation>削除に失敗しました</translation>
     </message>

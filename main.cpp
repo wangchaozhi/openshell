@@ -32,7 +32,11 @@ int main(int argc, char *argv[])
     QObject::connect(&controller, &AppController::languageChanged,
                      &engine, [&engine]() { engine.retranslate(); });
 
+#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+    engine.loadFromModule("OpenShell", "MobileMain");
+#else
     engine.loadFromModule("OpenShell", "Main");
+#endif
 
     return app.exec();
 }

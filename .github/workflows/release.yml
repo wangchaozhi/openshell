@@ -246,10 +246,123 @@ jobs:
             package/*.dmg
           if-no-files-found: error
 
+  build-android:
+    name: Build OpenShell-android-arm64
+    runs-on: ubuntu-24.04
+    env:
+      ANDROID_ABI: arm64-v8a
+      ANDROID_PLATFORM: android-35
+      ANDROID_NDK_VERSION: 27.0.12077973
+      ANDROID_ASSET_NAME: OpenShell-android-arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;${ANDROID_NDK_VERSION}"
+          yes | sdkmanager --licenses >/dev/null || true
+          echo "ANDROID_SDK_ROOT=${ANDROID_HOME}" >> "${GITHUB_ENV}"
+          echo "ANDROID_NDK_ROOT=${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}" >> "${GITHUB_ENV}"
+
+      - name: Install Ninja
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+      - name: Cache Qt Android
+        id: cache-qt-android
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/Qt
+          key: qt-v2-openshell-android-${{ env.QT_VERSION }}-android_arm64_v8a
+
+      - name: Install Qt Android
+        if: steps.cache-qt-android.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install aqtinstall
+          python -m aqt install-qt linux android "${QT_VERSION}" android_arm64_v8a -O "${RUNNER_TEMP}/Qt"
+
+      - name: Configure Qt Android environment
+        shell: bash
+        run: |
+          qt_root="${RUNNER_TEMP}/Qt/${QT_VERSION}/android_arm64_v8a"
+          if [ ! -d "${qt_root}" ]; then
+            echo "Qt Android root was not found: ${qt_root}" >&2
+            exit 1
+          fi
+          echo "QT_ANDROID_ROOT=${qt_root}" >> "${GITHUB_ENV}"
+          echo "${qt_root}/bin" >> "${GITHUB_PATH}"
+
+      - name: Configure Android
+        shell: bash
+        run: |
+          set -euo pipefail
+          "${QT_ANDROID_ROOT}/bin/qt-cmake" \
+            -S . \
+            -B build-android-arm64 \
+            -G Ninja \
+            -DANDROID_SDK_ROOT="${ANDROID_SDK_ROOT}" \
+            -DANDROID_NDK_ROOT="${ANDROID_NDK_ROOT}" \
+            -DANDROID_ABI="${ANDROID_ABI}" \
+            -DANDROID_PLATFORM="${ANDROID_PLATFORM}" \
+            -DCMAKE_BUILD_TYPE="${BUILD_TYPE}"
+
+      - name: Build Android
+        shell: bash
+        run: cmake --build build-android-arm64 --config "${BUILD_TYPE}" --parallel
+
+      - name: Package Android APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p package
+          apk_path="build-android-arm64/android-build/OpenShell.apk"
+          if [ ! -f "${apk_path}" ]; then
+            apk_path="$(find build-android-arm64/android-build -type f -name '*.apk' -print -quit)"
+          fi
+          if [ -z "${apk_path}" ] || [ ! -f "${apk_path}" ]; then
+            echo "Android APK was not found." >&2
+            exit 1
+          fi
+          cp "${apk_path}" "package/${ANDROID_ASSET_NAME}.apk"
+
+      - name: Upload Android package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ANDROID_ASSET_NAME }}
+          path: package/*.apk
+          if-no-files-found: error
+
   release:
     name: Publish GitHub Release
     runs-on: ubuntu-24.04
-    needs: build
+    needs:
+      - build
+      - build-android
     if: ${{ always() }}
     steps:
       - name: Checkout

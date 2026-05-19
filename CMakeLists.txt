@@ -15,6 +15,7 @@ find_package(Qt6 REQUIRED COMPONENTS
 )
 
 qt_standard_project_setup(REQUIRES 6.6)
+qt_policy(SET QTP0004 NEW)
 
 option(OPENSHELL_BUILD_TESTS "Build OpenShell unit tests" OFF)
 option(OPENSHELL_ENABLE_ECHO_BACKEND
@@ -31,7 +32,19 @@ if(NOT Libssh2_FOUND)
     set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(LIBSSH2_NO_DEPRECATED ON CACHE BOOL "" FORCE)
     set(ENABLE_ZLIB_COMPRESSION OFF CACHE BOOL "" FORCE)
-    if(WIN32)
+    if(ANDROID)
+        message(STATUS "OpenShell: Android build uses bundled mbedTLS for libssh2")
+        set(ENABLE_PROGRAMS OFF CACHE BOOL "" FORCE)
+        set(ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+        FetchContent_Declare(mbedtls
+            GIT_REPOSITORY https://github.com/Mbed-TLS/mbedtls.git
+            GIT_TAG        v3.6.2
+        )
+        FetchContent_MakeAvailable(mbedtls)
+        set(CRYPTO_BACKEND "mbedTLS" CACHE STRING "" FORCE)
+        set(MBEDTLS_INCLUDE_DIR "${mbedtls_SOURCE_DIR}/include" CACHE PATH "" FORCE)
+        set(MBEDCRYPTO_LIBRARY "${mbedtls_BINARY_DIR}/library/${CMAKE_STATIC_LIBRARY_PREFIX}mbedcrypto${CMAKE_STATIC_LIBRARY_SUFFIX}" CACHE FILEPATH "" FORCE)
+    elseif(WIN32)
         set(CRYPTO_BACKEND "WinCNG" CACHE STRING "" FORCE)
     elseif(APPLE)
         set(CRYPTO_BACKEND "OpenSSL" CACHE STRING "" FORCE)
@@ -43,6 +56,9 @@ if(NOT Libssh2_FOUND)
         GIT_TAG        libssh2-1.11.1
     )
     FetchContent_MakeAvailable(libssh2)
+    if(ANDROID AND TARGET libssh2_static AND TARGET mbedcrypto)
+        add_dependencies(libssh2_static mbedcrypto)
+    endif()
     add_library(Libssh2::libssh2 ALIAS libssh2_static)
 endif()
 
@@ -190,8 +206,6 @@ set(OPENSHELL_SOURCES
     src/SystemMonitorController.h
     src/TranslationManager.cpp
     src/TranslationManager.h
-    src/TrayController.cpp
-    src/TrayController.h
     src/ssh/SshChannelWorker.cpp
     src/ssh/SshChannelWorker.h
     src/ssh/SshSession.cpp
@@ -206,6 +220,12 @@ set(OPENSHELL_SOURCES
     src/terminal/TerminalScreenItem.cpp
     src/terminal/TerminalScreenItem.h
 )
+
+if(NOT ANDROID AND NOT IOS)
+    list(APPEND OPENSHELL_SOURCES
+        src/TrayController.cpp
+        src/TrayController.h)
+endif()
 
 if(OPENSHELL_ENABLE_ECHO_BACKEND)
     list(APPEND OPENSHELL_SOURCES
@@ -225,6 +245,7 @@ qt_add_qml_module(OpenShell
     URI OpenShell
     QML_FILES
         Main.qml
+        MobileMain.qml
         qml/MainWindow.qml
         qml/Sidebar.qml
         qml/ConnectionList.qml
@@ -240,6 +261,14 @@ qt_add_qml_module(OpenShell
         qml/ThemedComboBox.qml
         qml/ThemedSpinBox.qml
         qml/ThemedButton.qml
+        qml/mobile/MobileWindow.qml
+        qml/mobile/MobileConnectionsPage.qml
+        qml/mobile/MobileConnectionEditorPage.qml
+        qml/mobile/MobileTerminalPage.qml
+        qml/mobile/MobileSystemPage.qml
+        qml/mobile/MobileFilesPage.qml
+    RESOURCES
+        assets/icons/openshell.svg
 )
 
 qt_add_translations(OpenShell

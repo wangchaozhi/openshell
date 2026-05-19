@@ -5,7 +5,6 @@
 #include "SettingsStore.h"
 #include "SystemMonitorController.h"
 #include "ssh/SftpDirectoryLister.h"
-#include "TrayController.h"
 #include "TranslationManager.h"
 
 #include <QApplication>
@@ -30,6 +29,10 @@
 #include <QtConcurrent>
 
 #include <utility>
+
+#if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
+#include "TrayController.h"
+#endif
 
 namespace {
 class TransferProgressReporter
@@ -97,19 +100,24 @@ AppController::AppController(QObject *parent)
     , m_sessions(new SessionController(this))
     , m_monitor(new SystemMonitorController(this))
     , m_translations(new TranslationManager(this))
-    , m_tray(new TrayController(this))
     , m_remoteEditWatcher(new QFileSystemWatcher(this))
 {
     m_translations->installLanguage(m_settings->language());
-    m_tray->setLanguage(m_translations->language());
-    m_tray->setConnections(m_catalog->profiles());
 
-    connect(m_tray, &TrayController::showRequested, this, &AppController::showWindow);
-    connect(m_tray, &TrayController::hideRequested, this, &AppController::hideWindow);
-    connect(m_tray, &TrayController::languageChanged, this, &AppController::setLanguage);
-    connect(m_tray, &TrayController::connectionTriggered, this,
-            [this](const QString &connectionId) { openSession(connectionId); });
-    connect(m_tray, &TrayController::quitRequested, this, &AppController::quit);
+#if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
+    m_tray = new TrayController(this);
+    if (m_tray) {
+        m_tray->setLanguage(m_translations->language());
+        m_tray->setConnections(m_catalog->profiles());
+
+        connect(m_tray, &TrayController::showRequested, this, &AppController::showWindow);
+        connect(m_tray, &TrayController::hideRequested, this, &AppController::hideWindow);
+        connect(m_tray, &TrayController::languageChanged, this, &AppController::setLanguage);
+        connect(m_tray, &TrayController::connectionTriggered, this,
+                [this](const QString &connectionId) { openSession(connectionId); });
+        connect(m_tray, &TrayController::quitRequested, this, &AppController::quit);
+    }
+#endif
 
     connect(m_sessions, &SessionController::sessionsChanged, this, &AppController::sessionsChanged);
     connect(m_sessions, &SessionController::sessionScreenUpdated, this,
@@ -137,7 +145,11 @@ void AppController::setLanguage(const QString &language)
 
     m_settings->setLanguage(language);
     m_translations->installLanguage(language);
-    m_tray->setLanguage(language);
+#if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
+    if (m_tray) {
+        m_tray->setLanguage(language);
+    }
+#endif
     emit languageChanged();
 }
 
@@ -270,7 +282,11 @@ QVariantList AppController::connectionProfiles() const
 QVariantList AppController::reloadConnectionProfiles()
 {
     m_catalog->reload();
-    m_tray->setConnections(m_catalog->profiles());
+#if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
+    if (m_tray) {
+        m_tray->setConnections(m_catalog->profiles());
+    }
+#endif
     return connectionProfiles();
 }
 
@@ -282,7 +298,11 @@ bool AppController::saveConnectionProfile(const QVariantMap &profile)
         return false;
     }
 
-    m_tray->setConnections(m_catalog->profiles());
+#if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
+    if (m_tray) {
+        m_tray->setConnections(m_catalog->profiles());
+    }
+#endif
     setLastError(QString());
     return true;
 }
@@ -295,7 +315,11 @@ bool AppController::deleteConnection(const QString &id)
         return false;
     }
 
-    m_tray->setConnections(m_catalog->profiles());
+#if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
+    if (m_tray) {
+        m_tray->setConnections(m_catalog->profiles());
+    }
+#endif
     if (m_currentConnectionId == id) {
         setCurrentConnectionId(QString());
     }
