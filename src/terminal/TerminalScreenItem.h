@@ -61,6 +61,8 @@ public:
     Q_INVOKABLE void requestFocus();
     Q_INVOKABLE void selectAll();
     Q_INVOKABLE void clearSelection();
+    Q_INVOKABLE void scrollByLines(int delta);
+    Q_INVOKABLE void scrollToBottom();
 
 signals:
     void screenChanged();
@@ -78,6 +80,7 @@ protected:
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
     void focusInEvent(QFocusEvent *event) override;
     void focusOutEvent(QFocusEvent *event) override;
 
@@ -86,6 +89,9 @@ private slots:
     void onScreenCursorMoved();
     void onScreenSizeChanged();
     void onCursorBlink();
+    void onScrollbackPushed(int count);
+    void onScrollbackCleared();
+    void onAutoScrollTick();
 
 private:
     void connectScreen();
@@ -94,13 +100,17 @@ private:
     void emitDesiredGrid();
     QPoint cellAtPosition(const QPointF &pos) const;
     QPair<QPoint, QPoint> normalizedSelection() const;
-    bool isCellSelected(int row, int col) const;
-    QString lineText(int row) const;
+    bool isCellSelected(int absRow, int col) const;
+    QString lineText(int absRow) const;
+    QString cellText(int absRow, int col) const;
     bool isWordCharacter(const QString &text) const;
     void setSelectionRange(const QPoint &start, const QPoint &end, bool active = true);
     void selectWordAt(const QPoint &cell);
-    void selectLineAt(int row);
+    void selectLineAt(int absRow);
     void copySelectionIfActive();
+    int maxScrollOffset() const;
+    void setScrollOffset(int offset);
+    void updateAutoScroll();
 
     QPointer<VtScreen> m_screen;
     int m_cols = 0;
@@ -111,7 +121,6 @@ private:
     QFont m_font{QStringLiteral("Consolas"), 0};
     QColor m_background{0x02, 0x06, 0x17};
     QColor m_cursorColor{0x38, 0xbd, 0xf8};
-    bool m_selectAllActive = false;
     bool m_selectionActive = false;
     bool m_selecting = false;
     QPoint m_selectionStart{0, 0};
@@ -122,4 +131,10 @@ private:
     int m_clickCount = 0;
     bool m_cursorOn = true;
     QTimer m_cursorTimer;
+    int m_scrollOffset = 0;            // 视口顶部相对实时屏幕顶行的偏移：0=贴底
+    int m_wheelPixelAccum = 0;
+    int m_wheelAngleAccum = 0;
+    QPointF m_lastMousePos;            // 最近一次 mouseMove 的本地坐标，给 autoscroll 用
+    int m_autoScrollDir = 0;           // +1=往上拉历史，-1=往下回到实时
+    QTimer m_autoScrollTimer;
 };

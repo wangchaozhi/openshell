@@ -49,6 +49,34 @@ QColor toQColor(const VTermColor &c, const QColor &fallback)
     return QColor(copy.rgb.red, copy.rgb.green, copy.rgb.blue);
 }
 
+VtCell makeCellFromRaw(const VTermScreenCell &raw)
+{
+    VtCell out;
+    if (raw.chars[0] == 0) {
+        out.text.clear();
+    } else {
+        out.text.reserve(2);
+        for (int i = 0; i < VTERM_MAX_CHARS_PER_CELL && raw.chars[i] != 0; ++i) {
+            out.text.append(QChar::fromUcs4(raw.chars[i]));
+        }
+    }
+    out.width = qMax<int>(1, raw.width);
+    out.bold = raw.attrs.bold;
+    out.italic = raw.attrs.italic;
+    out.underline = raw.attrs.underline != 0;
+    out.reverse = raw.attrs.reverse;
+    out.fg = toQColor(raw.fg, QColor(0xe2, 0xe8, 0xf0));
+    out.bg = toQColor(raw.bg, QColor(0x02, 0x06, 0x17));
+    if (out.reverse) {
+        std::swap(out.fg, out.bg);
+    }
+    if (raw.chars[0] == static_cast<uint32_t>(-1)) {
+        out.placeholder = true;
+        out.text.clear();
+    }
+    return out;
+}
+
 } // namespace
 
 VtScreen::VtScreen(QObject *parent)
@@ -80,9 +108,9 @@ void VtScreen::initialiseVTerm()
         &VtScreen::sSetTermProp,
         &VtScreen::sBell,
         &VtScreen::sResize,
-        nullptr, // sb_pushline
-        nullptr, // sb_popline
-        nullptr, // sb_clear (libvterm >= 0.3)
+        &VtScreen::sScrollbackPushLine,
+        &VtScreen::sScrollbackPopLine,
+        &VtScreen::sScrollbackClear, // libvterm >= 0.3
     };
     vterm_screen_set_callbacks(m_screen, &kCallbacks, this);
     vterm_screen_enable_altscreen(m_screen, 1);
@@ -275,39 +303,54 @@ bool VtScreen::sendKey(int qtKey, Qt::KeyboardModifiers modifiers, const QString
 
 VtCell VtScreen::cellAt(int row, int col) const
 {
-    VtCell out;
     if (!m_screen || row < 0 || row >= m_rows || col < 0 || col >= m_cols) {
-        return out;
+        return VtCell();
     }
     VTermPos pos{row, col};
     VTermScreenCell raw;
     if (vterm_screen_get_cell(m_screen, pos, &raw) == 0) {
-        return out;
+        return VtCell();
     }
-    if (raw.chars[0] == 0) {
-        out.text.clear();
-    } else {
-        out.text.reserve(2);
-        for (int i = 0; i < VTERM_MAX_CHARS_PER_CELL && raw.chars[i] != 0; ++i) {
-            out.text.append(QChar::fromUcs4(raw.chars[i]));
-        }
+    return makeCellFromRaw(raw);
+}
+
+VtCell VtScreen::cellAtAbsolute(int absRow, int col) const
+{
+    if (absRow >= 0) {
+        return cellAt(absRow, col);
     }
-    out.width = qMax<int>(1, raw.width);
-    out.bold = raw.attrs.bold;
-    out.italic = raw.attrs.italic;
-    out.underline = raw.attrs.underline != 0;
-    out.reverse = raw.attrs.reverse;
-    out.fg = toQColor(raw.fg, QColor(0xe2, 0xe8, 0xf0));
-    out.bg = toQColor(raw.bg, QColor(0x02, 0x06, 0x17));
-    if (out.reverse) {
-        std::swap(out.fg, out.bg);
+    const int sbSize = static_cast<int>(m_scrollback.size());
+    const int sbIdx = sbSize + absRow; // absRow=-1 -> last, absRow=-sbSize -> first
+    if (sbIdx < 0 || sbIdx >= sbSize) {
+        return VtCell();
     }
-    if (raw.chars[0] == static_cast<uint32_t>(-1)) {
-        // libvterm 用 (uint32_t)-1 表示 "上一格 wide char 的右半边"
-        out.placeholder = true;
-        out.text.clear();
+    const QVector<VtCell> &row = m_scrollback[sbIdx];
+    if (col < 0 || col >= row.size()) {
+        return VtCell();
     }
-    return out;
+    return row[col];
+}
+
+void VtScreen::setScrollbackLimit(int limit)
+{
+    m_scrollbackLimit = qMax(0, limit);
+    bool changed = false;
+    while (static_cast<int>(m_scrollback.size()) > m_scrollbackLimit) {
+        m_scrollback.pop_front();
+        changed = true;
+    }
+    if (changed) {
+        emit scrollbackCleared();
+    }
+}
+
+void VtScreen::clearScrollback()
+{
+    if (m_scrollback.empty()) {
+        return;
+    }
+    m_scrollback.clear();
+    emit scrollbackCleared();
 }
 
 QString VtScreen::plainTextSnapshot() const
@@ -398,6 +441,52 @@ int VtScreen::sResize(int rows, int cols, void *user)
 void VtScreen::sOutput(const char *s, size_t len, void *user)
 {
     static_cast<VtScreen *>(user)->appendOutput(s, len);
+}
+
+int VtScreen::sScrollbackPushLine(int cols, const VTermScreenCell *cells, void *user)
+{
+    return static_cast<VtScreen *>(user)->handleScrollbackPush(cols, cells);
+}
+
+int VtScreen::sScrollbackPopLine(int /*cols*/, VTermScreenCell * /*cells*/, void * /*user*/)
+{
+    // 终端变高时 libvterm 会通过该回调向回滚区借行回填顶部，由于 VtCell 是
+    // 渲染快照、无法无损还原成 VTermScreenCell，这里直接返回 0 表示没有可借
+    // 的行；libvterm 会用空白行填充新出现的顶部，效果可接受。
+    return 0;
+}
+
+int VtScreen::sScrollbackClear(void *user)
+{
+    return static_cast<VtScreen *>(user)->handleScrollbackClear();
+}
+
+int VtScreen::handleScrollbackPush(int cols, const VTermScreenCell *cells)
+{
+    if (!cells || cols <= 0 || m_scrollbackLimit <= 0) {
+        return 1;
+    }
+    QVector<VtCell> row;
+    row.reserve(cols);
+    for (int c = 0; c < cols; ++c) {
+        row.append(makeCellFromRaw(cells[c]));
+    }
+    m_scrollback.push_back(std::move(row));
+    while (static_cast<int>(m_scrollback.size()) > m_scrollbackLimit) {
+        m_scrollback.pop_front();
+    }
+    emit scrollbackPushed(1);
+    return 1;
+}
+
+int VtScreen::handleScrollbackClear()
+{
+    if (m_scrollback.empty()) {
+        return 1;
+    }
+    m_scrollback.clear();
+    emit scrollbackCleared();
+    return 1;
 }
 
 int VtScreen::handleDamage(int startRow, int startCol, int endRow, int endCol)

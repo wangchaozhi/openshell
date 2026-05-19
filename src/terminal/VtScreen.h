@@ -8,6 +8,8 @@
 #include <QString>
 #include <QVector>
 
+#include <deque>
+
 #include <vterm.h>
 
 // 一个单元格的渲染快照。Renderer 拷一份后即可放心绘制。
@@ -66,6 +68,15 @@ public:
     // 读取一个 cell（越界返回空白格）。
     VtCell cellAt(int row, int col) const;
 
+    // 读取一个 cell；absRow 为 0..rows-1 时是实时屏幕，-1..-scrollbackSize() 时是回滚区
+    // （-1 = 最新滚出，-scrollbackSize() = 最早保存的一行）。
+    VtCell cellAtAbsolute(int absRow, int col) const;
+
+    int scrollbackSize() const { return static_cast<int>(m_scrollback.size()); }
+    int scrollbackLimit() const { return m_scrollbackLimit; }
+    void setScrollbackLimit(int limit);
+    void clearScrollback();
+
     QPoint cursorPosition() const { return m_cursorPos; }
     bool cursorVisible() const { return m_cursorVisible; }
 
@@ -79,6 +90,8 @@ signals:
     void titleChanged(const QString &title);
     void bellRang();
     void outputReady();
+    void scrollbackPushed(int count);
+    void scrollbackCleared();
 
 private:
     static int sDamage(VTermRect rect, void *user);
@@ -88,12 +101,17 @@ private:
     static int sBell(void *user);
     static int sResize(int rows, int cols, void *user);
     static void sOutput(const char *s, size_t len, void *user);
+    static int sScrollbackPushLine(int cols, const VTermScreenCell *cells, void *user);
+    static int sScrollbackPopLine(int cols, VTermScreenCell *cells, void *user);
+    static int sScrollbackClear(void *user);
 
     int handleDamage(int startRow, int startCol, int endRow, int endCol);
     int handleMoveCursor(int row, int col, int visible);
     int handleSetTermProp(VTermProp prop, VTermValue *val);
     int handleBell();
     int handleResize(int rows, int cols);
+    int handleScrollbackPush(int cols, const VTermScreenCell *cells);
+    int handleScrollbackClear();
     void appendOutput(const char *s, size_t len);
 
     void initialiseVTerm();
@@ -106,4 +124,6 @@ private:
     bool m_cursorVisible = true;
     QString m_title;
     QByteArray m_pendingOutput;
+    std::deque<QVector<VtCell>> m_scrollback;
+    int m_scrollbackLimit = 5000;
 };

@@ -9,6 +9,7 @@
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QWheelEvent>
 #include <QFile>
 #include <QTextStream>
 #include <QStandardPaths>
@@ -47,6 +48,10 @@ TerminalScreenItem::TerminalScreenItem(QQuickItem *parent)
     m_cursorTimer.setTimerType(Qt::CoarseTimer);
     connect(&m_cursorTimer, &QTimer::timeout, this, &TerminalScreenItem::onCursorBlink);
 
+    m_autoScrollTimer.setInterval(40);
+    m_autoScrollTimer.setTimerType(Qt::CoarseTimer);
+    connect(&m_autoScrollTimer, &QTimer::timeout, this, &TerminalScreenItem::onAutoScrollTick);
+
     recomputeMetrics();
 }
 
@@ -66,6 +71,9 @@ void TerminalScreenItem::setScreenObject(QObject *obj)
     clearSelection();
     disconnectScreen();
     m_screen = next;
+    m_scrollOffset = 0;
+    m_wheelPixelAccum = 0;
+    m_wheelAngleAccum = 0;
     connectScreen();
     emit screenChanged();
     if (m_screen) {
@@ -88,6 +96,10 @@ void TerminalScreenItem::connectScreen()
             this, &TerminalScreenItem::onScreenCursorMoved);
     connect(m_screen.data(), &VtScreen::sizeChanged,
             this, &TerminalScreenItem::onScreenSizeChanged);
+    connect(m_screen.data(), &VtScreen::scrollbackPushed,
+            this, &TerminalScreenItem::onScrollbackPushed);
+    connect(m_screen.data(), &VtScreen::scrollbackCleared,
+            this, &TerminalScreenItem::onScrollbackCleared);
 }
 
 void TerminalScreenItem::disconnectScreen()
@@ -144,17 +156,7 @@ void TerminalScreenItem::setCursorColor(const QColor &c)
 
 QString TerminalScreenItem::selectedText() const
 {
-    if (!m_screen) {
-        return QString();
-    }
-    if (m_selectAllActive) {
-        QString text = m_screen->plainTextSnapshot();
-        while (text.endsWith(QLatin1Char('\n')) || text.endsWith(QLatin1Char(' '))) {
-            text.chop(1);
-        }
-        return text;
-    }
-    if (!m_selectionActive) {
+    if (!m_screen || !m_selectionActive) {
         return QString();
     }
 
@@ -167,7 +169,7 @@ QString TerminalScreenItem::selectedText() const
         const int firstCol = row == start.y() ? start.x() : 0;
         const int lastCol = row == end.y() ? end.x() : m_cols - 1;
         for (int col = firstCol; col <= lastCol; ++col) {
-            const VtCell cell = m_screen->cellAt(row, col);
+            const VtCell cell = m_screen->cellAtAbsolute(row, col);
             if (cell.placeholder) {
                 continue;
             }
@@ -190,12 +192,15 @@ QString TerminalScreenItem::selectedText() const
 
 bool TerminalScreenItem::hasSelection() const
 {
-    return m_screen && (m_selectAllActive || m_selectionActive) && !selectedText().isEmpty();
+    return m_screen && m_selectionActive && !selectedText().isEmpty();
 }
 
 void TerminalScreenItem::sendText(const QString &text)
 {
     if (m_screen && !text.isEmpty()) {
+        if (m_scrollOffset != 0) {
+            setScrollOffset(0);
+        }
         m_screen->enqueueRaw(text.toUtf8());
     }
 }
@@ -210,24 +215,35 @@ void TerminalScreenItem::selectAll()
     if (!m_screen) {
         return;
     }
-    m_selectionActive = false;
+    const int sbSize = m_screen->scrollbackSize();
     m_selecting = false;
-    m_selectAllActive = true;
-    update();
-    emit selectionChanged();
+    m_selectionAnchor = QPoint(0, -sbSize);
+    setSelectionRange(QPoint(0, -sbSize),
+                      QPoint(qMax(0, m_cols - 1), qMax(0, m_rows - 1)));
     copySelectionIfActive();
 }
 
 void TerminalScreenItem::clearSelection()
 {
-    if (!m_selectAllActive && !m_selectionActive && !m_selecting) {
+    m_autoScrollTimer.stop();
+    m_autoScrollDir = 0;
+    if (!m_selectionActive && !m_selecting) {
         return;
     }
-    m_selectAllActive = false;
     m_selectionActive = false;
     m_selecting = false;
     update();
     emit selectionChanged();
+}
+
+void TerminalScreenItem::scrollByLines(int delta)
+{
+    setScrollOffset(m_scrollOffset + delta);
+}
+
+void TerminalScreenItem::scrollToBottom()
+{
+    setScrollOffset(0);
 }
 
 void TerminalScreenItem::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry)
@@ -238,8 +254,9 @@ void TerminalScreenItem::geometryChange(const QRectF &newGeometry, const QRectF 
 
 void TerminalScreenItem::keyPressEvent(QKeyEvent *event)
 {
-    if (m_selectAllActive && !(event->modifiers() & Qt::ControlModifier)) {
-        clearSelection();
+    // 用户输入时回到实时屏幕底部，看见自己敲的字。
+    if (m_scrollOffset != 0) {
+        setScrollOffset(0);
     }
 
     QString logMsg = QString("KEY EVENT: key=%1 modifiers=%2 text=[%3] focus=%4")
@@ -284,7 +301,7 @@ void TerminalScreenItem::mousePressEvent(QMouseEvent *event)
         m_lastClickMs = now;
 
         if (event->modifiers() & Qt::ShiftModifier) {
-            if (!m_selectionActive && !m_selectAllActive) {
+            if (!m_selectionActive) {
                 m_selectionAnchor = m_selectionStart;
             }
             setSelectionRange(m_selectionAnchor, cell);
@@ -299,6 +316,7 @@ void TerminalScreenItem::mousePressEvent(QMouseEvent *event)
             m_selectionEnd = cell;
         }
         m_selecting = true;
+        m_lastMousePos = event->position();
         event->accept();
         return;
     }
@@ -311,10 +329,12 @@ void TerminalScreenItem::mousePressEvent(QMouseEvent *event)
 void TerminalScreenItem::mouseMoveEvent(QMouseEvent *event)
 {
     if (m_selecting && m_screen && (event->buttons() & Qt::LeftButton)) {
+        m_lastMousePos = event->position();
         const QPoint next = cellAtPosition(event->position());
         if (next != m_selectionEnd) {
             setSelectionRange(m_selectionAnchor, next, next != m_selectionAnchor);
         }
+        updateAutoScroll();
         event->accept();
         return;
     }
@@ -325,6 +345,8 @@ void TerminalScreenItem::mouseReleaseEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton && m_selecting) {
         m_selecting = false;
+        m_autoScrollTimer.stop();
+        m_autoScrollDir = 0;
         if (m_clickCount < 2) {
             const QPoint next = cellAtPosition(event->position());
             setSelectionRange(m_selectionAnchor, next, next != m_selectionAnchor);
@@ -335,6 +357,39 @@ void TerminalScreenItem::mouseReleaseEvent(QMouseEvent *event)
         return;
     }
     QQuickPaintedItem::mouseReleaseEvent(event);
+}
+
+void TerminalScreenItem::wheelEvent(QWheelEvent *event)
+{
+    if (!m_screen) {
+        QQuickPaintedItem::wheelEvent(event);
+        return;
+    }
+    const int maxOff = maxScrollOffset();
+    if (maxOff <= 0 && m_scrollOffset == 0) {
+        event->ignore();
+        return;
+    }
+
+    int linesDelta = 0;
+    const QPoint pixelDelta = event->pixelDelta();
+    const QPoint angleDelta = event->angleDelta();
+    if (!pixelDelta.isNull()) {
+        m_wheelPixelAccum += pixelDelta.y();
+        const int cellH = qMax(1, m_cellH);
+        linesDelta = m_wheelPixelAccum / cellH;
+        m_wheelPixelAccum -= linesDelta * cellH;
+    } else if (!angleDelta.isNull()) {
+        m_wheelAngleAccum += angleDelta.y();
+        // 一次标准滚轮 tick = 120 units，按 3 行/格
+        const int unitsPerLine = 40;
+        linesDelta = m_wheelAngleAccum / unitsPerLine;
+        m_wheelAngleAccum -= linesDelta * unitsPerLine;
+    }
+    if (linesDelta != 0) {
+        setScrollOffset(m_scrollOffset + linesDelta);
+    }
+    event->accept();
 }
 
 void TerminalScreenItem::focusInEvent(QFocusEvent *event)
@@ -360,7 +415,7 @@ void TerminalScreenItem::onScreenDamaged(const QRect &cellRect)
         return;
     }
     const QRect px(cellRect.x() * m_cellW,
-                   cellRect.y() * m_cellH,
+                   (cellRect.y() + m_scrollOffset) * m_cellH,
                    cellRect.width() * m_cellW,
                    cellRect.height() * m_cellH);
     update(px);
@@ -419,9 +474,110 @@ void TerminalScreenItem::emitDesiredGrid()
 
 QPoint TerminalScreenItem::cellAtPosition(const QPointF &pos) const
 {
+    // 鼠标 y 可能在 widget 外（autoscroll 时），用 floor 而不是 clamp 才能正确
+    // 反映 "拉到了上方还是下方"。最终 clamp 到 [-scrollbackSize, m_rows-1]。
+    const int cellH = qMax(1, m_cellH);
+    int viewRow;
+    if (pos.y() >= 0) {
+        viewRow = int(pos.y()) / cellH;
+    } else {
+        viewRow = -1 - int(-pos.y() - 1) / cellH; // floor 除法
+    }
+    int absRow = viewRow - m_scrollOffset;
+    const int sbSize = m_screen ? m_screen->scrollbackSize() : 0;
+    absRow = qBound(-sbSize, absRow, qMax(0, m_rows - 1));
+
     const int col = qBound(0, int(pos.x()) / qMax(1, m_cellW), qMax(0, m_cols - 1));
-    const int row = qBound(0, int(pos.y()) / qMax(1, m_cellH), qMax(0, m_rows - 1));
-    return QPoint(col, row);
+    return QPoint(col, absRow);
+}
+
+int TerminalScreenItem::maxScrollOffset() const
+{
+    return m_screen ? m_screen->scrollbackSize() : 0;
+}
+
+void TerminalScreenItem::setScrollOffset(int offset)
+{
+    const int clamped = qBound(0, offset, maxScrollOffset());
+    if (clamped == m_scrollOffset) {
+        return;
+    }
+    m_scrollOffset = clamped;
+    update();
+}
+
+void TerminalScreenItem::updateAutoScroll()
+{
+    if (!m_selecting) {
+        m_autoScrollTimer.stop();
+        m_autoScrollDir = 0;
+        return;
+    }
+    int dir = 0;
+    if (m_lastMousePos.y() < 0) {
+        dir = +1;
+    } else if (m_lastMousePos.y() > height()) {
+        dir = -1;
+    }
+    m_autoScrollDir = dir;
+    if (dir == 0) {
+        m_autoScrollTimer.stop();
+    } else if (!m_autoScrollTimer.isActive()) {
+        m_autoScrollTimer.start();
+    }
+}
+
+void TerminalScreenItem::onAutoScrollTick()
+{
+    if (!m_selecting || m_autoScrollDir == 0 || !m_screen) {
+        m_autoScrollTimer.stop();
+        m_autoScrollDir = 0;
+        return;
+    }
+    const int before = m_scrollOffset;
+    setScrollOffset(m_scrollOffset + m_autoScrollDir);
+    if (m_scrollOffset == before) {
+        // 到底/到顶，停一下，避免空转
+        m_autoScrollTimer.stop();
+        return;
+    }
+    const QPoint next = cellAtPosition(m_lastMousePos);
+    if (next != m_selectionEnd) {
+        setSelectionRange(m_selectionAnchor, next, next != m_selectionAnchor);
+    }
+}
+
+void TerminalScreenItem::onScrollbackPushed(int count)
+{
+    if (count <= 0) {
+        return;
+    }
+    const int sbSize = m_screen ? m_screen->scrollbackSize() : 0;
+
+    // 视口贴底时 (scrollOffset==0) 跟随新内容；否则锚定到原来那一行历史内容上。
+    if (m_scrollOffset > 0) {
+        m_scrollOffset = qMin(m_scrollOffset + count, sbSize);
+    }
+
+    if (m_selectionActive || m_selecting) {
+        m_selectionStart.ry() -= count;
+        m_selectionEnd.ry() -= count;
+        m_selectionAnchor.ry() -= count;
+        if (m_selectionStart.y() < -sbSize && m_selectionEnd.y() < -sbSize) {
+            clearSelection();
+        }
+    }
+    update();
+}
+
+void TerminalScreenItem::onScrollbackCleared()
+{
+    m_scrollOffset = 0;
+    if (m_selectionActive || m_selecting) {
+        // 选区可能引用了已经丢弃的历史，统一清掉
+        clearSelection();
+    }
+    update();
 }
 
 QPair<QPoint, QPoint> TerminalScreenItem::normalizedSelection() const
@@ -434,38 +590,35 @@ QPair<QPoint, QPoint> TerminalScreenItem::normalizedSelection() const
     return qMakePair(start, end);
 }
 
-bool TerminalScreenItem::isCellSelected(int row, int col) const
+bool TerminalScreenItem::isCellSelected(int absRow, int col) const
 {
-    if (m_selectAllActive) {
-        return true;
-    }
     if (!m_selectionActive) {
         return false;
     }
     const auto bounds = normalizedSelection();
     const QPoint start = bounds.first;
     const QPoint end = bounds.second;
-    if (row < start.y() || row > end.y()) {
+    if (absRow < start.y() || absRow > end.y()) {
         return false;
     }
-    if (row == start.y() && col < start.x()) {
+    if (absRow == start.y() && col < start.x()) {
         return false;
     }
-    if (row == end.y() && col > end.x()) {
+    if (absRow == end.y() && col > end.x()) {
         return false;
     }
     return true;
 }
 
-QString TerminalScreenItem::lineText(int row) const
+QString TerminalScreenItem::lineText(int absRow) const
 {
     QString line;
-    if (!m_screen || row < 0 || row >= m_rows) {
+    if (!m_screen) {
         return line;
     }
     line.reserve(m_cols);
     for (int col = 0; col < m_cols; ++col) {
-        const VtCell cell = m_screen->cellAt(row, col);
+        const VtCell cell = m_screen->cellAtAbsolute(absRow, col);
         if (cell.placeholder) {
             continue;
         }
@@ -476,6 +629,14 @@ QString TerminalScreenItem::lineText(int row) const
         }
     }
     return line;
+}
+
+QString TerminalScreenItem::cellText(int absRow, int col) const
+{
+    if (!m_screen) {
+        return QString();
+    }
+    return m_screen->cellAtAbsolute(absRow, col).text;
 }
 
 bool TerminalScreenItem::isWordCharacter(const QString &text) const
@@ -496,11 +657,9 @@ bool TerminalScreenItem::isWordCharacter(const QString &text) const
 
 void TerminalScreenItem::setSelectionRange(const QPoint &start, const QPoint &end, bool active)
 {
-    const bool changed = m_selectAllActive
-                         || m_selectionStart != start
+    const bool changed = m_selectionStart != start
                          || m_selectionEnd != end
                          || m_selectionActive != active;
-    m_selectAllActive = false;
     m_selectionStart = start;
     m_selectionEnd = end;
     m_selectionActive = active;
@@ -515,16 +674,16 @@ void TerminalScreenItem::selectWordAt(const QPoint &cell)
     if (!m_screen) {
         return;
     }
-    if (!isWordCharacter(m_screen->cellAt(cell.y(), cell.x()).text)) {
+    if (!isWordCharacter(cellText(cell.y(), cell.x()))) {
         setSelectionRange(cell, cell, false);
         return;
     }
     int startCol = cell.x();
     int endCol = cell.x();
-    while (startCol > 0 && isWordCharacter(m_screen->cellAt(cell.y(), startCol - 1).text)) {
+    while (startCol > 0 && isWordCharacter(cellText(cell.y(), startCol - 1))) {
         --startCol;
     }
-    while (endCol + 1 < m_cols && isWordCharacter(m_screen->cellAt(cell.y(), endCol + 1).text)) {
+    while (endCol + 1 < m_cols && isWordCharacter(cellText(cell.y(), endCol + 1))) {
         ++endCol;
     }
     m_selectionAnchor = QPoint(startCol, cell.y());
@@ -532,18 +691,18 @@ void TerminalScreenItem::selectWordAt(const QPoint &cell)
     copySelectionIfActive();
 }
 
-void TerminalScreenItem::selectLineAt(int row)
+void TerminalScreenItem::selectLineAt(int absRow)
 {
-    QString line = lineText(row);
+    QString line = lineText(absRow);
     while (!line.isEmpty() && line.endsWith(QLatin1Char(' '))) {
         line.chop(1);
     }
     if (line.isEmpty()) {
-        setSelectionRange(QPoint(0, row), QPoint(0, row), false);
+        setSelectionRange(QPoint(0, absRow), QPoint(0, absRow), false);
         return;
     }
-    m_selectionAnchor = QPoint(0, row);
-    setSelectionRange(m_selectionAnchor, QPoint(qMin(m_cols - 1, line.size() - 1), row));
+    m_selectionAnchor = QPoint(0, absRow);
+    setSelectionRange(m_selectionAnchor, QPoint(qMin(m_cols - 1, line.size() - 1), absRow));
     copySelectionIfActive();
 }
 
@@ -565,8 +724,9 @@ void TerminalScreenItem::paint(QPainter *painter)
     painter->setFont(m_font);
     painter->setRenderHint(QPainter::TextAntialiasing, true);
 
-    const int rows = qMin(m_screen->rows(), int(height() / m_cellH) + 1);
+    const int viewRows = qMin(m_rows, int(height() / m_cellH) + 1);
     const int cols = qMin(m_screen->cols(), int(width() / m_cellW) + 1);
+    const int sbSize = m_screen->scrollbackSize();
 
     QFont boldFont = m_font;
     boldFont.setBold(true);
@@ -575,9 +735,13 @@ void TerminalScreenItem::paint(QPainter *painter)
     QFont boldItalicFont = boldFont;
     boldItalicFont.setItalic(true);
 
-    for (int r = 0; r < rows; ++r) {
+    for (int r = 0; r < viewRows; ++r) {
+        const int absRow = r - m_scrollOffset;
+        if (absRow < -sbSize || absRow > m_rows - 1) {
+            continue;
+        }
         for (int c = 0; c < cols; ++c) {
-            const VtCell cell = m_screen->cellAt(r, c);
+            const VtCell cell = m_screen->cellAtAbsolute(absRow, c);
             if (cell.placeholder) {
                 continue;
             }
@@ -590,7 +754,7 @@ void TerminalScreenItem::paint(QPainter *painter)
                 painter->fillRect(x, y, w, h, cell.bg);
             }
 
-            if (isCellSelected(r, c)) {
+            if (isCellSelected(absRow, c)) {
                 QColor selection = m_cursorColor;
                 selection.setAlphaF(0.28);
                 painter->fillRect(x, y, w, h, selection);
@@ -619,7 +783,7 @@ void TerminalScreenItem::paint(QPainter *painter)
         }
     }
 
-    if (m_screen->cursorVisible() && (m_cursorOn || !hasActiveFocus())) {
+    if (m_screen->cursorVisible() && m_scrollOffset == 0 && (m_cursorOn || !hasActiveFocus())) {
         const QPoint cp = m_screen->cursorPosition();
         const int x = cp.x() * m_cellW;
         const int y = cp.y() * m_cellH;
