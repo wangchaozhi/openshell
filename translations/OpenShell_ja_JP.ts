@@ -938,6 +938,11 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../qml/mobile/MobileConnectionsPage.qml" line="68"/>
+        <source>New</source>
+        <translation type="unfinished">新規</translation>
+    </message>
+    <message>
         <location filename="../qml/mobile/MobileConnectionsPage.qml" line="75"/>
         <source>Refresh</source>
         <translation type="unfinished">更新</translation>

@@ -958,6 +958,11 @@
         <translation>已保存 %1 个</translation>
     </message>
     <message>
+        <location filename="../qml/mobile/MobileConnectionsPage.qml" line="68"/>
+        <source>New</source>
+        <translation>新建</translation>
+    </message>
+    <message>
         <location filename="../qml/mobile/MobileConnectionsPage.qml" line="75"/>
         <source>Refresh</source>
         <translation>刷新</translation>
