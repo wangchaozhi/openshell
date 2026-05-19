@@ -7,11 +7,13 @@
 #include "ssh/SftpDirectoryLister.h"
 #include "TranslationManager.h"
 
-#include <QApplication>
 #include <QClipboard>
+#include <QGuiApplication>
 #include <QDesktopServices>
 #include <QDir>
+#if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
 #include <QFileDialog>
+#endif
 #include <QFileInfo>
 #include <QFile>
 #include <QFileSystemWatcher>
@@ -449,25 +451,45 @@ QString AppController::localPathFromUrl(const QString &url) const
 
 QString AppController::chooseLocalFile()
 {
+#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+    setLastError(tr("Mobile file picker is not implemented yet"));
+    return {};
+#else
     return QFileDialog::getOpenFileName(nullptr, tr("Select file to upload"), QDir::homePath());
+#endif
 }
 
 QString AppController::chooseLocalFolder()
 {
+#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+    setLastError(tr("Mobile folder picker is not implemented yet"));
+    return {};
+#else
     return QFileDialog::getExistingDirectory(nullptr, tr("Select folder to upload"), QDir::homePath());
+#endif
 }
 
 QString AppController::chooseDownloadFolder()
 {
+#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+    setLastError(tr("Mobile download folder picker is not implemented yet"));
+    return {};
+#else
     return QFileDialog::getExistingDirectory(nullptr, tr("Select download folder"), QDir::homePath());
+#endif
 }
 
 QString AppController::chooseExternalTextEditor()
 {
+#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+    setLastError(tr("External editor selection is not available on mobile"));
+    return {};
+#else
     return QFileDialog::getOpenFileName(nullptr,
                                         tr("Select text editor"),
                                         QDir::homePath(),
                                         tr("Applications (*.exe);;All files (*)"));
+#endif
 }
 
 QString AppController::remoteHomePath(const QString &connectionId) const
@@ -509,12 +531,12 @@ QString AppController::remoteSiblingPath(const QString &path, const QString &nam
 
 void AppController::copyTextToClipboard(const QString &text) const
 {
-    QApplication::clipboard()->setText(text);
+    QGuiApplication::clipboard()->setText(text);
 }
 
 QString AppController::clipboardText() const
 {
-    return QApplication::clipboard()->text();
+    return QGuiApplication::clipboard()->text();
 }
 
 QVariantList AppController::remoteDirectoryEntries(const QString &connectionId,
@@ -1015,5 +1037,5 @@ void AppController::hideWindow()
 
 void AppController::quit()
 {
-    QApplication::quit();
+    QGuiApplication::quit();
 }

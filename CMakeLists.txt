@@ -8,11 +8,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Qt6 REQUIRED COMPONENTS
     Quick
     QuickControls2
-    Widgets
     Network
     Concurrent
     LinguistTools
 )
+if(NOT ANDROID AND NOT IOS)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets)
+endif()
 
 qt_standard_project_setup(REQUIRES 6.6)
 qt_policy(SET QTP0004 NEW)
@@ -23,7 +25,9 @@ option(OPENSHELL_ENABLE_ECHO_BACKEND
 
 # --- libssh2 -------------------------------------------------------------
 # 优先用系统 / vcpkg 提供的 libssh2；找不到就 FetchContent 拉源码。
-find_package(Libssh2 CONFIG QUIET)
+if(NOT ANDROID AND NOT IOS)
+    find_package(Libssh2 CONFIG QUIET)
+endif()
 if(NOT Libssh2_FOUND)
     include(FetchContent)
     message(STATUS "OpenShell: libssh2 not found via find_package, fetching from upstream")
@@ -32,8 +36,8 @@ if(NOT Libssh2_FOUND)
     set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(LIBSSH2_NO_DEPRECATED ON CACHE BOOL "" FORCE)
     set(ENABLE_ZLIB_COMPRESSION OFF CACHE BOOL "" FORCE)
-    if(ANDROID)
-        message(STATUS "OpenShell: Android build uses bundled mbedTLS for libssh2")
+    if(ANDROID OR IOS)
+        message(STATUS "OpenShell: mobile build uses bundled mbedTLS for libssh2")
         set(ENABLE_PROGRAMS OFF CACHE BOOL "" FORCE)
         set(ENABLE_TESTING OFF CACHE BOOL "" FORCE)
         FetchContent_Declare(mbedtls
@@ -56,7 +60,7 @@ if(NOT Libssh2_FOUND)
         GIT_TAG        libssh2-1.11.1
     )
     FetchContent_MakeAvailable(libssh2)
-    if(ANDROID AND TARGET libssh2_static AND TARGET mbedcrypto)
+    if((ANDROID OR IOS) AND TARGET libssh2_static AND TARGET mbedcrypto)
         add_dependencies(libssh2_static mbedcrypto)
     endif()
     add_library(Libssh2::libssh2 ALIAS libssh2_static)
@@ -66,7 +70,9 @@ endif()
 # 终端模型层。优先找系统 / vcpkg 提供的 libvterm；找不到则从 neovim 上游
 # 拉源码（裸 C，无 CMake），用我们自己的目标编译。
 set(OPENSHELL_VTERM_TARGET "" CACHE INTERNAL "Resolved libvterm target")
-find_package(libvterm CONFIG QUIET)
+if(NOT ANDROID AND NOT IOS)
+    find_package(libvterm CONFIG QUIET)
+endif()
 if(libvterm_FOUND)
     set(OPENSHELL_VTERM_TARGET libvterm::libvterm)
 else()
@@ -236,6 +242,9 @@ endif()
 qt_add_executable(OpenShell ${OPENSHELL_SOURCES})
 
 target_include_directories(OpenShell PRIVATE src)
+if(ANDROID OR IOS)
+    target_compile_definitions(OpenShell PRIVATE OPENSHELL_MOBILE=1)
+endif()
 if(OPENSHELL_ENABLE_ECHO_BACKEND)
     target_include_directories(OpenShell PRIVATE tests/fixtures)
     target_compile_definitions(OpenShell PRIVATE OPENSHELL_ENABLE_ECHO_BACKEND=1)
@@ -280,6 +289,7 @@ qt_add_translations(OpenShell
 )
 
 set_target_properties(OpenShell PROPERTIES
+    MACOSX_BUNDLE_GUI_IDENTIFIER com.wangchaozhi.openshell
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
     MACOSX_BUNDLE TRUE
@@ -291,12 +301,14 @@ target_link_libraries(OpenShell
     PRIVATE
         Qt6::Quick
         Qt6::QuickControls2
-        Qt6::Widgets
         Qt6::Network
         Qt6::Concurrent
         Libssh2::libssh2
         ${OPENSHELL_VTERM_TARGET}
 )
+if(NOT ANDROID AND NOT IOS)
+    target_link_libraries(OpenShell PRIVATE Qt6::Widgets)
+endif()
 
 install(TARGETS OpenShell
     BUNDLE DESTINATION .

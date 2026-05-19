@@ -366,12 +366,126 @@ jobs:
           path: package/*.apk
           if-no-files-found: error
 
+  build-ios:
+    name: Build OpenShell-ios-simulator-arm64
+    runs-on: macos-15
+    env:
+      IOS_ASSET_NAME: OpenShell-ios-simulator-arm64
+      IOS_DESTINATION: generic/platform=iOS Simulator
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+          xcrun --sdk iphonesimulator --show-sdk-version
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache Qt iOS
+        id: cache-qt-ios
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/Qt
+          key: qt-v1-openshell-ios-${{ env.QT_VERSION }}-macos-ios
+
+      - name: Install Qt iOS
+        if: steps.cache-qt-ios.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install aqtinstall
+          python -m aqt install-qt mac desktop "${QT_VERSION}" clang_64 -O "${RUNNER_TEMP}/Qt"
+          python -m aqt install-qt mac ios "${QT_VERSION}" ios -O "${RUNNER_TEMP}/Qt"
+
+      - name: Configure Qt iOS environment
+        shell: bash
+        run: |
+          ios_qt_root="${RUNNER_TEMP}/Qt/${QT_VERSION}/ios"
+          host_qt_root="${RUNNER_TEMP}/Qt/${QT_VERSION}/macos"
+          if [ ! -d "${ios_qt_root}" ]; then
+            echo "Qt iOS root was not found: ${ios_qt_root}" >&2
+            exit 1
+          fi
+          if [ ! -d "${host_qt_root}" ]; then
+            echo "Qt host root was not found: ${host_qt_root}" >&2
+            exit 1
+          fi
+          echo "QT_IOS_ROOT=${ios_qt_root}" >> "${GITHUB_ENV}"
+          echo "QT_HOST_ROOT=${host_qt_root}" >> "${GITHUB_ENV}"
+          echo "${ios_qt_root}/bin" >> "${GITHUB_PATH}"
+          echo "${host_qt_root}/bin" >> "${GITHUB_PATH}"
+
+      - name: Configure iOS
+        shell: bash
+        run: |
+          set -euo pipefail
+          "${QT_IOS_ROOT}/bin/qt-cmake" \
+            -S . \
+            -B build-ios \
+            -G Xcode \
+            -DQT_HOST_PATH="${QT_HOST_ROOT}" \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_SYSROOT=iphonesimulator \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO \
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO
+
+      - name: Build iOS simulator app
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodeproj="$(find build-ios -maxdepth 2 -name '*.xcodeproj' -print -quit)"
+          if [ -z "${xcodeproj}" ]; then
+            echo "Generated Xcode project was not found." >&2
+            exit 1
+          fi
+          xcodebuild build \
+            -project "${xcodeproj}" \
+            -scheme "${APP_NAME}" \
+            -configuration "${BUILD_TYPE}" \
+            -destination "${IOS_DESTINATION}" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            ENABLE_ONLY_ACTIVE_RESOURCES=NO
+
+      - name: Package iOS simulator app
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p package
+          app_path="$(find build-ios -type d -path "*${BUILD_TYPE}-iphonesimulator/*.app" -name "${APP_NAME}.app" -print -quit)"
+          if [ -z "${app_path}" ]; then
+            app_path="$(find build-ios -type d -name "${APP_NAME}.app" -print -quit)"
+          fi
+          if [ -z "${app_path}" ]; then
+            echo "iOS simulator app bundle was not found." >&2
+            exit 1
+          fi
+          codesign --force --deep --sign - "${app_path}"
+          ditto -c -k --sequesterRsrc --keepParent "${app_path}" "package/${IOS_ASSET_NAME}.zip"
+
+      - name: Upload iOS package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.IOS_ASSET_NAME }}
+          path: package/*.zip
+          if-no-files-found: error
+
   release:
     name: Publish GitHub Release
     runs-on: ubuntu-24.04
     needs:
       - build
       - build-android
+      - build-ios
     if: ${{ always() }}
     steps:
       - name: Checkout

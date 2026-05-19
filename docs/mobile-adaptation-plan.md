@@ -272,8 +272,10 @@ iOS：
 
 - macOS。
 - Xcode。
+- Qt macOS host 套件。
 - Qt iOS 套件。
-- Apple Developer 签名配置。
+- 模拟器构建可先使用 ad-hoc 签名。
+- 真机安装、TestFlight、App Store 发布需要 Apple Developer 签名配置。
 
 ## Windows 环境实测记录
 
@@ -368,6 +370,27 @@ build-android-arm64.bat
 run-android-arm64.bat
 ```
 
+## iOS CI 策略
+
+当前阶段先在 GitHub Actions `macos-15` runner 上验证 iOS 模拟器构建，不直接产出可上架或可真机安装的 `.ipa`。
+
+CI 做法：
+
+- 安装 Xcode runner 自带的 iOS Simulator SDK。
+- 使用 aqt 安装 Qt macOS host 套件和 Qt iOS 套件。
+- 通过 `ios/bin/qt-cmake` 生成 Xcode 工程。
+- 使用 `iphonesimulator`、`arm64` 构建。
+- `CODE_SIGNING_ALLOWED=NO` 完成构建后，对 `.app` 做临时 ad-hoc codesign。
+- 上传 `OpenShell-ios-simulator-arm64.zip` 作为 release artifact。
+
+这个产物适合验证 iOS 编译链、QML 资源、移动端入口和模拟器运行。后续如果要真机安装或发布，需要补：
+
+- Bundle ID 管理。
+- Apple Developer Team ID。
+- 证书和 provisioning profile。
+- `.ipa` 导出配置。
+- Keychain / UIDocumentPicker / 后台限制等 iOS 原生能力。
+
 ## 风险点
 
 - libssh2 / libvterm 在 Android / iOS 下交叉编译失败。
@@ -396,4 +419,6 @@ run-android-arm64.bat
 - [x] 新增 Android arm64 配置、构建、安装脚本。
 - [x] 记录 Android 构建命令和环境版本。
 - [x] 验证 Android 模拟器窗口启动，无启动闪退。
+- [x] 新增 iOS Simulator CI 构建和临时 ad-hoc 签名产物。
 - [ ] 验证 Android 真机 / 模拟器核心页面交互。
+- [ ] 验证 iOS Simulator 窗口启动与核心页面交互。

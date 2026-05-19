@@ -4,41 +4,61 @@
 <context>
     <name>AppController</name>
     <message>
-        <location filename="../src/AppController.cpp" line="334"/>
-        <location filename="../src/AppController.cpp" line="525"/>
-        <location filename="../src/AppController.cpp" line="551"/>
-        <location filename="../src/AppController.cpp" line="593"/>
-        <location filename="../src/AppController.cpp" line="652"/>
+        <location filename="../src/AppController.cpp" line="336"/>
+        <location filename="../src/AppController.cpp" line="547"/>
+        <location filename="../src/AppController.cpp" line="573"/>
+        <location filename="../src/AppController.cpp" line="615"/>
+        <location filename="../src/AppController.cpp" line="674"/>
         <source>Unknown connection</source>
         <translation>未知连接</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="452"/>
+        <location filename="../src/AppController.cpp" line="455"/>
+        <source>Mobile file picker is not implemented yet</source>
+        <translation>移动端文件选择器尚未实现</translation>
+    </message>
+    <message>
+        <location filename="../src/AppController.cpp" line="458"/>
         <source>Select file to upload</source>
         <translation>选择要上传的文件</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="457"/>
+        <location filename="../src/AppController.cpp" line="465"/>
+        <source>Mobile folder picker is not implemented yet</source>
+        <translation>移动端文件夹选择器尚未实现</translation>
+    </message>
+    <message>
+        <location filename="../src/AppController.cpp" line="468"/>
         <source>Select folder to upload</source>
         <translation>选择要上传的文件夹</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="462"/>
+        <location filename="../src/AppController.cpp" line="475"/>
+        <source>Mobile download folder picker is not implemented yet</source>
+        <translation>移动端下载目录选择器尚未实现</translation>
+    </message>
+    <message>
+        <location filename="../src/AppController.cpp" line="478"/>
         <source>Select download folder</source>
         <translation>选择下载目录</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="653"/>
+        <location filename="../src/AppController.cpp" line="485"/>
+        <source>External editor selection is not available on mobile</source>
+        <translation>移动端不支持选择外部编辑器</translation>
+    </message>
+    <message>
+        <location filename="../src/AppController.cpp" line="675"/>
         <source>Invalid permission value</source>
         <translation>权限值无效</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="468"/>
+        <location filename="../src/AppController.cpp" line="489"/>
         <source>Select text editor</source>
         <translation>选择文本编辑器</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="470"/>
+        <location filename="../src/AppController.cpp" line="491"/>
         <source>Applications (*.exe);;All files (*)</source>
         <translation>应用程序 (*.exe);;所有文件 (*)</translation>
     </message>
@@ -51,17 +71,17 @@
         <translation type="vanished">上传失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="866"/>
+        <location filename="../src/AppController.cpp" line="888"/>
         <source>Cannot open %1</source>
         <translation>无法打开 %1</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="827"/>
+        <location filename="../src/AppController.cpp" line="849"/>
         <source>Cannot write %1</source>
         <translation>无法写入 %1</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="834"/>
+        <location filename="../src/AppController.cpp" line="856"/>
         <source>Cannot save %1</source>
         <translation>无法保存 %1</translation>
     </message>
@@ -274,6 +294,20 @@
         <location filename="../qml/ConnectionManagerView.qml" line="438"/>
         <source>No connections yet. Press + to add one.</source>
         <translation>还没有连接，点 + 添加一个。</translation>
+    </message>
+</context>
+<context>
+    <name>CopyAction</name>
+    <message>
+        <source>Copy</source>
+        <translation type="obsolete">复制</translation>
+    </message>
+</context>
+<context>
+    <name>DeleteAction</name>
+    <message>
+        <source>Delete</source>
+        <translation type="obsolete">删除</translation>
     </message>
 </context>
 <context>
@@ -1104,59 +1138,66 @@
     </message>
 </context>
 <context>
+    <name>PasteAction</name>
+    <message>
+        <source>Paste</source>
+        <translation type="obsolete">粘贴</translation>
+    </message>
+</context>
+<context>
     <name>QObject</name>
     <message>
-        <location filename="../src/AppController.cpp" line="635"/>
+        <location filename="../src/AppController.cpp" line="657"/>
         <source>Upload completed</source>
         <translation>上传完成</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="684"/>
+        <location filename="../src/AppController.cpp" line="706"/>
         <source>Permissions updated</source>
         <translation>权限已更新</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="727"/>
+        <location filename="../src/AppController.cpp" line="749"/>
         <source>Download failed</source>
         <translation>下载失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="806"/>
+        <location filename="../src/AppController.cpp" line="828"/>
         <source>Remote file saved</source>
         <translation>远程文件已保存</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="806"/>
+        <location filename="../src/AppController.cpp" line="828"/>
         <source>Upload failed</source>
         <translation>上传失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="941"/>
+        <location filename="../src/AppController.cpp" line="963"/>
         <source>Created</source>
         <translation>已创建</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="941"/>
+        <location filename="../src/AppController.cpp" line="963"/>
         <source>Create failed</source>
         <translation>创建失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="971"/>
+        <location filename="../src/AppController.cpp" line="993"/>
         <source>Renamed</source>
         <translation>已重命名</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="971"/>
+        <location filename="../src/AppController.cpp" line="993"/>
         <source>Rename failed</source>
         <translation>重命名失败</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="1000"/>
+        <location filename="../src/AppController.cpp" line="1022"/>
         <source>Deleted</source>
         <translation>已删除</translation>
     </message>
     <message>
-        <location filename="../src/AppController.cpp" line="1000"/>
+        <location filename="../src/AppController.cpp" line="1022"/>
         <source>Delete failed</source>
         <translation>删除失败</translation>
     </message>
@@ -1317,6 +1358,13 @@
         <location filename="../src/SystemMonitorController.cpp" line="242"/>
         <source>Unknown connection</source>
         <translation>未知连接</translation>
+    </message>
+</context>
+<context>
+    <name>SelectAllAction</name>
+    <message>
+        <source>Select All</source>
+        <translation type="obsolete">全选</translation>
     </message>
 </context>
 <context>

@@ -1,4 +1,8 @@
+#if defined(OPENSHELL_MOBILE)
+#include <QGuiApplication>
+#else
 #include <QApplication>
+#endif
 #include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -10,7 +14,11 @@
 
 int main(int argc, char *argv[])
 {
+#if defined(OPENSHELL_MOBILE)
+    QGuiApplication app(argc, argv);
+#else
     QApplication app(argc, argv);
+#endif
     app.setOrganizationName(QStringLiteral("OpenShell"));
     app.setApplicationName(QStringLiteral("OpenShell"));
     app.setQuitOnLastWindowClosed(false);
@@ -32,7 +40,7 @@ int main(int argc, char *argv[])
     QObject::connect(&controller, &AppController::languageChanged,
                      &engine, [&engine]() { engine.retranslate(); });
 
-#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+#if defined(OPENSHELL_MOBILE)
     engine.loadFromModule("OpenShell", "MobileMain");
 #else
     engine.loadFromModule("OpenShell", "Main");
