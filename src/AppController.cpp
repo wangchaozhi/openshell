@@ -513,7 +513,7 @@ QString AppController::remoteParentPath(const QString &path) const
     while (clean.size() > 1 && clean.endsWith(QLatin1Char('/'))) {
         clean.chop(1);
     }
-    const int slash = clean.lastIndexOf(QLatin1Char('/'));
+    const qsizetype slash = clean.lastIndexOf(QLatin1Char('/'));
     if (slash <= 0) {
         return QStringLiteral("/");
     }
@@ -880,7 +880,9 @@ void AppController::openDownloadedRemoteFile(const QString &connectionId,
 
     bool opened = false;
     if (mode == QStringLiteral("custom") && !externalTextEditorPath().isEmpty()) {
+#if !defined(Q_OS_IOS) && !defined(Q_OS_ANDROID)
         opened = QProcess::startDetached(externalTextEditorPath(), QStringList{localPath});
+#endif
     }
     if (!opened) {
         opened = QDesktopServices::openUrl(QUrl::fromLocalFile(localPath));
