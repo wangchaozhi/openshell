@@ -10,6 +10,7 @@
 #include <QMutex>
 #include <QMutexLocker>
 #include <QVariantMap>
+#include <QVector>
 
 #include <cstdlib>
 #include <cstring>
@@ -54,6 +55,13 @@ struct CachedSftpConnection
     QMutex mutex; // serializes work on this single libssh2 session (not session-thread-safe)
 };
 
+enum class ConnectionLane
+{
+    Browse,
+    Transfer,
+    Exec
+};
+
 // Tiny mutex protecting only the cache map lookup/insert — long-running SFTP work
 // runs under the per-connection mutex instead, so different connections don't block each other.
 QMutex &cacheMapMutex()
@@ -62,26 +70,106 @@ QMutex &cacheMapMutex()
     return mutex;
 }
 
-QHash<QString, CachedSftpConnection *> &connectionCache()
+QHash<QString, QVector<CachedSftpConnection *>> &connectionCache()
 {
-    static QHash<QString, CachedSftpConnection *> cache;
+    static QHash<QString, QVector<CachedSftpConnection *>> cache;
     return cache;
 }
 
-CachedSftpConnection *acquireConnection(const QString &key)
+QHash<QString, int> &connectionWaitCursor()
 {
-    QMutexLocker lock(&cacheMapMutex());
-    auto &cache = connectionCache();
-    auto it = cache.find(key);
-    if (it == cache.end()) {
-        it = cache.insert(key, new CachedSftpConnection);
+    static QHash<QString, int> cursors;
+    return cursors;
+}
+
+class LockedSftpConnection
+{
+public:
+    LockedSftpConnection() = default;
+
+    LockedSftpConnection(CachedSftpConnection *connection, bool alreadyLocked)
+        : m_connection(connection)
+    {
+        if (m_connection && !alreadyLocked) {
+            m_connection->mutex.lock();
+        }
     }
-    return it.value();
+
+    ~LockedSftpConnection()
+    {
+        if (m_connection) {
+            m_connection->mutex.unlock();
+        }
+    }
+
+    LockedSftpConnection(const LockedSftpConnection &) = delete;
+    LockedSftpConnection &operator=(const LockedSftpConnection &) = delete;
+
+    LockedSftpConnection(LockedSftpConnection &&other) noexcept
+        : m_connection(other.m_connection)
+    {
+        other.m_connection = nullptr;
+    }
+
+    LockedSftpConnection &operator=(LockedSftpConnection &&other) noexcept
+    {
+        if (this == &other) {
+            return *this;
+        }
+        if (m_connection) {
+            m_connection->mutex.unlock();
+        }
+        m_connection = other.m_connection;
+        other.m_connection = nullptr;
+        return *this;
+    }
+
+    CachedSftpConnection *get() const { return m_connection; }
+
+private:
+    CachedSftpConnection *m_connection = nullptr;
+};
+
+LockedSftpConnection acquireConnection(const QString &key, int poolSize)
+{
+    if (poolSize < 1) {
+        poolSize = 1;
+    }
+
+    CachedSftpConnection *fallback = nullptr;
+    {
+        QMutexLocker lock(&cacheMapMutex());
+        auto &pool = connectionCache()[key];
+        if (pool.isEmpty()) {
+            pool.append(new CachedSftpConnection);
+        }
+
+        for (CachedSftpConnection *connection : pool) {
+            if (connection->mutex.tryLock()) {
+                return LockedSftpConnection(connection, true);
+            }
+        }
+
+        if (pool.size() < poolSize) {
+            auto *connection = new CachedSftpConnection;
+            connection->mutex.lock();
+            pool.append(connection);
+            return LockedSftpConnection(connection, true);
+        }
+
+        auto &cursor = connectionWaitCursor()[key];
+        fallback = pool.at(cursor % pool.size());
+        cursor = (cursor + 1) % pool.size();
+    }
+
+    return LockedSftpConnection(fallback, false);
 }
 
 bool ensureLibssh2(QString *errorOut)
 {
     static bool initialized = false;
+    static QMutex initMutex;
+    QMutexLocker lock(&initMutex);
     if (initialized) {
         return true;
     }
@@ -95,15 +183,42 @@ bool ensureLibssh2(QString *errorOut)
     return true;
 }
 
-QString cacheKey(const ConnectionProfile &profile)
+QString laneName(ConnectionLane lane)
 {
-    return QStringLiteral("%1|%2|%3|%4|%5|%6")
+    switch (lane) {
+    case ConnectionLane::Browse:
+        return QStringLiteral("browse");
+    case ConnectionLane::Transfer:
+        return QStringLiteral("transfer");
+    case ConnectionLane::Exec:
+        return QStringLiteral("exec");
+    }
+    return QStringLiteral("browse");
+}
+
+int lanePoolSize(ConnectionLane lane)
+{
+    switch (lane) {
+    case ConnectionLane::Browse:
+        return 2;
+    case ConnectionLane::Transfer:
+        return 4;
+    case ConnectionLane::Exec:
+        return 1;
+    }
+    return 1;
+}
+
+QString cacheKey(const ConnectionProfile &profile, ConnectionLane lane)
+{
+    return QStringLiteral("%1|%2|%3|%4|%5|%6|%7")
         .arg(profile.id,
              profile.host,
              QString::number(profile.port),
              profile.username,
              profile.authType,
-             profile.privateKeyPath);
+             profile.privateKeyPath,
+             laneName(lane));
 }
 
 void resetConnection(CachedSftpConnection *connection)
@@ -868,8 +983,9 @@ QVariantList SftpDirectoryLister::list(const ConnectionProfile &profile,
         }
     };
 
-    CachedSftpConnection *connection = acquireConnection(cacheKey(profile));
-    QMutexLocker locker(&connection->mutex);
+    auto lease = acquireConnection(cacheKey(profile, ConnectionLane::Browse),
+                                   lanePoolSize(ConnectionLane::Browse));
+    CachedSftpConnection *connection = lease.get();
 
     if (!ensureConnected(connection, profile, errorOut)) {
         return rows;
@@ -947,8 +1063,9 @@ QString SftpDirectoryLister::execute(const ConnectionProfile &profile,
         return QString();
     }
 
-    CachedSftpConnection *connection = acquireConnection(cacheKey(profile));
-    QMutexLocker locker(&connection->mutex);
+    auto lease = acquireConnection(cacheKey(profile, ConnectionLane::Exec),
+                                   lanePoolSize(ConnectionLane::Exec));
+    CachedSftpConnection *connection = lease.get();
     if (!ensureConnected(connection, profile, errorOut)) {
         return QString();
     }
@@ -1032,8 +1149,9 @@ bool SftpDirectoryLister::upload(const ConnectionProfile &profile,
         return false;
     }
 
-    CachedSftpConnection *connection = acquireConnection(cacheKey(profile));
-    QMutexLocker locker(&connection->mutex);
+    auto lease = acquireConnection(cacheKey(profile, ConnectionLane::Transfer),
+                                   lanePoolSize(ConnectionLane::Transfer));
+    CachedSftpConnection *connection = lease.get();
     if (!ensureConnected(connection, profile, errorOut)) {
         return false;
     }
@@ -1078,8 +1196,9 @@ bool SftpDirectoryLister::chmod(const ConnectionProfile &profile,
         return false;
     }
 
-    CachedSftpConnection *connection = acquireConnection(cacheKey(profile));
-    QMutexLocker locker(&connection->mutex);
+    auto lease = acquireConnection(cacheKey(profile, ConnectionLane::Browse),
+                                   lanePoolSize(ConnectionLane::Browse));
+    CachedSftpConnection *connection = lease.get();
     if (!ensureConnected(connection, profile, errorOut)) {
         return false;
     }
@@ -1112,8 +1231,9 @@ bool SftpDirectoryLister::download(const ConnectionProfile &profile,
     if (!ensureLibssh2(errorOut)) {
         return false;
     }
-    CachedSftpConnection *connection = acquireConnection(cacheKey(profile));
-    QMutexLocker locker(&connection->mutex);
+    auto lease = acquireConnection(cacheKey(profile, ConnectionLane::Transfer),
+                                   lanePoolSize(ConnectionLane::Transfer));
+    CachedSftpConnection *connection = lease.get();
     if (!ensureConnected(connection, profile, errorOut)) {
         return false;
     }
@@ -1153,8 +1273,9 @@ bool SftpDirectoryLister::createDirectory(const ConnectionProfile &profile,
     if (!ensureLibssh2(errorOut)) {
         return false;
     }
-    CachedSftpConnection *connection = acquireConnection(cacheKey(profile));
-    QMutexLocker locker(&connection->mutex);
+    auto lease = acquireConnection(cacheKey(profile, ConnectionLane::Browse),
+                                   lanePoolSize(ConnectionLane::Browse));
+    CachedSftpConnection *connection = lease.get();
     return ensureConnected(connection, profile, errorOut)
            && makeRemoteDirectory(connection->sftp, remotePath);
 }
@@ -1166,8 +1287,9 @@ bool SftpDirectoryLister::createFile(const ConnectionProfile &profile,
     if (!ensureLibssh2(errorOut)) {
         return false;
     }
-    CachedSftpConnection *connection = acquireConnection(cacheKey(profile));
-    QMutexLocker locker(&connection->mutex);
+    auto lease = acquireConnection(cacheKey(profile, ConnectionLane::Browse),
+                                   lanePoolSize(ConnectionLane::Browse));
+    CachedSftpConnection *connection = lease.get();
     if (!ensureConnected(connection, profile, errorOut)) {
         return false;
     }
@@ -1194,8 +1316,9 @@ bool SftpDirectoryLister::renamePath(const ConnectionProfile &profile,
     if (!ensureLibssh2(errorOut)) {
         return false;
     }
-    CachedSftpConnection *connection = acquireConnection(cacheKey(profile));
-    QMutexLocker locker(&connection->mutex);
+    auto lease = acquireConnection(cacheKey(profile, ConnectionLane::Browse),
+                                   lanePoolSize(ConnectionLane::Browse));
+    CachedSftpConnection *connection = lease.get();
     if (!ensureConnected(connection, profile, errorOut)) {
         return false;
     }
@@ -1218,8 +1341,9 @@ bool SftpDirectoryLister::removePath(const ConnectionProfile &profile,
     if (!ensureLibssh2(errorOut)) {
         return false;
     }
-    CachedSftpConnection *connection = acquireConnection(cacheKey(profile));
-    QMutexLocker locker(&connection->mutex);
+    auto lease = acquireConnection(cacheKey(profile, ConnectionLane::Browse),
+                                   lanePoolSize(ConnectionLane::Browse));
+    CachedSftpConnection *connection = lease.get();
     return ensureConnected(connection, profile, errorOut)
            && removePathRecursive(connection->sftp, remotePath, recursive, errorOut);
 }
