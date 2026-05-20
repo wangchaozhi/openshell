@@ -123,6 +123,13 @@ ApplicationWindow {
             } else if (status === "connected") {
                 window.statusMessage = qsTr("Connected")
             }
+            if (id === window.activeSessionId && status !== "connected") {
+                window.monitorTimer.stop()
+                window.monitorSnapshot = ({})
+                window.monitorError = message || ""
+                window.monitorRequestId = ""
+                window.monitorRequestInFlight = false
+            }
         }
         function onLanguageChanged() {
             window.refreshConnections()
@@ -161,6 +168,7 @@ ApplicationWindow {
             monitorError: window.monitorError
             uiTheme: window.uiTheme
             hasActiveSession: window.activeSessionId.length > 0
+            sessionStatus: window.activeSession && window.activeSession.status ? window.activeSession.status : ""
             connectionHost: window.activeConnectionHost
             onSystemInfoRequested: {
                 if (window.activeSessionId.length > 0) {
@@ -324,7 +332,7 @@ ApplicationWindow {
         id: monitorTimer
         interval: 5000
         repeat: true
-        running: window.activeSession && window.activeSession.connectionId
+        running: window.activeSession && window.activeSession.connectionId && window.activeSession.status === "connected"
         triggeredOnStart: true
         onTriggered: {
             if (window.activeSession && window.activeSession.connectionId && !window.monitorRequestInFlight) {

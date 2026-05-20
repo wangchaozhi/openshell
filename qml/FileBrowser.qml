@@ -20,6 +20,7 @@ Rectangle {
     property bool pendingChmodIsDir: false
     property string pendingUploadPath: ""
     property string pendingRemotePath: ""
+    property var remoteMenuEntry: ({})
     property string nameDialogMode: ""
     property string editingRemotePath: ""
     property string editingLocalPath: ""
@@ -1359,6 +1360,11 @@ Rectangle {
         chooseAndUploadFolderTo(remotePath)
     }
 
+    function uploadTargetForRemoteMenuEntry() {
+        const entry = remoteMenuEntry || ({})
+        return entry && entry.isDir && entry.path ? entry.path : remotePath
+    }
+
     function changeRemotePermissions(path, permissions) {
         if (connectionId === "" || path.length === 0) {
             return
@@ -1628,14 +1634,30 @@ Rectangle {
         }
     }
 
-    RowLayout {
+    SplitView {
         anchors.fill: parent
         anchors.margins: 4
-        spacing: 4
+        orientation: Qt.Horizontal
+
+        handle: Rectangle {
+            implicitWidth: 8
+            implicitHeight: 8
+            color: SplitHandle.pressed ? "#38bdf8"
+                  : SplitHandle.hovered ? "#2563eb" : "#1e293b"
+
+            Rectangle {
+                width: 2
+                height: Math.min(44, parent.height - 12)
+                radius: 1
+                anchors.centerIn: parent
+                color: SplitHandle.pressed || SplitHandle.hovered ? "#bfdbfe" : "#475569"
+            }
+        }
 
         Rectangle {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+            SplitView.preferredWidth: Math.max(320, (root.width - 16) / 2)
+            SplitView.minimumWidth: 260
+            SplitView.fillHeight: true
             color: "#020617"
             radius: 4
 
@@ -1728,6 +1750,8 @@ Rectangle {
                     Layout.fillHeight: true
                     clip: true
                     model: root.localEntries
+                    reuseItems: true
+                    cacheBuffer: 600
                     activeFocusOnTab: true
                     highlightFollowsCurrentItem: true
                     highlight: Rectangle {
@@ -1866,8 +1890,10 @@ Rectangle {
         }
 
         Rectangle {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+            SplitView.preferredWidth: Math.max(320, (root.width - 16) / 2)
+            SplitView.minimumWidth: 320
+            SplitView.fillWidth: true
+            SplitView.fillHeight: true
             color: "#020617"
             radius: 4
 
@@ -2043,6 +2069,8 @@ Rectangle {
                         id: remoteList
                         clip: true
                         model: root.remoteEntries
+                        reuseItems: true
+                        cacheBuffer: 900
                         activeFocusOnTab: true
                         highlightFollowsCurrentItem: true
                         highlight: Rectangle {
@@ -2103,6 +2131,130 @@ Rectangle {
                             }
                         }
 
+                        Menu {
+                            id: remoteItemMenu
+                            readonly property var entry: root.remoteMenuEntry || ({})
+                            readonly property bool hasEntry: entry && entry.path
+                            readonly property bool isDir: hasEntry && entry.isDir
+
+                            MenuItem {
+                                text: qsTr("Refresh")
+                                onTriggered: root.refreshRemote()
+                            }
+                            MenuSeparator {}
+                            MenuItem {
+                                text: qsTr("Open")
+                                enabled: remoteItemMenu.hasEntry && !remoteItemMenu.isDir
+                                onTriggered: root.openRemotePath(remoteItemMenu.entry.path)
+                            }
+                            Menu {
+                                title: qsTr("Open With")
+                                enabled: remoteItemMenu.hasEntry && !remoteItemMenu.isDir
+                                MenuItem {
+                                    text: qsTr("System default app")
+                                    onTriggered: {
+                                        appController.remoteFileOpenMode = "system"
+                                        root.openRemotePath(remoteItemMenu.entry.path)
+                                    }
+                                }
+                                MenuItem {
+                                    text: qsTr("Specified text editor")
+                                    onTriggered: {
+                                        appController.remoteFileOpenMode = "custom"
+                                        root.openRemotePath(remoteItemMenu.entry.path)
+                                    }
+                                }
+                                MenuItem {
+                                    text: qsTr("Built-in editor")
+                                    onTriggered: {
+                                        appController.remoteFileOpenMode = "internal"
+                                        root.openRemotePath(remoteItemMenu.entry.path)
+                                    }
+                                }
+                            }
+                            Menu {
+                                title: qsTr("Select Text Editor")
+                                MenuItem {
+                                    text: appController.externalTextEditorPath && appController.externalTextEditorPath.length > 0
+                                          ? appController.externalTextEditorPath
+                                          : qsTr("Browse...")
+                                    onTriggered: root.chooseExternalEditor()
+                                }
+                                MenuItem {
+                                    text: qsTr("Open settings")
+                                    onTriggered: root.openRemoteOpenSettings()
+                                }
+                            }
+                            MenuSeparator {}
+                            MenuItem {
+                                text: qsTr("Copy Path")
+                                enabled: remoteItemMenu.hasEntry
+                                onTriggered: appController.copyTextToClipboard(remoteItemMenu.entry.path)
+                            }
+                            MenuSeparator {}
+                            MenuItem {
+                                text: qsTr("Download")
+                                enabled: remoteItemMenu.hasEntry
+                                onTriggered: root.downloadRemotePath(remoteItemMenu.entry.path)
+                            }
+                            Menu {
+                                title: qsTr("Upload...")
+                                enabled: remoteItemMenu.hasEntry && root.connectionId !== ""
+                                MenuItem {
+                                    text: qsTr("File")
+                                    onTriggered: root.chooseAndUploadFileTo(root.uploadTargetForRemoteMenuEntry())
+                                }
+                                MenuItem {
+                                    text: qsTr("Folder")
+                                    onTriggered: root.chooseAndUploadFolderTo(root.uploadTargetForRemoteMenuEntry())
+                                }
+                            }
+                            Menu {
+                                title: qsTr("Transfer Package")
+                                enabled: false
+                                MenuItem { text: qsTr("Coming soon") }
+                            }
+                            MenuSeparator {}
+                            Menu {
+                                title: qsTr("New")
+                                enabled: remoteItemMenu.hasEntry
+                                MenuItem {
+                                    text: qsTr("File")
+                                    onTriggered: root.openNameDialog("newFile", "", "new-file")
+                                }
+                                MenuItem {
+                                    text: qsTr("Folder")
+                                    onTriggered: root.openNameDialog("newDir", "", "new-folder")
+                                }
+                            }
+                            MenuSeparator {}
+                            MenuItem {
+                                text: qsTr("Rename")
+                                enabled: remoteItemMenu.hasEntry
+                                onTriggered: root.openNameDialog("rename",
+                                                                 remoteItemMenu.entry.path,
+                                                                 remoteItemMenu.entry.name)
+                            }
+                            MenuItem {
+                                text: qsTr("Delete")
+                                enabled: remoteItemMenu.hasEntry
+                                onTriggered: root.deleteRemotePath(remoteItemMenu.entry.path, false)
+                            }
+                            MenuItem {
+                                text: qsTr("Quick Delete (rm)")
+                                enabled: remoteItemMenu.hasEntry
+                                onTriggered: root.deleteRemotePath(remoteItemMenu.entry.path, true)
+                            }
+                            MenuSeparator {}
+                            MenuItem {
+                                text: qsTr("Permissions (%1)").arg(remoteItemMenu.entry.permissions || qsTr("?"))
+                                enabled: remoteItemMenu.hasEntry
+                                onTriggered: root.openChmodDialog(remoteItemMenu.entry.path,
+                                                                  remoteItemMenu.entry.permissions || "",
+                                                                  remoteItemMenu.isDir)
+                            }
+                        }
+
                         delegate: Rectangle {
                             id: remoteRow
                             required property var modelData
@@ -2143,6 +2295,7 @@ Rectangle {
                                     remoteList.currentIndex = remoteRow.index
                                     remoteList.forceActiveFocus()
                                     if (mouse.button === Qt.RightButton) {
+                                        root.remoteMenuEntry = remoteRow.modelData
                                         remoteItemMenu.popup()
                                     }
                                 }
@@ -2151,117 +2304,6 @@ Rectangle {
                                         root.enterRemote(remoteRow.modelData.path)
                                     } else {
                                         root.openRemotePath(remoteRow.modelData.path)
-                                    }
-                                }
-
-                                Menu {
-                                    id: remoteItemMenu
-                                    MenuItem {
-                                        text: qsTr("Refresh")
-                                        onTriggered: root.refreshRemote()
-                                    }
-                                    MenuSeparator {}
-                                    MenuItem {
-                                        text: qsTr("Open")
-                                        enabled: !remoteRow.modelData.isDir
-                                        onTriggered: root.openRemotePath(remoteRow.modelData.path)
-                                    }
-                                    Menu {
-                                        title: qsTr("Open With")
-                                        enabled: !remoteRow.modelData.isDir
-                                        MenuItem {
-                                            text: qsTr("System default app")
-                                            onTriggered: {
-                                                appController.remoteFileOpenMode = "system"
-                                                root.openRemotePath(remoteRow.modelData.path)
-                                            }
-                                        }
-                                        MenuItem {
-                                            text: qsTr("Specified text editor")
-                                            onTriggered: {
-                                                appController.remoteFileOpenMode = "custom"
-                                                root.openRemotePath(remoteRow.modelData.path)
-                                            }
-                                        }
-                                        MenuItem {
-                                            text: qsTr("Built-in editor")
-                                            onTriggered: {
-                                                appController.remoteFileOpenMode = "internal"
-                                                root.openRemotePath(remoteRow.modelData.path)
-                                            }
-                                        }
-                                    }
-                                    Menu {
-                                        title: qsTr("Select Text Editor")
-                                        MenuItem {
-                                            text: appController.externalTextEditorPath && appController.externalTextEditorPath.length > 0
-                                                  ? appController.externalTextEditorPath
-                                                  : qsTr("Browse...")
-                                            onTriggered: root.chooseExternalEditor()
-                                        }
-                                        MenuItem {
-                                            text: qsTr("Open settings")
-                                            onTriggered: root.openRemoteOpenSettings()
-                                        }
-                                    }
-                                    MenuSeparator {}
-                                    MenuItem {
-                                        text: qsTr("Copy Path")
-                                        onTriggered: appController.copyTextToClipboard(remoteRow.modelData.path)
-                                    }
-                                    MenuSeparator {}
-                                    MenuItem {
-                                        text: qsTr("Download")
-                                        onTriggered: root.downloadRemotePath(remoteRow.modelData.path)
-                                    }
-                                    Menu {
-                                        title: qsTr("Upload...")
-                                        enabled: remoteRow.modelData.isDir
-                                        MenuItem {
-                                            text: qsTr("File")
-                                            onTriggered: root.chooseAndUploadFileTo(remoteRow.modelData.path)
-                                        }
-                                        MenuItem {
-                                            text: qsTr("Folder")
-                                            onTriggered: root.chooseAndUploadFolderTo(remoteRow.modelData.path)
-                                        }
-                                    }
-                                    Menu {
-                                        title: qsTr("Transfer Package")
-                                        enabled: false
-                                        MenuItem { text: qsTr("Coming soon") }
-                                    }
-                                    MenuSeparator {}
-                                    Menu {
-                                        title: qsTr("New")
-                                        MenuItem {
-                                            text: qsTr("File")
-                                            onTriggered: root.openNameDialog("newFile", "", "new-file")
-                                        }
-                                        MenuItem {
-                                            text: qsTr("Folder")
-                                            onTriggered: root.openNameDialog("newDir", "", "new-folder")
-                                        }
-                                    }
-                                    MenuSeparator {}
-                                    MenuItem {
-                                        text: qsTr("Rename")
-                                        onTriggered: root.openNameDialog("rename", remoteRow.modelData.path, remoteRow.modelData.name)
-                                    }
-                                    MenuItem {
-                                        text: qsTr("Delete")
-                                        onTriggered: root.deleteRemotePath(remoteRow.modelData.path, false)
-                                    }
-                                    MenuItem {
-                                        text: qsTr("Quick Delete (rm)")
-                                        onTriggered: root.deleteRemotePath(remoteRow.modelData.path, true)
-                                    }
-                                    MenuSeparator {}
-                                    MenuItem {
-                                        text: qsTr("Permissions (%1)").arg(remoteRow.modelData.permissions || qsTr("?"))
-                                        onTriggered: root.openChmodDialog(remoteRow.modelData.path,
-                                                                          remoteRow.modelData.permissions || "",
-                                                                          remoteRow.modelData.isDir)
                                     }
                                 }
                             }

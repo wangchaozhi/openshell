@@ -9,8 +9,11 @@ Rectangle {
     property string monitorError: ""
     property string uiTheme: "dark"
     property bool hasActiveSession: false
+    property string sessionStatus: ""
     property string connectionHost: ""
     readonly property bool classic: uiTheme === "classic"
+    readonly property bool sessionConnected: sessionStatus === "connected"
+    readonly property bool sessionProblem: sessionStatus === "disconnected" || sessionStatus === "error"
 
     signal systemInfoRequested()
 
@@ -91,8 +94,9 @@ Rectangle {
                 width: 8
                 height: 8
                 radius: 4
-                color: root.monitorError.length > 0 ? "#ef4444"
-                      : root.monitorSnapshot.updatedAt ? "#22c55e" : "#94a3b8"
+                color: root.sessionProblem || root.monitorError.length > 0 ? "#ef4444"
+                      : root.sessionConnected && root.monitorSnapshot.updatedAt ? "#22c55e"
+                      : root.hasActiveSession ? "#f59e0b" : "#94a3b8"
             }
         }
 
@@ -147,8 +151,9 @@ Rectangle {
             Layout.fillWidth: true
             text: root.monitorError.length > 0
                   ? root.monitorError
+                  : root.sessionProblem ? qsTr("SSH disconnected")
                   : (root.monitorSnapshot.updatedAt ? qsTr("Monitor online") : qsTr("Open a session to monitor."))
-            color: root.monitorError.length > 0 ? "#fca5a5" : (root.classic ? "#64748b" : "#94a3b8")
+            color: root.monitorError.length > 0 || root.sessionProblem ? "#fca5a5" : (root.classic ? "#64748b" : "#94a3b8")
             font.pixelSize: 11
             elide: Text.ElideRight
         }
