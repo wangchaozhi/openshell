@@ -14,6 +14,8 @@ Rectangle {
 
     signal sessionActivated(string id)
     signal sessionClosed(string id)
+    signal sessionDisconnected(string id)
+    signal sessionReconnectRequested(string id, string connectionId)
     signal connectionManagerActivated()
     signal systemInfoActivated()
     signal systemInfoClosed()
@@ -108,6 +110,7 @@ Rectangle {
                 radius: 4
 
                 readonly property bool isActive: modelData.id === root.activeSessionId
+                readonly property bool isConnected: modelData.status === "connected"
 
                 color: isActive && root.activeView === "terminal"
                        ? (root.classic ? "#e0f2fe" : "#1e293b")
@@ -119,9 +122,37 @@ Rectangle {
 
                 MouseArea {
                     anchors.fill: parent
-                    acceptedButtons: Qt.LeftButton
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: root.sessionActivated(modelData.id)
+                    onClicked: function(mouse) {
+                        if (mouse.button === Qt.RightButton) {
+                            tabMenu.popup()
+                        } else {
+                            root.sessionActivated(modelData.id)
+                        }
+                    }
+                    onDoubleClicked: {
+                        root.sessionReconnectRequested(modelData.id, modelData.connectionId || "")
+                    }
+                }
+
+                Menu {
+                    id: tabMenu
+                    MenuItem {
+                        text: tab.isConnected ? qsTr("Disconnect") : qsTr("Disconnected")
+                        enabled: tab.isConnected
+                        onTriggered: root.sessionDisconnected(modelData.id)
+                    }
+                    MenuItem {
+                        text: qsTr("Reconnect")
+                        enabled: modelData.connectionId && modelData.connectionId.length > 0
+                        onTriggered: root.sessionReconnectRequested(modelData.id, modelData.connectionId)
+                    }
+                    MenuSeparator {}
+                    MenuItem {
+                        text: qsTr("Close session")
+                        onTriggered: root.sessionClosed(modelData.id)
+                    }
                 }
 
                 RowLayout {

@@ -83,6 +83,15 @@ ApplicationWindow {
         }
     }
 
+    function reconnectSession(sessionId, connectionId) {
+        const targetConnectionId = connectionId || ""
+        if (targetConnectionId.length === 0) {
+            return
+        }
+        appController.closeSession(sessionId)
+        openSessionFor(targetConnectionId)
+    }
+
     Component.onCompleted: {
         const saved = appController.mainWindowGeometry()
         if (saved && saved.width > 0 && saved.height > 0) {
@@ -181,6 +190,8 @@ ApplicationWindow {
                 }
                 onConnectionManagerActivated: window.activeView = "connections"
                 onSessionClosed: (id) => appController.closeSession(id)
+                onSessionDisconnected: (id) => appController.closeSession(id)
+                onSessionReconnectRequested: (id, connectionId) => window.reconnectSession(id, connectionId)
                 onSystemInfoActivated: window.activeView = "system"
                 onSystemInfoClosed: {
                     window.systemInfoTabVisible = false

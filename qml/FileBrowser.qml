@@ -37,6 +37,9 @@ Rectangle {
     property var transferTasks: []
     property bool transferPanelOpen: false
     readonly property bool remoteListingLoading: remoteLoading && remoteRequestId.length > 0
+    readonly property string sessionStatus: session && session.status ? session.status : ""
+    readonly property bool sessionConnected: sessionStatus === "connected"
+    readonly property bool sessionProblem: sessionStatus === "disconnected" || sessionStatus === "error"
 
     property string localSortColumn: "name"
     property bool localSortAsc: true
@@ -49,6 +52,8 @@ Rectangle {
     property string dragPanel: ""
     property int dragSourceIndex: -1
     property int dragTargetIndex: -1
+    property string quickLocatePanel: ""
+    property string quickLocatePrefix: ""
 
     readonly property int columnSpacing: 8
 
@@ -139,6 +144,17 @@ Rectangle {
 
     component SyncIcon: Item {
         property bool active: true
+        property bool connected: true
+        property bool problem: false
+        readonly property color strokeColor: problem ? "#f87171"
+                                           : connected ? (active ? "#93c5fd" : "#64748b")
+                                           : "#fbbf24"
+        readonly property color accentColor: problem ? "#ef4444"
+                                           : connected ? (active ? "#38bdf8" : "#64748b")
+                                           : "#f59e0b"
+        readonly property color dotColor: problem ? "#fecaca"
+                                        : connected ? (active ? "#dbeafe" : "#94a3b8")
+                                        : "#fde68a"
 
         implicitWidth: 15
         implicitHeight: 15
@@ -150,7 +166,7 @@ Rectangle {
             height: 11
             radius: 3
             color: "transparent"
-            border.color: active ? "#93c5fd" : "#64748b"
+            border.color: parent.strokeColor
             border.width: 2
         }
         Rectangle {
@@ -159,7 +175,7 @@ Rectangle {
             width: 5
             height: 5
             rotation: 45
-            color: active ? "#38bdf8" : "#64748b"
+            color: parent.accentColor
         }
         Rectangle {
             x: 3
@@ -167,7 +183,7 @@ Rectangle {
             width: 5
             height: 5
             rotation: 45
-            color: active ? "#38bdf8" : "#64748b"
+            color: parent.accentColor
         }
         Rectangle {
             x: 2
@@ -189,7 +205,7 @@ Rectangle {
             width: 3
             height: 3
             radius: 1
-            color: active ? "#dbeafe" : "#94a3b8"
+            color: parent.dotColor
         }
     }
 
@@ -817,6 +833,16 @@ Rectangle {
         }
     }
 
+    Timer {
+        id: quickLocateReset
+        interval: 900
+        repeat: false
+        onTriggered: {
+            root.quickLocatePanel = ""
+            root.quickLocatePrefix = ""
+        }
+    }
+
     onSessionKeyChanged: switchRemoteSession()
 
     function columnTitle(colId) {
@@ -1181,6 +1207,61 @@ Rectangle {
         refreshRemote()
     }
 
+    function entryName(entry) {
+        return entry && entry.name ? String(entry.name) : ""
+    }
+
+    function locateEntryIndex(entries, prefix, startIndex) {
+        if (!entries || entries.length === 0 || !prefix || prefix.length === 0) {
+            return -1
+        }
+        const needle = prefix.toLocaleLowerCase()
+        const count = entries.length
+        for (let i = 0; i < count; ++i) {
+            const index = (startIndex + i + count) % count
+            const name = entryName(entries[index]).toLocaleLowerCase()
+            if (name.indexOf(needle) === 0) {
+                return index
+            }
+        }
+        return -1
+    }
+
+    function quickLocate(panel, text) {
+        if (!text || text.length !== 1) {
+            return false
+        }
+        const key = text.toLocaleLowerCase()
+        if (key < "a" || key > "z") {
+            return false
+        }
+
+        const list = panel === "local" ? localList : remoteList
+        const entries = panel === "local" ? localEntries : remoteEntries
+        const repeatKey = quickLocatePanel === panel
+                          && quickLocatePrefix === key
+                          && quickLocateReset.running
+        const prefix = repeatKey ? key
+                                 : (quickLocatePanel === panel && quickLocateReset.running
+                                    ? quickLocatePrefix + key
+                                    : key)
+        const startIndex = repeatKey ? list.currentIndex + 1 : 0
+        let match = locateEntryIndex(entries, prefix, startIndex)
+        if (match < 0 && prefix.length > 1) {
+            match = locateEntryIndex(entries, key, list.currentIndex + 1)
+            quickLocatePrefix = key
+        } else {
+            quickLocatePrefix = prefix
+        }
+        if (match >= 0) {
+            list.currentIndex = match
+            list.positionViewAtIndex(match, ListView.Contain)
+        }
+        quickLocatePanel = panel
+        quickLocateReset.restart()
+        return match >= 0
+    }
+
     function resolveTerminalRemotePath(path) {
         if (!path || path.length === 0) {
             return ""
@@ -1256,18 +1337,26 @@ Rectangle {
         remoteDropActive = false
     }
 
-    function chooseAndUploadFile() {
+    function chooseAndUploadFileTo(targetRemoteDirectory) {
         const path = appController.chooseLocalFile()
         if (path && path.length > 0) {
-            uploadLocalPath(path)
+            uploadLocalPathTo(path, targetRemoteDirectory || remotePath)
         }
     }
 
-    function chooseAndUploadFolder() {
+    function chooseAndUploadFolderTo(targetRemoteDirectory) {
         const path = appController.chooseLocalFolder()
         if (path && path.length > 0) {
-            uploadLocalPath(path)
+            uploadLocalPathTo(path, targetRemoteDirectory || remotePath)
         }
+    }
+
+    function chooseAndUploadFile() {
+        chooseAndUploadFileTo(remotePath)
+    }
+
+    function chooseAndUploadFolder() {
+        chooseAndUploadFolderTo(remotePath)
     }
 
     function changeRemotePermissions(path, permissions) {
@@ -1639,14 +1728,61 @@ Rectangle {
                     Layout.fillHeight: true
                     clip: true
                     model: root.localEntries
+                    activeFocusOnTab: true
+                    highlightFollowsCurrentItem: true
+                    highlight: Rectangle {
+                        color: "#172554"
+                    }
+
+                    Keys.onPressed: function(event) {
+                        event.accepted = root.quickLocate("local", event.text)
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.RightButton
+                        propagateComposedEvents: true
+                        z: 20
+                        onClicked: function(mouse) {
+                            localList.forceActiveFocus()
+                            if (localList.indexAt(mouse.x, mouse.y + localList.contentY) < 0) {
+                                localBlankMenu.popup()
+                            } else {
+                                mouse.accepted = false
+                            }
+                        }
+                    }
+
+                    Menu {
+                        id: localBlankMenu
+                        MenuItem {
+                            text: qsTr("Refresh")
+                            onTriggered: root.refreshLocal()
+                        }
+                        MenuSeparator {}
+                        Menu {
+                            title: qsTr("Upload to Remote")
+                            enabled: root.connectionId !== ""
+                            MenuItem {
+                                text: qsTr("File")
+                                onTriggered: root.chooseAndUploadFile()
+                            }
+                            MenuItem {
+                                text: qsTr("Folder")
+                                onTriggered: root.chooseAndUploadFolder()
+                            }
+                        }
+                    }
 
                     delegate: Rectangle {
                         id: localRow
                         required property var modelData
+                        required property int index
 
                         width: localList.width
                         height: 26
-                        color: mouseArea.containsMouse ? "#111827" : "#020617"
+                        color: localList.currentIndex === index ? "#172554"
+                              : mouseArea.containsMouse ? "#111827" : "#020617"
 
                         Drag.active: localDragHandler.active
                         Drag.dragType: Drag.Automatic
@@ -1701,6 +1837,8 @@ Rectangle {
                                 root.draggedLocalPath = ""
                             }
                             onClicked: function(mouse) {
+                                localList.currentIndex = localRow.index
+                                localList.forceActiveFocus()
                                 if (mouse.button === Qt.RightButton) {
                                     localItemMenu.popup()
                                 }
@@ -1785,13 +1923,19 @@ Rectangle {
                         checked: root.syncRemoteWithTerminal
                         onClicked: root.syncRemoteWithTerminal = checked
                         background: Rectangle {
-                            color: parent.checked ? "#0f2742" : "#111827"
-                            border.color: parent.checked ? "#38bdf8" : "#334155"
+                            color: root.sessionProblem ? "#2a1014"
+                                  : !root.sessionConnected ? "#241b0a"
+                                  : parent.checked ? "#0f2742" : "#111827"
+                            border.color: root.sessionProblem ? "#ef4444"
+                                          : !root.sessionConnected ? "#f59e0b"
+                                          : parent.checked ? "#38bdf8" : "#334155"
                             radius: 3
                         }
                         contentItem: SyncIcon {
                             anchors.centerIn: parent
                             active: root.syncRemoteWithTerminal
+                            connected: root.sessionConnected
+                            problem: root.sessionProblem
                             opacity: parent.enabled ? 1 : 0.35
                         }
                         ToolTip.visible: hovered
@@ -1899,14 +2043,75 @@ Rectangle {
                         id: remoteList
                         clip: true
                         model: root.remoteEntries
+                        activeFocusOnTab: true
+                        highlightFollowsCurrentItem: true
+                        highlight: Rectangle {
+                            color: "#172554"
+                        }
+
+                        Keys.onPressed: function(event) {
+                            event.accepted = root.quickLocate("remote", event.text)
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            acceptedButtons: Qt.RightButton
+                            propagateComposedEvents: true
+                            z: 20
+                            onClicked: function(mouse) {
+                                remoteList.forceActiveFocus()
+                                if (remoteList.indexAt(mouse.x, mouse.y + remoteList.contentY) < 0) {
+                                    remoteBlankMenu.popup()
+                                } else {
+                                    mouse.accepted = false
+                                }
+                            }
+                        }
+
+                        Menu {
+                            id: remoteBlankMenu
+                            MenuItem {
+                                text: qsTr("Refresh")
+                                enabled: root.connectionId !== ""
+                                onTriggered: root.refreshRemote()
+                            }
+                            MenuSeparator {}
+                            Menu {
+                                title: qsTr("Upload...")
+                                enabled: root.connectionId !== ""
+                                MenuItem {
+                                    text: qsTr("File")
+                                    onTriggered: root.chooseAndUploadFile()
+                                }
+                                MenuItem {
+                                    text: qsTr("Folder")
+                                    onTriggered: root.chooseAndUploadFolder()
+                                }
+                            }
+                            MenuSeparator {}
+                            Menu {
+                                title: qsTr("New")
+                                enabled: root.connectionId !== ""
+                                MenuItem {
+                                    text: qsTr("File")
+                                    onTriggered: root.openNameDialog("newFile", "", "new-file")
+                                }
+                                MenuItem {
+                                    text: qsTr("Folder")
+                                    onTriggered: root.openNameDialog("newDir", "", "new-folder")
+                                }
+                            }
+                        }
 
                         delegate: Rectangle {
                             id: remoteRow
                             required property var modelData
+                            required property int index
 
                             width: remoteList.width
                             height: 26
                             color: remoteRowDropArea.containsDrag ? "#1e3a5f"
+                                  : remoteList.currentIndex === index ? "#172554"
                                   : remoteMouseArea.containsMouse ? "#111827" : "#020617"
 
                             Item {
@@ -1935,6 +2140,8 @@ Rectangle {
                                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                                 hoverEnabled: true
                                 onClicked: function(mouse) {
+                                    remoteList.currentIndex = remoteRow.index
+                                    remoteList.forceActiveFocus()
                                     if (mouse.button === Qt.RightButton) {
                                         remoteItemMenu.popup()
                                     }
@@ -2007,12 +2214,16 @@ Rectangle {
                                         text: qsTr("Download")
                                         onTriggered: root.downloadRemotePath(remoteRow.modelData.path)
                                     }
-                                    MenuItem {
-                                        text: qsTr("Upload...")
+                                    Menu {
+                                        title: qsTr("Upload...")
                                         enabled: remoteRow.modelData.isDir
-                                        onTriggered: {
-                                            root.remotePath = remoteRow.modelData.path
-                                            root.chooseAndUploadFile()
+                                        MenuItem {
+                                            text: qsTr("File")
+                                            onTriggered: root.chooseAndUploadFileTo(remoteRow.modelData.path)
+                                        }
+                                        MenuItem {
+                                            text: qsTr("Folder")
+                                            onTriggered: root.chooseAndUploadFolderTo(remoteRow.modelData.path)
                                         }
                                     }
                                     Menu {
