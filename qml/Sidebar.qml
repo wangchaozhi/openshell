@@ -10,10 +10,14 @@ Rectangle {
     property string uiTheme: "dark"
     property bool hasActiveSession: false
     property string sessionStatus: ""
+    property string sftpStatus: ""
+    property string sftpMessage: ""
     property string connectionHost: ""
     readonly property bool classic: uiTheme === "classic"
     readonly property bool sessionConnected: sessionStatus === "connected"
     readonly property bool sessionProblem: sessionStatus === "disconnected" || sessionStatus === "error"
+    readonly property bool sftpConnected: sftpStatus === "connected"
+    readonly property bool sftpProblem: sftpStatus === "error"
 
     signal systemInfoRequested()
 
@@ -82,21 +86,48 @@ Rectangle {
             return isFinite(current) ? current : 0
         }
 
+        function statusColor(status, connected, problem) {
+            if (problem) {
+                return "#ef4444"
+            }
+            if (connected) {
+                return "#22c55e"
+            }
+            if (status === "connecting" || root.hasActiveSession) {
+                return "#f59e0b"
+            }
+            return "#94a3b8"
+        }
+
         RowLayout {
             Layout.fillWidth: true
             Label {
-                text: qsTr("Sync status")
+                text: qsTr("Status")
                 color: root.classic ? "#0f172a" : "#e2e8f0"
                 font.pixelSize: 12
                 Layout.fillWidth: true
+            }
+            Label {
+                text: "SSH"
+                color: root.classic ? "#64748b" : "#94a3b8"
+                font.pixelSize: 10
             }
             Rectangle {
                 width: 8
                 height: 8
                 radius: 4
-                color: root.sessionProblem || root.monitorError.length > 0 ? "#ef4444"
-                      : root.sessionConnected && root.monitorSnapshot.updatedAt ? "#22c55e"
-                      : root.hasActiveSession ? "#f59e0b" : "#94a3b8"
+                color: monitorColumn.statusColor(root.sessionStatus, root.sessionConnected, root.sessionProblem)
+            }
+            Label {
+                text: "SFTP"
+                color: root.classic ? "#64748b" : "#94a3b8"
+                font.pixelSize: 10
+            }
+            Rectangle {
+                width: 8
+                height: 8
+                radius: 4
+                color: monitorColumn.statusColor(root.sftpStatus, root.sftpConnected, root.sftpProblem)
             }
         }
 
@@ -152,8 +183,9 @@ Rectangle {
             text: root.monitorError.length > 0
                   ? root.monitorError
                   : root.sessionProblem ? qsTr("SSH disconnected")
+                  : root.sftpProblem ? (root.sftpMessage.length > 0 ? root.sftpMessage : qsTr("SFTP disconnected"))
                   : (root.monitorSnapshot.updatedAt ? qsTr("Monitor online") : qsTr("Open a session to monitor."))
-            color: root.monitorError.length > 0 || root.sessionProblem ? "#fca5a5" : (root.classic ? "#64748b" : "#94a3b8")
+            color: root.monitorError.length > 0 || root.sessionProblem || root.sftpProblem ? "#fca5a5" : (root.classic ? "#64748b" : "#94a3b8")
             font.pixelSize: 11
             elide: Text.ElideRight
         }

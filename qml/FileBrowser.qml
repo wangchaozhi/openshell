@@ -42,6 +42,8 @@ Rectangle {
     readonly property bool sessionConnected: sessionStatus === "connected"
     readonly property bool sessionProblem: sessionStatus === "disconnected" || sessionStatus === "error"
 
+    signal sftpStatusChanged(string status, string message)
+
     property string localSortColumn: "name"
     property bool localSortAsc: true
     property string remoteSortColumn: "name"
@@ -830,6 +832,7 @@ Rectangle {
             root.remoteLoading = false
             root.remoteRequestId = ""
             root.remoteError = qsTr("Remote listing timed out. Try refresh again.")
+            root.sftpStatusChanged("error", root.remoteError)
             root.saveCurrentRemoteState()
         }
     }
@@ -1131,6 +1134,7 @@ Rectangle {
         if (!key || key.length === 0 || !connId || connId.length === 0) {
             return
         }
+        root.sftpStatusChanged("connecting", "")
         const requestId = appController.requestRemoteDirectoryEntries(connId, path)
         const owners = Object.assign({}, remoteRequestOwners)
         owners[requestId] = key
@@ -1585,6 +1589,7 @@ Rectangle {
             })
             if (key === root.sessionKey) {
                 remoteRequestTimeout.stop()
+                root.sftpStatusChanged(error && error.length > 0 ? "error" : "connected", error || "")
             }
         }
 
@@ -1603,8 +1608,12 @@ Rectangle {
                 remoteError: ok ? "" : message
             })
             if (ok) {
+                if (key === root.sessionKey) {
+                    root.sftpStatusChanged("connected", "")
+                }
                 root.requestRemoteForSession(key, connectionId, base.remotePath || appController.remoteHomePath(connectionId))
             } else if (key === root.sessionKey) {
+                root.sftpStatusChanged("error", message || "")
                 remoteRequestTimeout.stop()
             }
         }

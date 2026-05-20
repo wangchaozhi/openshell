@@ -25,6 +25,8 @@ ApplicationWindow {
     property string monitorError: ""
     property string monitorRequestId: ""
     property bool monitorRequestInFlight: false
+    property string sftpStatus: ""
+    property string sftpMessage: ""
     property bool fileBrowserVisible: false
     property bool systemInfoTabVisible: false
 
@@ -169,6 +171,8 @@ ApplicationWindow {
             uiTheme: window.uiTheme
             hasActiveSession: window.activeSessionId.length > 0
             sessionStatus: window.activeSession && window.activeSession.status ? window.activeSession.status : ""
+            sftpStatus: window.sftpStatus
+            sftpMessage: window.sftpMessage
             connectionHost: window.activeConnectionHost
             onSystemInfoRequested: {
                 if (window.activeSessionId.length > 0) {
@@ -253,6 +257,10 @@ ApplicationWindow {
                         sourceComponent: FileBrowser {
                             session: window.activeSession
                             terminalRemotePath: terminalView.detectedRemotePath
+                            onSftpStatusChanged: (status, message) => {
+                                window.sftpStatus = status
+                                window.sftpMessage = message || ""
+                            }
                         }
                     }
                 }
@@ -347,6 +355,8 @@ ApplicationWindow {
         monitorError = ""
         monitorRequestId = ""
         monitorRequestInFlight = false
+        sftpStatus = ""
+        sftpMessage = ""
         fileBrowserVisible = false
         systemInfoTabVisible = false
         if (activeView === "system") activeView = "terminal"

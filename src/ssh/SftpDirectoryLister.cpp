@@ -995,6 +995,14 @@ QVariantList SftpDirectoryLister::list(const ConnectionProfile &profile,
     const QByteArray path = cleanPath.toUtf8();
     dir = libssh2_sftp_opendir(connection->sftp, path.constData());
     if (!dir) {
+        // The cached SFTP session can look valid after the SSH server drops it.
+        // Rebuild the browse connection once so a manual refresh behaves like a reconnect.
+        resetConnection(connection);
+        if (ensureConnected(connection, profile, errorOut)) {
+            dir = libssh2_sftp_opendir(connection->sftp, path.constData());
+        }
+    }
+    if (!dir) {
         if (errorOut) {
             *errorOut = QObject::tr("Cannot open remote directory %1").arg(cleanPath);
         }
