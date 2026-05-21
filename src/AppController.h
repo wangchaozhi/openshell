@@ -79,6 +79,9 @@ public:
     Q_INVOKABLE QString chooseLocalFile();
     Q_INVOKABLE QString chooseLocalFolder();
     Q_INVOKABLE QString chooseDownloadFolder();
+    Q_INVOKABLE bool openLocalFolderForPath(const QString &path) const;
+    Q_INVOKABLE QVariantList transferHistory() const;
+    Q_INVOKABLE void saveTransferHistory(const QVariantList &history) const;
     Q_INVOKABLE QString remoteHomePath(const QString &connectionId) const;
     Q_INVOKABLE QString remoteParentPath(const QString &path) const;
     Q_INVOKABLE QVariantList remoteDirectoryEntries(const QString &connectionId,

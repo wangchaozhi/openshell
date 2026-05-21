@@ -22,9 +22,12 @@
 #include <QFileSystemWatcher>
 #include <QFutureWatcher>
 #include <QElapsedTimer>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QMetaObject>
 #include <QProcess>
 #include <QSaveFile>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QStringConverter>
 #include <QTextStream>
@@ -40,6 +43,8 @@
 #endif
 
 namespace {
+constexpr auto kTransferHistory = "transfers/history";
+
 class TransferProgressReporter
 {
 public:
@@ -480,6 +485,44 @@ QString AppController::chooseDownloadFolder()
 #else
     return QFileDialog::getExistingDirectory(nullptr, tr("Select download folder"), QDir::homePath());
 #endif
+}
+
+bool AppController::openLocalFolderForPath(const QString &path) const
+{
+    if (path.trimmed().isEmpty()) {
+        return false;
+    }
+
+    const QFileInfo info(path);
+    const QString folder = info.exists() && info.isDir()
+                               ? info.absoluteFilePath()
+                               : info.absolutePath();
+    if (folder.isEmpty() || !QDir(folder).exists()) {
+        return false;
+    }
+    return QDesktopServices::openUrl(QUrl::fromLocalFile(folder));
+}
+
+QVariantList AppController::transferHistory() const
+{
+    QSettings settings;
+    const QByteArray payload = settings.value(QString::fromLatin1(kTransferHistory)).toByteArray();
+    if (payload.isEmpty()) {
+        return {};
+    }
+
+    const QJsonDocument document = QJsonDocument::fromJson(payload);
+    if (!document.isArray()) {
+        return {};
+    }
+    return document.array().toVariantList();
+}
+
+void AppController::saveTransferHistory(const QVariantList &history) const
+{
+    QSettings settings;
+    settings.setValue(QString::fromLatin1(kTransferHistory),
+                      QJsonDocument(QJsonArray::fromVariantList(history)).toJson(QJsonDocument::Compact));
 }
 
 QString AppController::chooseExternalTextEditor()

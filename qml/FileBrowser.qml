@@ -37,6 +37,8 @@ Rectangle {
     property bool remoteDropActive: false
     property bool syncRemoteWithTerminal: true
     property var transferTasks: []
+    property bool transferHistoryLoaded: false
+    property var downloadTargetFolders: ({})
     property bool transferPanelOpen: false
     property var localDetachedWindow: null
     property var remoteDetachedWindow: null
@@ -547,8 +549,15 @@ Rectangle {
     }
 
     Component.onCompleted: {
+        loadTransferHistory()
         refreshLocal()
         switchRemoteSession()
+    }
+
+    onTransferTasksChanged: {
+        if (transferHistoryLoaded) {
+            saveTransferHistory()
+        }
     }
 
     Dialog {
@@ -1487,7 +1496,9 @@ Rectangle {
         if (!folder || folder.length === 0) {
             return
         }
-        startRemoteOperation(appController.requestRemoteDownload(connectionId, path, folder))
+        const requestId = appController.requestRemoteDownload(connectionId, path, folder)
+        rememberDownloadTarget(requestId, folder)
+        startRemoteOperation(requestId)
     }
 
     function openRemotePath(path) {
@@ -1564,6 +1575,93 @@ Rectangle {
                : normalized
     }
 
+    function transferTasksFor(operation) {
+        const rows = []
+        for (let i = 0; i < transferTasks.length; ++i) {
+            if (transferTasks[i].operation === operation) {
+                rows.push(transferTasks[i])
+            }
+        }
+        return rows
+    }
+
+    function normalizeSavedTransfer(task) {
+        const status = task.status === "running" ? "failed" : (task.status || "done")
+        return {
+            requestId: task.requestId || ("saved-" + Date.now() + "-" + Math.random()),
+            connectionId: task.connectionId || "",
+            operation: task.operation === "upload" ? "upload" : "download",
+            path: task.path || "",
+            localPath: task.localPath || "",
+            localDirectory: task.localDirectory || "",
+            done: Number(task.done) || 0,
+            total: Number(task.total) || 0,
+            speed: 0,
+            status: status,
+            message: task.status === "running" ? qsTr("Interrupted") : (task.message || ""),
+            startedAt: Number(task.startedAt) || Date.now(),
+            finishedAt: Number(task.finishedAt) || Number(task.updatedAt) || Date.now()
+        }
+    }
+
+    function loadTransferHistory() {
+        const saved = appController.transferHistory()
+        const next = []
+        for (let i = 0; i < saved.length; ++i) {
+            const task = normalizeSavedTransfer(saved[i])
+            if ((task.operation === "upload" || task.operation === "download") && task.path.length > 0) {
+                next.push(task)
+            }
+        }
+        transferTasks = next.slice(0, 60)
+        transferHistoryLoaded = true
+    }
+
+    function saveTransferHistory() {
+        const saved = []
+        for (let i = 0; i < transferTasks.length && saved.length < 60; ++i) {
+            const task = transferTasks[i]
+            saved.push({
+                requestId: task.requestId || "",
+                connectionId: task.connectionId || "",
+                operation: task.operation || "",
+                path: task.path || "",
+                localPath: task.localPath || "",
+                localDirectory: task.localDirectory || "",
+                done: Number(task.done) || 0,
+                total: Number(task.total) || 0,
+                status: task.status || "done",
+                message: task.message || "",
+                startedAt: Number(task.startedAt) || Date.now(),
+                finishedAt: Number(task.finishedAt) || 0
+            })
+        }
+        appController.saveTransferHistory(saved)
+    }
+
+    function rememberDownloadTarget(requestId, folder) {
+        if (!requestId || requestId.length === 0 || !folder || folder.length === 0) {
+            return
+        }
+        const targets = Object.assign({}, downloadTargetFolders)
+        targets[requestId] = folder
+        downloadTargetFolders = targets
+    }
+
+    function downloadOpenPath(task) {
+        if (!task || task.operation !== "download" || task.status !== "done") {
+            return ""
+        }
+        return task.localPath && task.localPath.length > 0 ? task.localPath : (task.message || "")
+    }
+
+    function openDownloadedFolder(task) {
+        const path = downloadOpenPath(task)
+        if (path.length > 0) {
+            appController.openLocalFolderForPath(path)
+        }
+    }
+
     function transferPercent(task) {
         if (!task || !task.total || task.total <= 0) {
             return 0
@@ -1585,7 +1683,11 @@ Rectangle {
                     total: total,
                     speed: speed,
                     status: next[i].status || "running",
-                    message: next[i].message || ""
+                    message: next[i].message || "",
+                    localPath: next[i].localPath || "",
+                    localDirectory: next[i].localDirectory || "",
+                    startedAt: next[i].startedAt || Date.now(),
+                    finishedAt: next[i].finishedAt || 0
                 }
                 found = true
                 break
@@ -1601,26 +1703,52 @@ Rectangle {
                 total: total,
                 speed: speed,
                 status: "running",
-                message: ""
+                message: "",
+                localPath: "",
+                localDirectory: operation === "download" ? (downloadTargetFolders[requestId] || "") : "",
+                startedAt: Date.now(),
+                finishedAt: 0
             })
         }
-        transferTasks = next.slice(0, 20)
+        transferTasks = next.slice(0, 60)
     }
 
-    function finishTransferTask(requestId, ok, message) {
+    function finishTransferTask(requestId, ok, message, operation, path, connectionId) {
         const next = transferTasks.slice()
         for (let i = 0; i < next.length; ++i) {
             if (next[i].requestId === requestId) {
                 const done = ok && next[i].total > 0 ? next[i].total : next[i].done
+                const localPath = ok && next[i].operation === "download" ? (message || next[i].localPath || "") : next[i].localPath
                 next[i] = Object.assign({}, next[i], {
                     done: done,
                     speed: ok ? 0 : next[i].speed,
                     status: ok ? "done" : "failed",
-                    message: message || ""
+                    message: message || "",
+                    localPath: localPath,
+                    finishedAt: Date.now()
                 })
                 transferTasks = next
                 return
             }
+        }
+        if (operation === "upload" || operation === "download") {
+            const localPath = ok && operation === "download" ? (message || "") : ""
+            next.unshift({
+                requestId: requestId,
+                connectionId: connectionId || "",
+                operation: operation,
+                path: path || "",
+                done: 0,
+                total: 0,
+                speed: 0,
+                status: ok ? "done" : "failed",
+                message: message || "",
+                localPath: localPath,
+                localDirectory: operation === "download" ? (downloadTargetFolders[requestId] || "") : "",
+                startedAt: Date.now(),
+                finishedAt: Date.now()
+            })
+            transferTasks = next.slice(0, 60)
         }
     }
 
@@ -1682,7 +1810,7 @@ Rectangle {
         }
 
         function onRemoteOperationFinished(requestId, connectionId, operation, path, ok, message) {
-            root.finishTransferTask(requestId, ok, message)
+            root.finishTransferTask(requestId, ok, message, operation, path, connectionId)
             const key = root.remoteOperationOwners[requestId] || ""
             if (key.length === 0) {
                 return
@@ -3131,8 +3259,8 @@ Rectangle {
                 id: transferPanel
                 visible: root.transferPanelOpen && root.transferTasks.length > 0
                 z: 30
-                width: Math.min(420, parent.width - 16)
-                height: Math.min(260, parent.height - 48)
+                width: Math.min(680, parent.width - 16)
+                height: Math.min(320, parent.height - 48)
                 anchors.top: parent.top
                 anchors.topMargin: 38
                 anchors.right: parent.right
@@ -3173,82 +3301,204 @@ Rectangle {
                         }
                     }
 
-                    ListView {
+                    RowLayout {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        clip: true
-                        model: root.transferTasks
                         spacing: 8
 
-                        delegate: Rectangle {
-                            required property var modelData
-                            width: ListView.view.width
-                            height: 58
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
                             color: "#0f172a"
                             radius: 4
-                            border.color: modelData.status === "failed" ? "#7f1d1d" : "#1e293b"
+                            border.color: "#1e293b"
 
                             ColumnLayout {
                                 anchors.fill: parent
                                 anchors.margins: 8
-                                spacing: 4
+                                spacing: 6
 
                                 RowLayout {
                                     Layout.fillWidth: true
                                     Label {
-                                        text: modelData.operation === "upload" ? qsTr("Upload") : qsTr("Download")
-                                        color: modelData.operation === "upload" ? "#93c5fd" : "#86efac"
-                                        font.pixelSize: 11
+                                        text: qsTr("Upload")
+                                        color: "#93c5fd"
+                                        font.pixelSize: 12
                                         font.bold: true
-                                    }
-                                    Label {
-                                        text: root.shortPath(modelData.path)
-                                        color: "#dbeafe"
-                                        font.pixelSize: 11
-                                        elide: Text.ElideMiddle
                                         Layout.fillWidth: true
                                     }
                                     Label {
-                                        text: modelData.status === "failed"
-                                              ? qsTr("Failed")
-                                              : modelData.status === "done"
-                                                ? qsTr("Done")
-                                                : qsTr("%1%").arg(root.transferPercent(modelData))
-                                        color: modelData.status === "failed" ? "#fca5a5" : "#94a3b8"
-                                        font.pixelSize: 11
+                                        text: String(root.transferTasksFor("upload").length)
+                                        color: "#64748b"
+                                        font.pixelSize: 10
                                     }
                                 }
 
-                                ProgressBar {
+                                ListView {
                                     Layout.fillWidth: true
-                                    from: 0
-                                    to: modelData.total > 0 ? modelData.total : 1
-                                    value: modelData.total > 0 ? modelData.done : 0
-                                    indeterminate: modelData.status === "running" && modelData.total <= 0
-                                }
+                                    Layout.fillHeight: true
+                                    clip: true
+                                    model: root.transferTasksFor("upload")
+                                    spacing: 7
 
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    Label {
-                                        text: root.formatFileSize(modelData.done) + " / "
-                                              + (modelData.total > 0 ? root.formatFileSize(modelData.total) : qsTr("Unknown"))
-                                        color: "#94a3b8"
-                                        font.pixelSize: 10
-                                        Layout.fillWidth: true
-                                        elide: Text.ElideRight
+                                    delegate: Rectangle {
+                                        required property var modelData
+                                        width: ListView.view.width
+                                        height: 64
+                                        color: "#020617"
+                                        radius: 4
+                                        border.color: modelData.status === "failed" ? "#7f1d1d" : "#1e293b"
+
+                                        ColumnLayout {
+                                            anchors.fill: parent
+                                            anchors.margins: 8
+                                            spacing: 4
+
+                                            RowLayout {
+                                                Layout.fillWidth: true
+                                                Label {
+                                                    text: root.shortPath(modelData.path)
+                                                    color: "#dbeafe"
+                                                    font.pixelSize: 11
+                                                    elide: Text.ElideMiddle
+                                                    Layout.fillWidth: true
+                                                }
+                                                Label {
+                                                    text: modelData.status === "failed"
+                                                          ? qsTr("Failed")
+                                                          : modelData.status === "done"
+                                                            ? qsTr("Done")
+                                                            : qsTr("%1%").arg(root.transferPercent(modelData))
+                                                    color: modelData.status === "failed" ? "#fca5a5" : "#94a3b8"
+                                                    font.pixelSize: 11
+                                                }
+                                            }
+
+                                            ProgressBar {
+                                                Layout.fillWidth: true
+                                                from: 0
+                                                to: modelData.total > 0 ? modelData.total : 1
+                                                value: modelData.total > 0 ? modelData.done : 0
+                                                indeterminate: modelData.status === "running" && modelData.total <= 0
+                                            }
+
+                                            Label {
+                                                Layout.fillWidth: true
+                                                text: modelData.status === "running"
+                                                      ? root.formatSpeed(modelData.speed)
+                                                      : (modelData.message || root.formatFileSize(modelData.done))
+                                                color: "#94a3b8"
+                                                font.pixelSize: 10
+                                                elide: Text.ElideMiddle
+                                            }
+                                        }
                                     }
-                                    Label {
-                                        text: modelData.status === "running" ? root.formatSpeed(modelData.speed) : modelData.message
-                                        color: "#94a3b8"
-                                        font.pixelSize: 10
-                                        elide: Text.ElideMiddle
-                                        Layout.maximumWidth: 140
-                                    }
+
+                                    ScrollBar.vertical: ScrollBar {}
                                 }
                             }
                         }
 
-                        ScrollBar.vertical: ScrollBar {}
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            color: "#0f172a"
+                            radius: 4
+                            border.color: "#1e293b"
+
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 8
+                                spacing: 6
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Label {
+                                        text: qsTr("Download")
+                                        color: "#86efac"
+                                        font.pixelSize: 12
+                                        font.bold: true
+                                        Layout.fillWidth: true
+                                    }
+                                    Label {
+                                        text: String(root.transferTasksFor("download").length)
+                                        color: "#64748b"
+                                        font.pixelSize: 10
+                                    }
+                                }
+
+                                ListView {
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    clip: true
+                                    model: root.transferTasksFor("download")
+                                    spacing: 7
+
+                                    delegate: Rectangle {
+                                        required property var modelData
+                                        width: ListView.view.width
+                                        height: 64
+                                        color: downloadMouse.containsMouse && root.downloadOpenPath(modelData).length > 0 ? "#10251c" : "#020617"
+                                        radius: 4
+                                        border.color: modelData.status === "failed" ? "#7f1d1d" : "#1e293b"
+
+                                        MouseArea {
+                                            id: downloadMouse
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            acceptedButtons: Qt.LeftButton
+                                            onDoubleClicked: root.openDownloadedFolder(modelData)
+                                        }
+
+                                        ColumnLayout {
+                                            anchors.fill: parent
+                                            anchors.margins: 8
+                                            spacing: 4
+
+                                            RowLayout {
+                                                Layout.fillWidth: true
+                                                Label {
+                                                    text: root.shortPath(modelData.path)
+                                                    color: "#dbeafe"
+                                                    font.pixelSize: 11
+                                                    elide: Text.ElideMiddle
+                                                    Layout.fillWidth: true
+                                                }
+                                                Label {
+                                                    text: modelData.status === "failed"
+                                                          ? qsTr("Failed")
+                                                          : modelData.status === "done"
+                                                            ? qsTr("Done")
+                                                            : qsTr("%1%").arg(root.transferPercent(modelData))
+                                                    color: modelData.status === "failed" ? "#fca5a5" : "#94a3b8"
+                                                    font.pixelSize: 11
+                                                }
+                                            }
+
+                                            ProgressBar {
+                                                Layout.fillWidth: true
+                                                from: 0
+                                                to: modelData.total > 0 ? modelData.total : 1
+                                                value: modelData.total > 0 ? modelData.done : 0
+                                                indeterminate: modelData.status === "running" && modelData.total <= 0
+                                            }
+
+                                            Label {
+                                                Layout.fillWidth: true
+                                                text: modelData.status === "running"
+                                                      ? root.formatSpeed(modelData.speed)
+                                                      : (modelData.localPath || modelData.message || root.formatFileSize(modelData.done))
+                                                color: "#94a3b8"
+                                                font.pixelSize: 10
+                                                elide: Text.ElideMiddle
+                                            }
+                                        }
+                                    }
+
+                                    ScrollBar.vertical: ScrollBar {}
+                                }
+                            }
+                        }
                     }
                 }
             }

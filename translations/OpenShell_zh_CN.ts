@@ -586,6 +586,11 @@
     </message>
     <message>
         <location filename="../qml/FileBrowser.qml" line="2160"/>
+        <source>Interrupted</source>
+        <translation>已中断</translation>
+    </message>
+    <message>
+        <location filename="../qml/FileBrowser.qml" line="2160"/>
         <source>Upload</source>
         <translation>上传</translation>
     </message>
