@@ -1,0 +1,105 @@
+set(OPENSHELL_APP_SOURCES
+    main.cpp
+    src/AppController.cpp
+    src/AppController.h
+    src/AppControllerConnections.cpp
+    src/AppControllerLifecycle.cpp
+    src/AppControllerLocalFiles.cpp
+    src/AppControllerRemoteEdit.cpp
+    src/AppControllerRemoteFiles.cpp
+    src/AppControllerSessions.cpp
+    src/AppControllerTransferProgressReporter.h
+    src/ConnectionCatalog.cpp
+    src/ConnectionCatalog.h
+    src/SessionController.cpp
+    src/SessionController.h
+    src/SettingsStore.cpp
+    src/SettingsStore.h
+    src/SystemMonitorController.cpp
+    src/SystemMonitorController.h
+    src/TranslationManager.cpp
+    src/TranslationManager.h
+    src/ssh/SshChannelWorker.cpp
+    src/ssh/SshChannelWorker.h
+    src/ssh/SshSession.cpp
+    src/ssh/SshSession.h
+    src/ssh/SshWorkerFactory.h
+    src/ssh/SftpDirectoryLister.cpp
+    src/ssh/SftpDirectoryLister.h
+    src/ssh/Libssh2ChannelWorker.cpp
+    src/ssh/Libssh2ChannelWorker.h
+    src/terminal/VtScreen.cpp
+    src/terminal/VtScreen.h
+    src/terminal/TerminalScreenItem.cpp
+    src/terminal/TerminalScreenItem.h
+)
+
+set(OPENSHELL_DESKTOP_SOURCES
+    src/TrayController.cpp
+    src/TrayController.h
+)
+
+set(OPENSHELL_ECHO_BACKEND_SOURCES
+    tests/fixtures/EchoChannelWorker.cpp
+    tests/fixtures/EchoChannelWorker.h
+)
+
+set(OPENSHELL_QML_FILES
+    Main.qml
+    MobileMain.qml
+    qml/MainWindow.qml
+    qml/Sidebar.qml
+    qml/MarchingAntsBorder.qml
+    qml/ConnectionList.qml
+    qml/ConnectionManagerView.qml
+    qml/ConnectionEditor.qml
+    qml/SessionTabs.qml
+    qml/TerminalView.qml
+    qml/SystemInfoView.qml
+    qml/FileBrowser.qml
+    qml/filebrowser/FileBrowserDialogs.qml
+    qml/filebrowser/HeaderCell.qml
+    qml/filebrowser/DataCell.qml
+    qml/filebrowser/TransferPanel.qml
+    qml/filebrowser/TransferTaskList.qml
+    qml/AccentCard.qml
+    qml/ThemedTextField.qml
+    qml/ThemedTextArea.qml
+    qml/ThemedComboBox.qml
+    qml/ThemedSpinBox.qml
+    qml/ThemedButton.qml
+    qml/mobile/MobileWindow.qml
+    qml/mobile/MobileConnectionsPage.qml
+    qml/mobile/MobileConnectionEditorPage.qml
+    qml/mobile/MobileTerminalPage.qml
+    qml/mobile/MobileSystemPage.qml
+    qml/mobile/MobileFilesPage.qml
+)
+
+set(OPENSHELL_QML_RESOURCES
+    assets/icons/openshell.svg
+)
+
+set(OPENSHELL_TEST_CONNECTION_CATALOG_SOURCES
+    tests/test_connection_catalog.cpp
+    src/ConnectionCatalog.cpp
+    src/ConnectionCatalog.h
+)
+
+set(OPENSHELL_TEST_SESSION_CONTROLLER_SOURCES
+    tests/test_session_controller.cpp
+    tests/fixtures/EchoChannelWorker.cpp
+    tests/fixtures/EchoChannelWorker.h
+    src/ConnectionCatalog.cpp
+    src/ConnectionCatalog.h
+    src/SessionController.cpp
+    src/SessionController.h
+    src/ssh/SshChannelWorker.cpp
+    src/ssh/SshChannelWorker.h
+    src/ssh/Libssh2ChannelWorker.cpp
+    src/ssh/Libssh2ChannelWorker.h
+    src/ssh/SshSession.cpp
+    src/ssh/SshSession.h
+    src/terminal/VtScreen.cpp
+    src/terminal/VtScreen.h
+)

@@ -198,48 +198,18 @@ endif()
 
 # --- Main executable -----------------------------------------------------
 
-set(OPENSHELL_SOURCES
-    main.cpp
-    src/AppController.cpp
-    src/AppController.h
-    src/ConnectionCatalog.cpp
-    src/ConnectionCatalog.h
-    src/SessionController.cpp
-    src/SessionController.h
-    src/SettingsStore.cpp
-    src/SettingsStore.h
-    src/SystemMonitorController.cpp
-    src/SystemMonitorController.h
-    src/TranslationManager.cpp
-    src/TranslationManager.h
-    src/ssh/SshChannelWorker.cpp
-    src/ssh/SshChannelWorker.h
-    src/ssh/SshSession.cpp
-    src/ssh/SshSession.h
-    src/ssh/SshWorkerFactory.h
-    src/ssh/SftpDirectoryLister.cpp
-    src/ssh/SftpDirectoryLister.h
-    src/ssh/Libssh2ChannelWorker.cpp
-    src/ssh/Libssh2ChannelWorker.h
-    src/terminal/VtScreen.cpp
-    src/terminal/VtScreen.h
-    src/terminal/TerminalScreenItem.cpp
-    src/terminal/TerminalScreenItem.h
-)
+include(cmake/OpenShellSources.cmake)
 
 if(NOT ANDROID AND NOT IOS)
-    list(APPEND OPENSHELL_SOURCES
-        src/TrayController.cpp
-        src/TrayController.h)
+    list(APPEND OPENSHELL_APP_SOURCES ${OPENSHELL_DESKTOP_SOURCES})
 endif()
 
 if(OPENSHELL_ENABLE_ECHO_BACKEND)
-    list(APPEND OPENSHELL_SOURCES
-        tests/fixtures/EchoChannelWorker.cpp
-        tests/fixtures/EchoChannelWorker.h)
+    list(APPEND OPENSHELL_APP_SOURCES ${OPENSHELL_ECHO_BACKEND_SOURCES})
 endif()
 
-qt_add_executable(OpenShell ${OPENSHELL_SOURCES})
+qt_add_executable(OpenShell ${OPENSHELL_APP_SOURCES})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${OPENSHELL_APP_SOURCES})
 
 target_include_directories(OpenShell PRIVATE src)
 if(ANDROID OR IOS)
@@ -253,32 +223,9 @@ endif()
 qt_add_qml_module(OpenShell
     URI OpenShell
     QML_FILES
-        Main.qml
-        MobileMain.qml
-        qml/MainWindow.qml
-        qml/Sidebar.qml
-        qml/MarchingAntsBorder.qml
-        qml/ConnectionList.qml
-        qml/ConnectionManagerView.qml
-        qml/ConnectionEditor.qml
-        qml/SessionTabs.qml
-        qml/TerminalView.qml
-        qml/SystemInfoView.qml
-        qml/FileBrowser.qml
-        qml/AccentCard.qml
-        qml/ThemedTextField.qml
-        qml/ThemedTextArea.qml
-        qml/ThemedComboBox.qml
-        qml/ThemedSpinBox.qml
-        qml/ThemedButton.qml
-        qml/mobile/MobileWindow.qml
-        qml/mobile/MobileConnectionsPage.qml
-        qml/mobile/MobileConnectionEditorPage.qml
-        qml/mobile/MobileTerminalPage.qml
-        qml/mobile/MobileSystemPage.qml
-        qml/mobile/MobileFilesPage.qml
+        ${OPENSHELL_QML_FILES}
     RESOURCES
-        assets/icons/openshell.svg
+        ${OPENSHELL_QML_RESOURCES}
 )
 
 qt_add_translations(OpenShell
@@ -325,11 +272,8 @@ if(OPENSHELL_BUILD_TESTS)
     find_package(Qt6 REQUIRED COMPONENTS Test)
     enable_testing()
 
-    qt_add_executable(test_connection_catalog
-        tests/test_connection_catalog.cpp
-        src/ConnectionCatalog.cpp
-        src/ConnectionCatalog.h
-    )
+    qt_add_executable(test_connection_catalog ${OPENSHELL_TEST_CONNECTION_CATALOG_SOURCES})
+    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${OPENSHELL_TEST_CONNECTION_CATALOG_SOURCES})
 
     target_include_directories(test_connection_catalog PRIVATE src)
 
@@ -341,23 +285,8 @@ if(OPENSHELL_BUILD_TESTS)
 
     add_test(NAME connection_catalog COMMAND test_connection_catalog)
 
-    qt_add_executable(test_session_controller
-        tests/test_session_controller.cpp
-        tests/fixtures/EchoChannelWorker.cpp
-        tests/fixtures/EchoChannelWorker.h
-        src/ConnectionCatalog.cpp
-        src/ConnectionCatalog.h
-        src/SessionController.cpp
-        src/SessionController.h
-        src/ssh/SshChannelWorker.cpp
-        src/ssh/SshChannelWorker.h
-        src/ssh/Libssh2ChannelWorker.cpp
-        src/ssh/Libssh2ChannelWorker.h
-        src/ssh/SshSession.cpp
-        src/ssh/SshSession.h
-        src/terminal/VtScreen.cpp
-        src/terminal/VtScreen.h
-    )
+    qt_add_executable(test_session_controller ${OPENSHELL_TEST_SESSION_CONTROLLER_SOURCES})
+    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${OPENSHELL_TEST_SESSION_CONTROLLER_SOURCES})
 
     target_include_directories(test_session_controller PRIVATE src tests/fixtures)
 

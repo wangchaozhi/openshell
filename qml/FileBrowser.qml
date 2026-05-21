@@ -1,7 +1,8 @@
-﻿import QtQuick
+import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Window
+import "filebrowser" as FileBrowserComponents
 
 Rectangle {
     id: root
@@ -263,291 +264,6 @@ Rectangle {
         }
     }
 
-    component FileTypeIcon: Item {
-        property bool isDir: false
-        property color accentColor: isDir ? "#3b82f6" : "#94a3b8"
-
-        implicitWidth: 16
-        implicitHeight: 14
-
-        Rectangle {
-            visible: isDir
-            x: 1
-            y: 2
-            width: 7
-            height: 3
-            radius: 1
-            color: accentColor
-        }
-        Rectangle {
-            visible: isDir
-            x: 1
-            y: 5
-            width: 14
-            height: 9
-            radius: 2
-            color: accentColor
-            opacity: 0.88
-        }
-        Rectangle {
-            visible: !isDir
-            x: 3
-            y: 1
-            width: 10
-            height: 13
-            radius: 1
-            color: accentColor
-        }
-        Rectangle {
-            visible: !isDir
-            x: 10
-            y: 1
-            width: 3
-            height: 3
-            color: Qt.lighter(accentColor, 1.35)
-        }
-    }
-
-    component BroomIcon: Item {
-        implicitWidth: 15
-        implicitHeight: 15
-
-        Rectangle {
-            x: 9
-            y: 1
-            width: 2
-            height: 9
-            radius: 1
-            rotation: 38
-            color: "#cbd5e1"
-        }
-        Rectangle {
-            x: 4
-            y: 8
-            width: 8
-            height: 5
-            radius: 1
-            rotation: 38
-            color: "#facc15"
-        }
-        Repeater {
-            model: 3
-            Rectangle {
-                x: 3 + index * 3
-                y: 11
-                width: 1
-                height: 3
-                rotation: 38
-                color: "#fef3c7"
-            }
-        }
-    }
-
-    component HeaderCell: Item {
-        id: headerCell
-
-        property string panelName: "local"
-        property string colId: ""
-        property int naturalIndex: 0
-        property real parentWidth: 0
-
-        readonly property bool isDragged: root.dragPanel === panelName && root.dragSourceIndex === naturalIndex
-        readonly property int currentVisualIndex: isDragged ? root.dragTargetIndex
-                                                            : root.visualIndexOf(panelName, naturalIndex)
-        readonly property bool isActiveSort: (panelName === "local" ? root.localSortColumn : root.remoteSortColumn) === colId
-        readonly property bool sortAsc: panelName === "local" ? root.localSortAsc : root.remoteSortAsc
-
-        property bool dragActive: false
-        property real dragX: 0
-        property real pressOffset: 0
-
-        width: root.columnWidthAt(panelName, colId, parentWidth)
-        height: parent ? parent.height : 22
-        x: dragActive ? dragX : root.slotX(panelName, currentVisualIndex, parentWidth)
-        z: isDragged ? 10 : 0
-
-        Behavior on x {
-            enabled: !headerCell.dragActive
-            NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
-        }
-
-        Rectangle {
-            anchors.fill: parent
-            color: headerCell.dragActive ? "#1e293b" : "transparent"
-            radius: 3
-            opacity: headerCell.dragActive ? 0.9 : 1
-        }
-
-        Label {
-            anchors.fill: parent
-            anchors.leftMargin: 2
-            anchors.rightMargin: 2
-            text: root.columnTitle(headerCell.colId)
-                  + root.sortIcon(headerCell.colId,
-                                  headerCell.panelName === "local" ? root.localSortColumn : root.remoteSortColumn,
-                                  headerCell.sortAsc)
-            color: headerCell.isActiveSort ? "#60a5fa" : "#93c5fd"
-            font.pixelSize: 11
-            horizontalAlignment: root.columnAlignsRight(headerCell.colId) ? Text.AlignRight : Text.AlignLeft
-            verticalAlignment: Text.AlignVCenter
-            elide: Text.ElideRight
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.PointingHandCursor
-            preventStealing: true
-
-            property bool armed: false
-            property real pressMouseX: 0
-
-            onPressed: function(mouse) {
-                armed = true
-                pressMouseX = mouse.x
-                headerCell.pressOffset = mouse.x
-            }
-            onPositionChanged: function(mouse) {
-                if (!armed) return
-                if (!headerCell.dragActive && Math.abs(mouse.x - pressMouseX) > 4) {
-                    headerCell.dragActive = true
-                    root.dragPanel = headerCell.panelName
-                    root.dragSourceIndex = headerCell.naturalIndex
-                    root.dragTargetIndex = headerCell.naturalIndex
-                }
-                if (headerCell.dragActive) {
-                    const absoluteX = headerCell.x + mouse.x
-                    headerCell.dragX = absoluteX - headerCell.pressOffset
-                    const center = headerCell.dragX + headerCell.width / 2
-                    const target = root.computeTargetIndex(headerCell.panelName, center, headerCell.parentWidth)
-                    if (target !== root.dragTargetIndex) {
-                        root.dragTargetIndex = target
-                    }
-                }
-            }
-            onReleased: function(mouse) {
-                const wasDrag = headerCell.dragActive
-                const wasArmed = armed
-                headerCell.dragActive = false
-                armed = false
-                if (wasDrag) {
-                    Qt.callLater(root.commitColumnDrag)
-                } else if (wasArmed) {
-                    if (headerCell.panelName === "local") root.sortLocal(headerCell.colId)
-                    else root.sortRemote(headerCell.colId)
-                }
-            }
-            onCanceled: {
-                const wasDrag = headerCell.dragActive
-                headerCell.dragActive = false
-                armed = false
-                if (wasDrag) Qt.callLater(root.cancelColumnDrag)
-            }
-        }
-    }
-
-    component DataCell: Loader {
-        id: dataCell
-
-        property string panelName: "local"
-        property string colId: ""
-        property int naturalIndex: 0
-        property real parentWidth: 0
-        property var entry: ({})
-
-        width: root.columnWidthAt(panelName, colId, parentWidth)
-        height: parent ? parent.height : 26
-        x: root.slotX(panelName, root.visualIndexOf(panelName, naturalIndex), parentWidth)
-
-        Behavior on x {
-            enabled: root.dragPanel === dataCell.panelName
-            NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
-        }
-
-        sourceComponent: {
-            switch (colId) {
-            case "name": return cellNameComponent
-            case "size": return cellSizeComponent
-            case "owner": return cellOwnerComponent
-            case "permissions": return cellPermComponent
-            case "modified": return cellModifiedComponent
-            }
-            return null
-        }
-    }
-
-    Component {
-        id: cellNameComponent
-        Row {
-            property var entry: parent && parent.entry ? parent.entry : ({})
-            anchors.fill: parent
-            spacing: 8
-
-            FileTypeIcon {
-                isDir: parent.entry.isDir || false
-                accentColor: root.entryNameColor(parent.entry)
-                anchors.verticalCenter: parent.verticalCenter
-            }
-            Label {
-                text: parent.entry.name || ""
-                color: root.entryNameColor(parent.entry)
-                font.pixelSize: 11
-                elide: Text.ElideRight
-                width: parent.width - 16 - parent.spacing
-                anchors.verticalCenter: parent.verticalCenter
-            }
-        }
-    }
-
-    Component {
-        id: cellSizeComponent
-        Label {
-            anchors.fill: parent
-            text: root.formatFileSize(parent && parent.entry ? parent.entry.size : "")
-            color: "#94a3b8"
-            font.pixelSize: 11
-            horizontalAlignment: Text.AlignRight
-            verticalAlignment: Text.AlignVCenter
-        }
-    }
-
-    Component {
-        id: cellOwnerComponent
-        Label {
-            anchors.fill: parent
-            text: parent && parent.entry ? (parent.entry.owner || "") : ""
-            color: "#94a3b8"
-            font.pixelSize: 11
-            verticalAlignment: Text.AlignVCenter
-            elide: Text.ElideRight
-        }
-    }
-
-    Component {
-        id: cellPermComponent
-        Label {
-            anchors.fill: parent
-            text: parent && parent.entry
-                  ? root.permissionsToSymbolic(parent.entry.permissions, parent.entry.isDir)
-                  : ""
-            color: "#94a3b8"
-            font.family: "Courier New"
-            font.pixelSize: 11
-            horizontalAlignment: Text.AlignRight
-            verticalAlignment: Text.AlignVCenter
-        }
-    }
-
-    Component {
-        id: cellModifiedComponent
-        Label {
-            anchors.fill: parent
-            text: parent && parent.entry ? (parent.entry.modified || "") : ""
-            color: "#94a3b8"
-            font.pixelSize: 11
-            verticalAlignment: Text.AlignVCenter
-        }
-    }
-
     Component.onCompleted: {
         loadTransferHistory()
         refreshLocal()
@@ -560,280 +276,10 @@ Rectangle {
         }
     }
 
-    Dialog {
-        id: chmodDialog
-        title: qsTr("Change File Permissions")
-        modal: true
-        anchors.centerIn: parent
-        width: 280
-
-        function applyOctal(value) {
-            const normalized = (value && value.length > 0 ? value : "755").slice(-3)
-            const owner = parseInt(normalized.charAt(0))
-            const group = parseInt(normalized.charAt(1))
-            const other = parseInt(normalized.charAt(2))
-            ownerRead.checked = (owner & 4) !== 0
-            ownerWrite.checked = (owner & 2) !== 0
-            ownerExec.checked = (owner & 1) !== 0
-            groupRead.checked = (group & 4) !== 0
-            groupWrite.checked = (group & 2) !== 0
-            groupExec.checked = (group & 1) !== 0
-            otherRead.checked = (other & 4) !== 0
-            otherWrite.checked = (other & 2) !== 0
-            otherExec.checked = (other & 1) !== 0
-            updateSymbolic()
-        }
-
-        function octalText() {
-            const owner = (ownerRead.checked ? 4 : 0)
-                        + (ownerWrite.checked ? 2 : 0)
-                        + (ownerExec.checked ? 1 : 0)
-            const group = (groupRead.checked ? 4 : 0)
-                        + (groupWrite.checked ? 2 : 0)
-                        + (groupExec.checked ? 1 : 0)
-            const other = (otherRead.checked ? 4 : 0)
-                        + (otherWrite.checked ? 2 : 0)
-                        + (otherExec.checked ? 1 : 0)
-            return "" + owner + group + other
-        }
-
-        function updateSymbolic() {
-            const prefix = root.pendingChmodIsDir ? "d" : "-"
-            const owner = (ownerRead.checked ? "r" : "-")
-                        + (ownerWrite.checked ? "w" : "-")
-                        + (ownerExec.checked ? "x" : "-")
-            const group = (groupRead.checked ? "r" : "-")
-                        + (groupWrite.checked ? "w" : "-")
-                        + (groupExec.checked ? "x" : "-")
-            const other = (otherRead.checked ? "r" : "-")
-                        + (otherWrite.checked ? "w" : "-")
-                        + (otherExec.checked ? "x" : "-")
-            symbolicLabel.text = prefix + owner + group + other
-        }
-
-        ColumnLayout {
-            anchors.fill: parent
-            spacing: 6
-
-            RowLayout {
-                Layout.fillWidth: true
-                Label {
-                    text: root.pendingChmodName
-                    color: "#020617"
-                    font.bold: true
-                    font.pixelSize: 16
-                    elide: Text.ElideMiddle
-                    Layout.fillWidth: true
-                }
-                Label {
-                    id: symbolicLabel
-                    text: "----------"
-                    color: "#64748b"
-                    font.family: "Courier New"
-                    font.pixelSize: 12
-                    font.bold: true
-                }
-            }
-
-            GridLayout {
-                Layout.fillWidth: true
-                columns: 4
-                columnSpacing: 4
-                rowSpacing: 2
-
-                Item { Layout.preferredWidth: 44 }
-                Label { text: qsTr("Read"); font.pixelSize: 12 }
-                Label { text: qsTr("Write"); font.pixelSize: 12 }
-                Label { text: qsTr("Exec"); font.pixelSize: 12 }
-
-                Label { text: qsTr("Owner"); font.pixelSize: 12 }
-                CheckBox { id: ownerRead; onCheckedChanged: chmodDialog.updateSymbolic() }
-                CheckBox { id: ownerWrite; onCheckedChanged: chmodDialog.updateSymbolic() }
-                CheckBox { id: ownerExec; onCheckedChanged: chmodDialog.updateSymbolic() }
-
-                Label { text: qsTr("Group"); font.pixelSize: 12 }
-                CheckBox { id: groupRead; onCheckedChanged: chmodDialog.updateSymbolic() }
-                CheckBox { id: groupWrite; onCheckedChanged: chmodDialog.updateSymbolic() }
-                CheckBox { id: groupExec; onCheckedChanged: chmodDialog.updateSymbolic() }
-
-                Label { text: qsTr("Other"); font.pixelSize: 12 }
-                CheckBox { id: otherRead; onCheckedChanged: chmodDialog.updateSymbolic() }
-                CheckBox { id: otherWrite; onCheckedChanged: chmodDialog.updateSymbolic() }
-                CheckBox { id: otherExec; onCheckedChanged: chmodDialog.updateSymbolic() }
-            }
-
-            GroupBox {
-                Layout.fillWidth: true
-                visible: root.pendingChmodIsDir
-                ColumnLayout {
-                    anchors.fill: parent
-                    CheckBox {
-                        id: recursiveCheck
-                        text: qsTr("Apply recursively")
-                    }
-                    RadioButton {
-                        text: qsTr("Apply to files and folders")
-                        checked: true
-                    }
-                    RadioButton {
-                        text: qsTr("Apply to files only")
-                    }
-                    RadioButton {
-                        text: qsTr("Apply to folders only")
-                    }
-                }
-            }
-
-            RowLayout {
-                Layout.alignment: Qt.AlignRight
-                Button {
-                    text: qsTr("OK")
-                    onClicked: chmodDialog.accept()
-                }
-                Button {
-                    text: qsTr("Cancel")
-                    onClicked: chmodDialog.reject()
-                }
-            }
-        }
-
-        onAccepted: {
-            root.startRemoteOperation(appController.requestRemoteChmod(root.connectionId,
-                                                                        root.pendingChmodPath,
-                                                                        octalText()))
-        }
-    }
-
-    Dialog {
-        id: nameDialog
-        title: root.nameDialogMode === "rename" ? qsTr("Rename") : qsTr("New")
-        modal: true
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        anchors.centerIn: parent
-        width: 300
-
-        ColumnLayout {
-            anchors.fill: parent
-            spacing: 8
-            Label {
-                text: root.nameDialogMode === "newDir" ? qsTr("Folder name")
-                    : root.nameDialogMode === "newFile" ? qsTr("File name")
-                    : qsTr("New name")
-                color: "#334155"
-            }
-            TextField {
-                id: nameField
-                Layout.fillWidth: true
-                selectByMouse: true
-            }
-        }
-
-        onAccepted: {
-            if (nameField.text.length === 0) {
-                return
-            }
-            if (root.nameDialogMode === "rename") {
-                root.startRemoteOperation(appController.requestRenameRemotePath(root.connectionId,
-                                                                                root.pendingRemotePath,
-                                                                                nameField.text))
-            } else {
-                root.startRemoteOperation(appController.requestCreateRemotePath(root.connectionId,
-                                                                                root.remotePath,
-                                                                                nameField.text,
-                                                                                root.nameDialogMode === "newDir"))
-            }
-        }
-    }
-
-    Dialog {
-        id: remoteOpenSettingsDialog
-        title: qsTr("Remote File Open")
-        modal: true
-        anchors.centerIn: parent
-        width: 420
-        standardButtons: Dialog.Ok | Dialog.Cancel
-
-        ColumnLayout {
-            anchors.fill: parent
-            spacing: 8
-
-            Label {
-                text: qsTr("Open remote files with")
-                color: "#020617"
-                font.pixelSize: 12
-            }
-
-            ComboBox {
-                id: openModeBox
-                Layout.fillWidth: true
-                textRole: "label"
-                valueRole: "value"
-                model: [
-                    { label: qsTr("System default app"), value: "system" },
-                    { label: qsTr("Specified text editor"), value: "custom" },
-                    { label: qsTr("Built-in editor"), value: "internal" }
-                ]
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                enabled: openModeBox.currentValue === "custom"
-
-                TextField {
-                    id: editorPathField
-                    Layout.fillWidth: true
-                    selectByMouse: true
-                    placeholderText: qsTr("Text editor path")
-                }
-                Button {
-                    text: qsTr("Browse")
-                    onClicked: {
-                        const path = appController.chooseExternalTextEditor()
-                        if (path && path.length > 0) {
-                            editorPathField.text = path
-                        }
-                    }
-                }
-            }
-
-            CheckBox {
-                id: autoUploadCheck
-                text: qsTr("Auto upload after external edits")
-            }
-        }
-
-        onAccepted: {
-            appController.remoteFileOpenMode = openModeBox.currentValue || "system"
-            appController.externalTextEditorPath = editorPathField.text
-            appController.autoUploadRemoteEdits = autoUploadCheck.checked
-        }
-    }
-
-    Dialog {
-        id: internalEditorDialog
-        title: root.editingRemotePath.length > 0 ? root.editingRemotePath : qsTr("Built-in editor")
-        modal: false
-        anchors.centerIn: parent
-        width: Math.min(root.width - 48, 820)
-        height: Math.min(root.height - 36, 520)
-        standardButtons: Dialog.Save | Dialog.Close
-
-        TextArea {
-            id: internalEditorText
-            anchors.fill: parent
-            selectByMouse: true
-            wrapMode: TextEdit.NoWrap
-            font.family: "Consolas"
-            font.pixelSize: 13
-        }
-
-        onAccepted: {
-            if (appController.saveTextFile(root.editingLocalPath, internalEditorText.text)) {
-                root.startRemoteOperation(appController.requestUploadEditedRemoteFile(root.editingConnectionId,
-                                                                                     root.editingLocalPath,
-                                                                                     root.editingRemotePath))
-            }
-        }
+    FileBrowserComponents.FileBrowserDialogs {
+        id: dialogs
+        anchors.fill: parent
+        fileBrowser: root
     }
 
     Timer {
@@ -1485,10 +931,7 @@ Rectangle {
         pendingChmodName = parts.length > 0 && parts[parts.length - 1].length > 0
                          ? parts[parts.length - 1]
                          : path
-        chmodDialog.applyOctal(currentPermissions && currentPermissions.length > 0
-                               ? currentPermissions
-                               : "755")
-        chmodDialog.open()
+        dialogs.openChmod(currentPermissions)
     }
 
     function downloadRemotePath(path) {
@@ -1514,19 +957,13 @@ Rectangle {
     }
 
     function openRemoteOpenSettings() {
-        const modes = ["system", "custom", "internal"]
-        openModeBox.currentIndex = Math.max(0, modes.indexOf(appController.remoteFileOpenMode || "system"))
-        editorPathField.text = appController.externalTextEditorPath || ""
-        autoUploadCheck.checked = appController.autoUploadRemoteEdits
-        remoteOpenSettingsDialog.open()
+        dialogs.openRemoteOpenSettings()
     }
 
     function openNameDialog(mode, path, currentName) {
         nameDialogMode = mode
         pendingRemotePath = path || ""
-        nameField.text = currentName || ""
-        nameField.selectAll()
-        nameDialog.open()
+        dialogs.openName(currentName)
     }
 
     function deleteRemotePath(path, recursive) {
@@ -1854,8 +1291,7 @@ Rectangle {
             root.editingConnectionId = connectionId
             root.editingRemotePath = remotePath
             root.editingLocalPath = localPath
-            internalEditorText.text = text
-            internalEditorDialog.open()
+            dialogs.openInternalEditor(text)
         }
     }
 
@@ -1948,10 +1384,11 @@ Rectangle {
                             anchors.rightMargin: 8
                             Repeater {
                                 model: root.localColumnOrder
-                                delegate: HeaderCell {
+                                delegate: FileBrowserComponents.HeaderCell {
                                     required property string modelData
                                     required property int index
                                     panelName: "local"
+                                    fileBrowser: root
                                     colId: modelData
                                     naturalIndex: index
                                     parentWidth: detachedLocalHeaderInner.width
@@ -1984,10 +1421,11 @@ Rectangle {
                                 anchors.rightMargin: 8
                                 Repeater {
                                     model: root.localColumnOrder
-                                    delegate: DataCell {
+                                    delegate: FileBrowserComponents.DataCell {
                                         required property string modelData
                                         required property int index
                                         panelName: "local"
+                                        fileBrowser: root
                                         colId: modelData
                                         naturalIndex: index
                                         parentWidth: detachedLocalRowInner.width
@@ -2139,10 +1577,11 @@ Rectangle {
                             anchors.rightMargin: 8
                             Repeater {
                                 model: root.remoteColumnOrder
-                                delegate: HeaderCell {
+                                delegate: FileBrowserComponents.HeaderCell {
                                     required property string modelData
                                     required property int index
                                     panelName: "remote"
+                                    fileBrowser: root
                                     colId: modelData
                                     naturalIndex: index
                                     parentWidth: detachedRemoteHeaderInner.width
@@ -2178,10 +1617,11 @@ Rectangle {
                                     anchors.rightMargin: 8
                                     Repeater {
                                         model: root.remoteColumnOrder
-                                        delegate: DataCell {
+                                        delegate: FileBrowserComponents.DataCell {
                                             required property string modelData
                                             required property int index
                                             panelName: "remote"
+                                            fileBrowser: root
                                             colId: modelData
                                             naturalIndex: index
                                             parentWidth: detachedRemoteRowInner.width
@@ -2509,10 +1949,11 @@ Rectangle {
 
                         Repeater {
                             model: root.localColumnOrder
-                            delegate: HeaderCell {
+                            delegate: FileBrowserComponents.HeaderCell {
                                 required property string modelData
                                 required property int index
                                 panelName: "local"
+                                fileBrowser: root
                                 colId: modelData
                                 naturalIndex: index
                                 parentWidth: localHeaderInner.width
@@ -2611,10 +2052,11 @@ Rectangle {
 
                             Repeater {
                                 model: root.localColumnOrder
-                                delegate: DataCell {
+                                delegate: FileBrowserComponents.DataCell {
                                     required property string modelData
                                     required property int index
                                     panelName: "local"
+                                    fileBrowser: root
                                     colId: modelData
                                     naturalIndex: index
                                     parentWidth: localRowInner.width
@@ -2962,10 +2404,11 @@ Rectangle {
 
                         Repeater {
                             model: root.remoteColumnOrder
-                            delegate: HeaderCell {
+                            delegate: FileBrowserComponents.HeaderCell {
                                 required property string modelData
                                 required property int index
                                 panelName: "remote"
+                                fileBrowser: root
                                 colId: modelData
                                 naturalIndex: index
                                 parentWidth: remoteHeaderInner.width
@@ -3188,10 +2631,11 @@ Rectangle {
 
                                 Repeater {
                                     model: root.remoteColumnOrder
-                                    delegate: DataCell {
+                                    delegate: FileBrowserComponents.DataCell {
                                         required property string modelData
                                         required property int index
                                         panelName: "remote"
+                                        fileBrowser: root
                                         colId: modelData
                                         naturalIndex: index
                                         parentWidth: remoteRowInner.width
@@ -3255,252 +2699,8 @@ Rectangle {
                 }
             }
 
-            Rectangle {
-                id: transferPanel
-                visible: root.transferPanelOpen && root.transferTasks.length > 0
-                z: 30
-                width: Math.min(680, parent.width - 16)
-                height: Math.min(320, parent.height - 48)
-                anchors.top: parent.top
-                anchors.topMargin: 38
-                anchors.right: parent.right
-                anchors.rightMargin: 8
-                radius: 4
-                color: "#020617"
-                border.color: "#334155"
-
-                ColumnLayout {
-                    anchors.fill: parent
-                    anchors.margins: 10
-                    spacing: 8
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Label {
-                            text: qsTr("Transfer tasks")
-                            color: "#dbeafe"
-                            font.bold: true
-                            font.pixelSize: 12
-                            Layout.fillWidth: true
-                        }
-                        ToolButton {
-                            implicitWidth: 24
-                            implicitHeight: 22
-                            contentItem: BroomIcon {
-                                anchors.centerIn: parent
-                            }
-                            ToolTip.visible: hovered
-                            ToolTip.text: qsTr("Clear finished tasks")
-                            onClicked: root.clearFinishedTransfers()
-                        }
-                        ToolButton {
-                            implicitWidth: 24
-                            implicitHeight: 22
-                            text: "脳"
-                            onClicked: root.transferPanelOpen = false
-                        }
-                    }
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        spacing: 8
-
-                        Rectangle {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            color: "#0f172a"
-                            radius: 4
-                            border.color: "#1e293b"
-
-                            ColumnLayout {
-                                anchors.fill: parent
-                                anchors.margins: 8
-                                spacing: 6
-
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    Label {
-                                        text: qsTr("Upload")
-                                        color: "#93c5fd"
-                                        font.pixelSize: 12
-                                        font.bold: true
-                                        Layout.fillWidth: true
-                                    }
-                                    Label {
-                                        text: String(root.transferTasksFor("upload").length)
-                                        color: "#64748b"
-                                        font.pixelSize: 10
-                                    }
-                                }
-
-                                ListView {
-                                    Layout.fillWidth: true
-                                    Layout.fillHeight: true
-                                    clip: true
-                                    model: root.transferTasksFor("upload")
-                                    spacing: 7
-
-                                    delegate: Rectangle {
-                                        required property var modelData
-                                        width: ListView.view.width
-                                        height: 64
-                                        color: "#020617"
-                                        radius: 4
-                                        border.color: modelData.status === "failed" ? "#7f1d1d" : "#1e293b"
-
-                                        ColumnLayout {
-                                            anchors.fill: parent
-                                            anchors.margins: 8
-                                            spacing: 4
-
-                                            RowLayout {
-                                                Layout.fillWidth: true
-                                                Label {
-                                                    text: root.shortPath(modelData.path)
-                                                    color: "#dbeafe"
-                                                    font.pixelSize: 11
-                                                    elide: Text.ElideMiddle
-                                                    Layout.fillWidth: true
-                                                }
-                                                Label {
-                                                    text: modelData.status === "failed"
-                                                          ? qsTr("Failed")
-                                                          : modelData.status === "done"
-                                                            ? qsTr("Done")
-                                                            : qsTr("%1%").arg(root.transferPercent(modelData))
-                                                    color: modelData.status === "failed" ? "#fca5a5" : "#94a3b8"
-                                                    font.pixelSize: 11
-                                                }
-                                            }
-
-                                            ProgressBar {
-                                                Layout.fillWidth: true
-                                                from: 0
-                                                to: modelData.total > 0 ? modelData.total : 1
-                                                value: modelData.total > 0 ? modelData.done : 0
-                                                indeterminate: modelData.status === "running" && modelData.total <= 0
-                                            }
-
-                                            Label {
-                                                Layout.fillWidth: true
-                                                text: modelData.status === "running"
-                                                      ? root.formatSpeed(modelData.speed)
-                                                      : (modelData.message || root.formatFileSize(modelData.done))
-                                                color: "#94a3b8"
-                                                font.pixelSize: 10
-                                                elide: Text.ElideMiddle
-                                            }
-                                        }
-                                    }
-
-                                    ScrollBar.vertical: ScrollBar {}
-                                }
-                            }
-                        }
-
-                        Rectangle {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            color: "#0f172a"
-                            radius: 4
-                            border.color: "#1e293b"
-
-                            ColumnLayout {
-                                anchors.fill: parent
-                                anchors.margins: 8
-                                spacing: 6
-
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    Label {
-                                        text: qsTr("Download")
-                                        color: "#86efac"
-                                        font.pixelSize: 12
-                                        font.bold: true
-                                        Layout.fillWidth: true
-                                    }
-                                    Label {
-                                        text: String(root.transferTasksFor("download").length)
-                                        color: "#64748b"
-                                        font.pixelSize: 10
-                                    }
-                                }
-
-                                ListView {
-                                    Layout.fillWidth: true
-                                    Layout.fillHeight: true
-                                    clip: true
-                                    model: root.transferTasksFor("download")
-                                    spacing: 7
-
-                                    delegate: Rectangle {
-                                        required property var modelData
-                                        width: ListView.view.width
-                                        height: 64
-                                        color: downloadMouse.containsMouse && root.downloadOpenPath(modelData).length > 0 ? "#10251c" : "#020617"
-                                        radius: 4
-                                        border.color: modelData.status === "failed" ? "#7f1d1d" : "#1e293b"
-
-                                        MouseArea {
-                                            id: downloadMouse
-                                            anchors.fill: parent
-                                            hoverEnabled: true
-                                            acceptedButtons: Qt.LeftButton
-                                            onDoubleClicked: root.openDownloadedFolder(modelData)
-                                        }
-
-                                        ColumnLayout {
-                                            anchors.fill: parent
-                                            anchors.margins: 8
-                                            spacing: 4
-
-                                            RowLayout {
-                                                Layout.fillWidth: true
-                                                Label {
-                                                    text: root.shortPath(modelData.path)
-                                                    color: "#dbeafe"
-                                                    font.pixelSize: 11
-                                                    elide: Text.ElideMiddle
-                                                    Layout.fillWidth: true
-                                                }
-                                                Label {
-                                                    text: modelData.status === "failed"
-                                                          ? qsTr("Failed")
-                                                          : modelData.status === "done"
-                                                            ? qsTr("Done")
-                                                            : qsTr("%1%").arg(root.transferPercent(modelData))
-                                                    color: modelData.status === "failed" ? "#fca5a5" : "#94a3b8"
-                                                    font.pixelSize: 11
-                                                }
-                                            }
-
-                                            ProgressBar {
-                                                Layout.fillWidth: true
-                                                from: 0
-                                                to: modelData.total > 0 ? modelData.total : 1
-                                                value: modelData.total > 0 ? modelData.done : 0
-                                                indeterminate: modelData.status === "running" && modelData.total <= 0
-                                            }
-
-                                            Label {
-                                                Layout.fillWidth: true
-                                                text: modelData.status === "running"
-                                                      ? root.formatSpeed(modelData.speed)
-                                                      : (modelData.localPath || modelData.message || root.formatFileSize(modelData.done))
-                                                color: "#94a3b8"
-                                                font.pixelSize: 10
-                                                elide: Text.ElideMiddle
-                                            }
-                                        }
-                                    }
-
-                                    ScrollBar.vertical: ScrollBar {}
-                                }
-                            }
-                        }
-                    }
-                }
+            FileBrowserComponents.TransferPanel {
+                fileBrowser: root
             }
 
             DropArea {
