@@ -28,7 +28,10 @@ ApplicationWindow {
     property string sftpStatus: ""
     property string sftpMessage: ""
     property bool fileBrowserVisible: false
+    property bool fileBrowserPanesDetached: false
     property bool systemInfoTabVisible: false
+    property var detachedSessionWindows: ({})
+    property var detachedSidebarWindow: null
 
     readonly property var activeSession: {
         for (let i = 0; i < activeSessions.length; ++i) {
@@ -72,6 +75,15 @@ ApplicationWindow {
         }
     }
 
+    function sessionById(sessionId) {
+        for (let i = 0; i < activeSessions.length; ++i) {
+            if (activeSessions[i].id === sessionId) {
+                return activeSessions[i]
+            }
+        }
+        return ({})
+    }
+
     function openSessionFor(connectionId) {
         const newId = appController.openSession(connectionId)
         if (newId && newId.length > 0) {
@@ -94,6 +106,99 @@ ApplicationWindow {
         openSessionFor(targetConnectionId)
     }
 
+    function detachSession(sessionId) {
+        if (!sessionId || sessionId.length === 0) {
+            return
+        }
+        const existing = detachedSessionWindows[sessionId]
+        if (existing) {
+            existing.show()
+            existing.raise()
+            existing.requestActivate()
+            revealDetachedWindow(existing)
+            return
+        }
+        const detached = detachedSessionWindowComponent.createObject(window, {
+            detachedSessionId: sessionId
+        })
+        if (!detached) {
+            return
+        }
+        const next = Object.assign({}, detachedSessionWindows)
+        next[sessionId] = detached
+        detachedSessionWindows = next
+        detached.show()
+        detached.raise()
+        detached.requestActivate()
+        revealDetachedWindow(detached)
+    }
+
+    function restoreDetachedSession(sessionId, activate) {
+        if (!sessionId || sessionId.length === 0) {
+            return
+        }
+        const next = Object.assign({}, detachedSessionWindows)
+        delete next[sessionId]
+        detachedSessionWindows = next
+        if (activate === undefined || activate) {
+            activeSessionId = sessionId
+            activeView = "terminal"
+        }
+    }
+
+    function positionDetachedWindow(detachedWindow, sourceItem) {
+        if (!detachedWindow || !sourceItem || !sourceItem.mapToItem) {
+            return
+        }
+        const point = sourceItem.mapToItem(null, sourceItem.width / 2, sourceItem.height / 2)
+        detachedWindow.x = Math.round(window.x + point.x - 32)
+        detachedWindow.y = Math.round(window.y + point.y - 24)
+    }
+
+    function moveDetachedWindow(detachedWindow, sourceItem, translation) {
+        if (!detachedWindow || !sourceItem || !sourceItem.mapToItem) {
+            return
+        }
+        const point = sourceItem.mapToItem(null, sourceItem.width / 2, sourceItem.height / 2)
+        detachedWindow.x = Math.round(window.x + point.x + translation.x - 32)
+        detachedWindow.y = Math.round(window.y + point.y + translation.y - 24)
+    }
+
+    function revealDetachedWindow(detachedWindow) {
+        if (detachedWindow && detachedWindow.playDetachPop) {
+            detachedWindow.playDetachPop()
+        }
+    }
+
+    // 拖拽过程中把新窗口交给系统窗口管理器，由它跟随仍按住的鼠标移动。
+    // 必须等窗口渲染出第一帧后再进入系统移动循环，否则该模态循环会
+    // 卡住渲染线程，只剩一个还没画出内容的空框跟着鼠标走。
+    function followCursorWithWindow(detachedWindow) {
+        if (detachedWindow && detachedWindow.startSystemMove) {
+            detachedWindow.pendingSystemMove = true
+        }
+    }
+
+    function detachSidebar(sourceItem) {
+        if (detachedSidebarWindow) {
+            positionDetachedWindow(detachedSidebarWindow, sourceItem)
+            detachedSidebarWindow.show()
+            detachedSidebarWindow.raise()
+            detachedSidebarWindow.requestActivate()
+            followCursorWithWindow(detachedSidebarWindow)
+            return
+        }
+        detachedSidebarWindow = detachedSidebarWindowComponent.createObject(window)
+        if (!detachedSidebarWindow) {
+            return
+        }
+        positionDetachedWindow(detachedSidebarWindow, sourceItem)
+        detachedSidebarWindow.show()
+        detachedSidebarWindow.raise()
+        detachedSidebarWindow.requestActivate()
+        followCursorWithWindow(detachedSidebarWindow)
+    }
+
     Component.onCompleted: {
         const saved = appController.mainWindowGeometry()
         if (saved && saved.width > 0 && saved.height > 0) {
@@ -108,6 +213,126 @@ ApplicationWindow {
         id: geometrySaveTimer
         interval: 600
         onTriggered: appController.saveMainWindowGeometry(window.x, window.y, window.width, window.height)
+    }
+
+    Component {
+        id: detachedSessionWindowComponent
+
+        Window {
+            id: detachedWindow
+            property string detachedSessionId: ""
+            readonly property var detachedSession: window.sessionById(detachedSessionId)
+            property real detachPopProgress: 1
+
+            function playDetachPop() {
+                detachPopProgress = 0
+                detachedSessionPop.restart()
+            }
+
+            width: 920
+            height: 560
+            minimumWidth: 640
+            minimumHeight: 360
+            visible: false
+            title: detachedSession && detachedSession.title
+                   ? detachedSession.title + " - " + qsTr("OpenShell")
+                   : qsTr("OpenShell")
+            color: "#020617"
+
+            TerminalView {
+                anchors.fill: parent
+                session: detachedWindow.detachedSession
+                opacity: 0.55 + detachedWindow.detachPopProgress * 0.45
+                scale: 0.96 + detachedWindow.detachPopProgress * 0.04
+                transformOrigin: Item.Center
+            }
+
+            NumberAnimation {
+                id: detachedSessionPop
+                target: detachedWindow
+                property: "detachPopProgress"
+                from: 0
+                to: 1
+                duration: 150
+                easing.type: Easing.OutCubic
+            }
+
+            onClosing: function(close) {
+                window.restoreDetachedSession(detachedSessionId, true)
+                close.accepted = true
+                destroy()
+            }
+
+            Connections {
+                target: appController
+                function onSessionsChanged() {
+                    if (!window.sessionById(detachedWindow.detachedSessionId).id) {
+                        detachedWindow.destroy()
+                    }
+                }
+            }
+
+            Component.onDestruction: window.restoreDetachedSession(detachedSessionId, false)
+        }
+    }
+
+    Component {
+        id: detachedSidebarWindowComponent
+
+        Window {
+            id: sidebarWindow
+            property bool pendingSystemMove: false
+
+            onFrameSwapped: {
+                if (pendingSystemMove) {
+                    pendingSystemMove = false
+                    startSystemMove()
+                }
+            }
+
+            width: 300
+            height: 720
+            minimumWidth: 240
+            minimumHeight: 420
+            visible: false
+            title: qsTr("Sidebar") + " - " + qsTr("OpenShell")
+            color: "#0b1220"
+
+            Sidebar {
+                anchors.fill: parent
+                monitorSnapshot: window.monitorSnapshot
+                monitorError: window.monitorError
+                uiTheme: window.uiTheme
+                hasActiveSession: window.activeSessionId.length > 0
+                sessionStatus: window.activeSession && window.activeSession.status ? window.activeSession.status : ""
+                sftpStatus: window.sftpStatus
+                sftpMessage: window.sftpMessage
+                connectionHost: window.activeConnectionHost
+                onSystemInfoRequested: {
+                    if (window.activeSessionId.length > 0) {
+                        window.activeView = "system"
+                        window.systemInfoTabVisible = true
+                    }
+                }
+                onDetachRequested: (sourceItem) => window.detachSidebar(sourceItem)
+                onDetachDragged: (sourceItem, translation) => {
+                    window.moveDetachedWindow(window.detachedSidebarWindow,
+                                              sourceItem,
+                                              translation)
+                }
+            }
+
+            onClosing: function(close) {
+                close.accepted = true
+                destroy()
+            }
+
+            Component.onDestruction: {
+                if (window.detachedSidebarWindow === sidebarWindow) {
+                    window.detachedSidebarWindow = null
+                }
+            }
+        }
     }
 
     onXChanged: if (visible) geometrySaveTimer.restart()
@@ -163,8 +388,9 @@ ApplicationWindow {
         orientation: Qt.Horizontal
 
         Sidebar {
-            SplitView.preferredWidth: 280
-            SplitView.minimumWidth: 220
+            visible: !window.detachedSidebarWindow
+            SplitView.preferredWidth: window.detachedSidebarWindow ? 0 : 280
+            SplitView.minimumWidth: window.detachedSidebarWindow ? 0 : 220
 
             monitorSnapshot: window.monitorSnapshot
             monitorError: window.monitorError
@@ -174,6 +400,12 @@ ApplicationWindow {
             sftpStatus: window.sftpStatus
             sftpMessage: window.sftpMessage
             connectionHost: window.activeConnectionHost
+            onDetachRequested: (sourceItem) => window.detachSidebar(sourceItem)
+            onDetachDragged: (sourceItem, translation) => {
+                window.moveDetachedWindow(window.detachedSidebarWindow,
+                                          sourceItem,
+                                          translation)
+            }
             onSystemInfoRequested: {
                 if (window.activeSessionId.length > 0) {
                     window.activeView = "system"
@@ -204,6 +436,7 @@ ApplicationWindow {
                 onSessionClosed: (id) => appController.closeSession(id)
                 onSessionDisconnected: (id) => appController.closeSession(id)
                 onSessionReconnectRequested: (id, connectionId) => window.reconnectSession(id, connectionId)
+                onSessionDetached: (id) => window.detachSession(id)
                 onSystemInfoActivated: window.activeView = "system"
                 onSystemInfoClosed: {
                     window.systemInfoTabVisible = false
@@ -252,7 +485,9 @@ ApplicationWindow {
                     Loader {
                         id: fileBrowserLoader
                         SplitView.fillWidth: true
-                        SplitView.preferredHeight: 220
+                        SplitView.preferredHeight: window.fileBrowserPanesDetached ? 0 : 220
+                        SplitView.minimumHeight: window.fileBrowserPanesDetached ? 0 : 120
+                        visible: !window.fileBrowserPanesDetached
                         active: window.fileBrowserVisible && window.activeView === "terminal" && window.activeSessionId.length > 0
                         sourceComponent: FileBrowser {
                             session: window.activeSession
@@ -260,6 +495,9 @@ ApplicationWindow {
                             onSftpStatusChanged: (status, message) => {
                                 window.sftpStatus = status
                                 window.sftpMessage = message || ""
+                            }
+                            onPanesDetachedChanged: (bothDetached) => {
+                                window.fileBrowserPanesDetached = bothDetached
                             }
                         }
                     }
@@ -358,6 +596,7 @@ ApplicationWindow {
         sftpStatus = ""
         sftpMessage = ""
         fileBrowserVisible = false
+        fileBrowserPanesDetached = false
         systemInfoTabVisible = false
         if (activeView === "system") activeView = "terminal"
         delayedFileBrowserLoad.restart()

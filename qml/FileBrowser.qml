@@ -1,6 +1,7 @@
-import QtQuick
+﻿import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Window
 
 Rectangle {
     id: root
@@ -37,12 +38,18 @@ Rectangle {
     property bool syncRemoteWithTerminal: true
     property var transferTasks: []
     property bool transferPanelOpen: false
+    property var localDetachedWindow: null
+    property var remoteDetachedWindow: null
+    // 长按窗格把手后置为 true：四周显示流动虚线，提示可以拖出。
+    property bool localDetaching: false
+    property bool remoteDetaching: false
     readonly property bool remoteListingLoading: remoteLoading && remoteRequestId.length > 0
     readonly property string sessionStatus: session && session.status ? session.status : ""
     readonly property bool sessionConnected: sessionStatus === "connected"
     readonly property bool sessionProblem: sessionStatus === "disconnected" || sessionStatus === "error"
 
     signal sftpStatusChanged(string status, string message)
+    signal panesDetachedChanged(bool bothDetached)
 
     property string localSortColumn: "name"
     property bool localSortAsc: true
@@ -984,7 +991,7 @@ Rectangle {
     function sortEntries(entries, column, asc) {
         const arr = entries.slice()
         arr.sort(function(a, b) {
-            // 目录始终置顶
+            // 鐩綍濮嬬粓缃《
             if (a.isDir !== b.isDir) {
                 return a.isDir ? -1 : 1
             }
@@ -1006,7 +1013,7 @@ Rectangle {
 
     function sortIcon(col, currentCol, asc) {
         if (col !== currentCol) return ""
-        return asc ? " ▲" : " ▼"
+        return asc ? " ^" : " v"
     }
 
     function cloneEntries(entries) {
@@ -1369,6 +1376,87 @@ Rectangle {
         return entry && entry.isDir && entry.path ? entry.path : remotePath
     }
 
+    function updateDetachedPaneState() {
+        panesDetachedChanged(!!localDetachedWindow && !!remoteDetachedWindow)
+    }
+
+    function positionDetachedWindow(detachedWindow, sourceItem) {
+        if (!detachedWindow || !sourceItem || !sourceItem.mapToItem) {
+            return
+        }
+        const hostWindow = root.Window.window
+        if (!hostWindow) {
+            return
+        }
+        const point = sourceItem.mapToItem(null, sourceItem.width / 2, sourceItem.height / 2)
+        detachedWindow.x = Math.round(hostWindow.x + point.x - 32)
+        detachedWindow.y = Math.round(hostWindow.y + point.y - 24)
+    }
+
+    function moveDetachedWindow(detachedWindow, sourceItem, translation) {
+        if (!detachedWindow || !sourceItem || !sourceItem.mapToItem) {
+            return
+        }
+        const hostWindow = root.Window.window
+        if (!hostWindow) {
+            return
+        }
+        const point = sourceItem.mapToItem(null, sourceItem.width / 2, sourceItem.height / 2)
+        detachedWindow.x = Math.round(hostWindow.x + point.x + translation.x - 32)
+        detachedWindow.y = Math.round(hostWindow.y + point.y + translation.y - 24)
+    }
+
+    // 拖拽过程中把新窗口交给系统窗口管理器，由它跟随仍按住的鼠标移动。
+    // 必须等窗口渲染出第一帧后再进入系统移动循环，否则该模态循环会
+    // 卡住渲染线程，只剩一个还没画出内容的空框跟着鼠标走。
+    function followCursorWithWindow(detachedWindow) {
+        if (detachedWindow && detachedWindow.startSystemMove) {
+            detachedWindow.pendingSystemMove = true
+        }
+    }
+
+    function detachLocalPane(sourceItem) {
+        if (localDetachedWindow) {
+            positionDetachedWindow(localDetachedWindow, sourceItem)
+            localDetachedWindow.show()
+            localDetachedWindow.raise()
+            localDetachedWindow.requestActivate()
+            updateDetachedPaneState()
+            followCursorWithWindow(localDetachedWindow)
+            return
+        }
+        localDetachedWindow = localDetachedWindowComponent.createObject(root)
+        if (localDetachedWindow) {
+            positionDetachedWindow(localDetachedWindow, sourceItem)
+            localDetachedWindow.show()
+            localDetachedWindow.raise()
+            localDetachedWindow.requestActivate()
+            updateDetachedPaneState()
+            followCursorWithWindow(localDetachedWindow)
+        }
+    }
+
+    function detachRemotePane(sourceItem) {
+        if (remoteDetachedWindow) {
+            positionDetachedWindow(remoteDetachedWindow, sourceItem)
+            remoteDetachedWindow.show()
+            remoteDetachedWindow.raise()
+            remoteDetachedWindow.requestActivate()
+            updateDetachedPaneState()
+            followCursorWithWindow(remoteDetachedWindow)
+            return
+        }
+        remoteDetachedWindow = remoteDetachedWindowComponent.createObject(root)
+        if (remoteDetachedWindow) {
+            positionDetachedWindow(remoteDetachedWindow, sourceItem)
+            remoteDetachedWindow.show()
+            remoteDetachedWindow.raise()
+            remoteDetachedWindow.requestActivate()
+            updateDetachedPaneState()
+            followCursorWithWindow(remoteDetachedWindow)
+        }
+    }
+
     function changeRemotePermissions(path, permissions) {
         if (connectionId === "" || path.length === 0) {
             return
@@ -1643,6 +1731,421 @@ Rectangle {
         }
     }
 
+    Component {
+        id: localDetachedWindowComponent
+
+        Window {
+            id: localWindow
+            property bool pendingSystemMove: false
+
+            onFrameSwapped: {
+                if (pendingSystemMove) {
+                    pendingSystemMove = false
+                    startSystemMove()
+                }
+            }
+
+            width: 720
+            height: 520
+            minimumWidth: 420
+            minimumHeight: 300
+            visible: false
+            title: qsTr("Local") + " - " + root.localPath
+            color: "#020617"
+
+            Rectangle {
+                id: localWindowContent
+                anchors.fill: parent
+                color: "#020617"
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    spacing: 6
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Label {
+                            text: qsTr("Local")
+                            color: "#cbd5f5"
+                            font.bold: true
+                            font.pixelSize: 12
+                        }
+                        ToolButton {
+                            implicitWidth: 30
+                            implicitHeight: 24
+                            contentItem: ParentIcon { anchors.centerIn: parent }
+                            ToolTip.visible: hovered
+                            ToolTip.text: qsTr("Parent folder")
+                            onClicked: {
+                                root.localPath = appController.localParentPath(root.localPath)
+                                root.refreshLocal()
+                            }
+                        }
+                        ToolButton {
+                            implicitWidth: 30
+                            implicitHeight: 24
+                            contentItem: RefreshIcon { anchors.centerIn: parent }
+                            ToolTip.visible: hovered
+                            ToolTip.text: qsTr("Refresh")
+                            onClicked: root.refreshLocal()
+                        }
+                    }
+
+                    TextField {
+                        Layout.fillWidth: true
+                        text: root.localPath
+                        selectByMouse: true
+                        color: "#dbeafe"
+                        font.pixelSize: 11
+                        background: Rectangle {
+                            color: "#0f172a"
+                            border.color: "#1e293b"
+                            radius: 3
+                        }
+                        onAccepted: {
+                            root.localPath = text
+                            root.refreshLocal()
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 22
+                        color: "#0f172a"
+                        Item {
+                            id: detachedLocalHeaderInner
+                            anchors.fill: parent
+                            anchors.leftMargin: 8
+                            anchors.rightMargin: 8
+                            Repeater {
+                                model: root.localColumnOrder
+                                delegate: HeaderCell {
+                                    required property string modelData
+                                    required property int index
+                                    panelName: "local"
+                                    colId: modelData
+                                    naturalIndex: index
+                                    parentWidth: detachedLocalHeaderInner.width
+                                }
+                            }
+                        }
+                    }
+
+                    ListView {
+                        id: detachedLocalList
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        model: root.localEntries
+                        reuseItems: true
+                        cacheBuffer: 900
+
+                        delegate: Rectangle {
+                            id: detachedLocalRow
+                            required property var modelData
+                            required property int index
+                            width: detachedLocalList.width
+                            height: 26
+                            color: detachedLocalMouse.containsMouse ? "#111827" : "#020617"
+
+                            Item {
+                                id: detachedLocalRowInner
+                                anchors.fill: parent
+                                anchors.leftMargin: 8
+                                anchors.rightMargin: 8
+                                Repeater {
+                                    model: root.localColumnOrder
+                                    delegate: DataCell {
+                                        required property string modelData
+                                        required property int index
+                                        panelName: "local"
+                                        colId: modelData
+                                        naturalIndex: index
+                                        parentWidth: detachedLocalRowInner.width
+                                        entry: detachedLocalRow.modelData
+                                    }
+                                }
+                            }
+
+                            MouseArea {
+                                id: detachedLocalMouse
+                                anchors.fill: parent
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                hoverEnabled: true
+                                onDoubleClicked: {
+                                    if (detachedLocalRow.modelData.isDir) {
+                                        root.enterLocal(detachedLocalRow.modelData.path)
+                                    }
+                                }
+                                onClicked: function(mouse) {
+                                    if (mouse.button === Qt.RightButton) {
+                                        detachedLocalMenu.path = detachedLocalRow.modelData.path
+                                        detachedLocalMenu.popup()
+                                    }
+                                }
+                            }
+                        }
+
+                        Menu {
+                            id: detachedLocalMenu
+                            property string path: ""
+                            MenuItem {
+                                text: qsTr("Upload to Remote")
+                                enabled: root.connectionId !== "" && detachedLocalMenu.path.length > 0
+                                onTriggered: root.uploadLocalPath(detachedLocalMenu.path)
+                            }
+                        }
+
+                        ScrollBar.vertical: ScrollBar {}
+                    }
+                }
+            }
+
+            onClosing: function(close) {
+                close.accepted = true
+                destroy()
+            }
+            Component.onDestruction: {
+                root.localDetachedWindow = null
+                root.updateDetachedPaneState()
+            }
+        }
+    }
+
+    Component {
+        id: remoteDetachedWindowComponent
+
+        Window {
+            id: remoteWindow
+            property bool pendingSystemMove: false
+
+            onFrameSwapped: {
+                if (pendingSystemMove) {
+                    pendingSystemMove = false
+                    startSystemMove()
+                }
+            }
+
+            width: 760
+            height: 520
+            minimumWidth: 460
+            minimumHeight: 300
+            visible: false
+            title: qsTr("Remote") + " - " + root.remotePath
+            color: "#020617"
+
+            Rectangle {
+                id: remoteWindowContent
+                anchors.fill: parent
+                color: "#020617"
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    spacing: 6
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Label {
+                            text: qsTr("Remote")
+                            color: "#cbd5f5"
+                            font.bold: true
+                            font.pixelSize: 12
+                        }
+                        ToolButton {
+                            implicitWidth: 30
+                            implicitHeight: 24
+                            enabled: root.connectionId !== ""
+                            contentItem: ParentIcon {
+                                anchors.centerIn: parent
+                                opacity: parent.enabled ? 1 : 0.35
+                            }
+                            ToolTip.visible: hovered
+                            ToolTip.text: qsTr("Parent folder")
+                            onClicked: {
+                                root.remotePath = appController.remoteParentPath(root.remotePath)
+                                root.refreshRemote()
+                            }
+                        }
+                        ToolButton {
+                            implicitWidth: 30
+                            implicitHeight: 24
+                            enabled: root.connectionId !== ""
+                            contentItem: RefreshIcon {
+                                anchors.centerIn: parent
+                                opacity: parent.enabled ? 1 : 0.35
+                            }
+                            ToolTip.visible: hovered
+                            ToolTip.text: qsTr("Refresh")
+                            onClicked: root.refreshRemote()
+                        }
+                    }
+
+                    TextField {
+                        Layout.fillWidth: true
+                        text: root.remotePath
+                        enabled: root.connectionId !== ""
+                        selectByMouse: true
+                        color: "#dbeafe"
+                        font.pixelSize: 11
+                        background: Rectangle {
+                            color: "#0f172a"
+                            border.color: "#1e293b"
+                            radius: 3
+                        }
+                        onAccepted: {
+                            root.remotePath = text
+                            root.refreshRemote()
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 22
+                        color: "#0f172a"
+                        Item {
+                            id: detachedRemoteHeaderInner
+                            anchors.fill: parent
+                            anchors.leftMargin: 8
+                            anchors.rightMargin: 8
+                            Repeater {
+                                model: root.remoteColumnOrder
+                                delegate: HeaderCell {
+                                    required property string modelData
+                                    required property int index
+                                    panelName: "remote"
+                                    colId: modelData
+                                    naturalIndex: index
+                                    parentWidth: detachedRemoteHeaderInner.width
+                                }
+                            }
+                        }
+                    }
+
+                    StackLayout {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        currentIndex: root.remoteListingLoading || (root.remoteError.length > 0 && root.remoteEntries.length === 0) ? 1 : 0
+
+                        ListView {
+                            id: detachedRemoteList
+                            clip: true
+                            model: root.remoteEntries
+                            reuseItems: true
+                            cacheBuffer: 900
+
+                            delegate: Rectangle {
+                                id: detachedRemoteRow
+                                required property var modelData
+                                required property int index
+                                width: detachedRemoteList.width
+                                height: 26
+                                color: detachedRemoteMouse.containsMouse ? "#111827" : "#020617"
+
+                                Item {
+                                    id: detachedRemoteRowInner
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 8
+                                    anchors.rightMargin: 8
+                                    Repeater {
+                                        model: root.remoteColumnOrder
+                                        delegate: DataCell {
+                                            required property string modelData
+                                            required property int index
+                                            panelName: "remote"
+                                            colId: modelData
+                                            naturalIndex: index
+                                            parentWidth: detachedRemoteRowInner.width
+                                            entry: detachedRemoteRow.modelData
+                                        }
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: detachedRemoteMouse
+                                    anchors.fill: parent
+                                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                    hoverEnabled: true
+                                    onDoubleClicked: {
+                                        if (detachedRemoteRow.modelData.isDir) {
+                                            root.enterRemote(detachedRemoteRow.modelData.path)
+                                        } else {
+                                            root.openRemotePath(detachedRemoteRow.modelData.path)
+                                        }
+                                    }
+                                    onClicked: function(mouse) {
+                                        if (mouse.button === Qt.RightButton) {
+                                            root.remoteMenuEntry = detachedRemoteRow.modelData
+                                            detachedRemoteMenu.popup()
+                                        }
+                                    }
+                                }
+                            }
+
+                            Menu {
+                                id: detachedRemoteMenu
+                                readonly property var entry: root.remoteMenuEntry || ({})
+                                readonly property bool hasEntry: entry && entry.path
+                                readonly property bool isDir: hasEntry && entry.isDir
+                                MenuItem {
+                                    text: qsTr("Download")
+                                    enabled: detachedRemoteMenu.hasEntry
+                                    onTriggered: root.downloadRemotePath(detachedRemoteMenu.entry.path)
+                                }
+                                Menu {
+                                    title: qsTr("Upload...")
+                                    enabled: detachedRemoteMenu.hasEntry && root.connectionId !== ""
+                                    MenuItem {
+                                        text: qsTr("File")
+                                        onTriggered: root.chooseAndUploadFileTo(root.uploadTargetForRemoteMenuEntry())
+                                    }
+                                    MenuItem {
+                                        text: qsTr("Folder")
+                                        onTriggered: root.chooseAndUploadFolderTo(root.uploadTargetForRemoteMenuEntry())
+                                    }
+                                }
+                                MenuSeparator {}
+                                MenuItem {
+                                    text: qsTr("Rename")
+                                    enabled: detachedRemoteMenu.hasEntry
+                                    onTriggered: root.openNameDialog("rename",
+                                                                     detachedRemoteMenu.entry.path,
+                                                                     detachedRemoteMenu.entry.name)
+                                }
+                                MenuItem {
+                                    text: qsTr("Delete")
+                                    enabled: detachedRemoteMenu.hasEntry
+                                    onTriggered: root.deleteRemotePath(detachedRemoteMenu.entry.path, false)
+                                }
+                            }
+
+                            ScrollBar.vertical: ScrollBar {}
+                        }
+
+                        Label {
+                            text: root.remoteListingLoading ? qsTr("Loading...") : root.remoteError
+                            color: "#64748b"
+                            font.pixelSize: 11
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            wrapMode: Text.WordWrap
+                        }
+                    }
+                }
+            }
+
+            onClosing: function(close) {
+                close.accepted = true
+                destroy()
+            }
+            Component.onDestruction: {
+                root.remoteDetachedWindow = null
+                root.updateDetachedPaneState()
+            }
+        }
+    }
+
     SplitView {
         anchors.fill: parent
         anchors.margins: 4
@@ -1664,11 +2167,20 @@ Rectangle {
         }
 
         Rectangle {
-            SplitView.preferredWidth: Math.max(320, (root.width - 16) / 2)
-            SplitView.minimumWidth: 260
+            visible: !root.localDetachedWindow
+            SplitView.preferredWidth: root.localDetachedWindow ? 0 : Math.max(320, (root.width - 16) / 2)
+            SplitView.minimumWidth: root.localDetachedWindow ? 0 : 260
+            SplitView.fillWidth: !!root.remoteDetachedWindow
             SplitView.fillHeight: true
             color: "#020617"
             radius: 4
+
+            MarchingAntsBorder {
+                anchors.fill: parent
+                z: 50
+                cornerRadius: parent.radius
+                active: root.localDetaching
+            }
 
             ColumnLayout {
                 anchors.fill: parent
@@ -1679,10 +2191,138 @@ Rectangle {
                     Layout.fillWidth: true
 
                     Label {
+                        id: localTitleLabel
+                        property bool detachHoldReady: false
+                        property bool detachStarted: false
                         text: qsTr("Local")
                         color: "#cbd5f5"
                         font.bold: true
                         font.pixelSize: 12
+
+                        function resetDetachIfIdle() {
+                            if (!localTitleDrag.active && !localTitleLabel.detachStarted) {
+                                localTitleArmTimer.stop()
+                                localTitleLabel.detachHoldReady = false
+                                root.localDetaching = false
+                            }
+                        }
+
+                        // 按住一小会儿即“就位”，期间允许移动，不像 longPressed
+                        // 那样一动就取消，于是按下后可以顺势拖出。
+                        Timer {
+                            id: localTitleArmTimer
+                            interval: 250
+                            onTriggered: {
+                                localTitleLabel.detachHoldReady = true
+                                root.localDetaching = true
+                            }
+                        }
+
+                        TapHandler {
+                            acceptedButtons: Qt.LeftButton
+                            onPressedChanged: {
+                                if (pressed) {
+                                    localTitleLabel.detachHoldReady = false
+                                    localTitleLabel.detachStarted = false
+                                    localTitleArmTimer.restart()
+                                } else {
+                                    Qt.callLater(localTitleLabel.resetDetachIfIdle)
+                                }
+                            }
+                        }
+                        DragHandler {
+                            id: localTitleDrag
+                            target: null
+                            dragThreshold: 0
+                            onActiveChanged: {
+                                if (!active) {
+                                    localTitleArmTimer.stop()
+                                    localTitleLabel.detachHoldReady = false
+                                    localTitleLabel.detachStarted = false
+                                    root.localDetaching = false
+                                }
+                            }
+                            onTranslationChanged: {
+                                if (!active || !localTitleLabel.detachHoldReady
+                                        || localTitleLabel.detachStarted) {
+                                    return
+                                }
+                                // 长按就位后，开始拖动才真正拆出窗口；
+                                // 拆出后由系统窗口管理器接管，窗口跟随鼠标。
+                                if (Math.hypot(translation.x, translation.y) <= 6) {
+                                    return
+                                }
+                                localTitleLabel.detachStarted = true
+                                root.detachLocalPane(localTitleLabel)
+                            }
+                        }
+                    }
+
+                    ToolButton {
+                        id: localDetachButton
+                        property bool detachHoldReady: false
+                        property bool detachStarted: false
+                        implicitWidth: 30
+                        implicitHeight: 24
+                        text: "[]"
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Detach Window")
+
+                        function resetDetachIfIdle() {
+                            if (!localDetachDrag.active && !localDetachButton.detachStarted) {
+                                localDetachArmTimer.stop()
+                                localDetachButton.detachHoldReady = false
+                                root.localDetaching = false
+                            }
+                        }
+
+                        // 按住一小会儿即“就位”，期间允许移动，不像 longPressed
+                        // 那样一动就取消，于是按下后可以顺势拖出。
+                        Timer {
+                            id: localDetachArmTimer
+                            interval: 250
+                            onTriggered: {
+                                localDetachButton.detachHoldReady = true
+                                root.localDetaching = true
+                            }
+                        }
+
+                        TapHandler {
+                            acceptedButtons: Qt.LeftButton
+                            onPressedChanged: {
+                                if (pressed) {
+                                    localDetachButton.detachHoldReady = false
+                                    localDetachButton.detachStarted = false
+                                    localDetachArmTimer.restart()
+                                } else {
+                                    Qt.callLater(localDetachButton.resetDetachIfIdle)
+                                }
+                            }
+                        }
+                        DragHandler {
+                            id: localDetachDrag
+                            target: null
+                            dragThreshold: 0
+                            onActiveChanged: {
+                                if (!active) {
+                                    localDetachArmTimer.stop()
+                                    localDetachButton.detachHoldReady = false
+                                    localDetachButton.detachStarted = false
+                                    root.localDetaching = false
+                                }
+                            }
+                            onTranslationChanged: {
+                                if (!active || !localDetachButton.detachHoldReady
+                                        || localDetachButton.detachStarted) {
+                                    return
+                                }
+                                if (Math.hypot(translation.x, translation.y) <= 6) {
+                                    return
+                                }
+                                localDetachButton.detachStarted = true
+                                root.detachLocalPane(localDetachButton)
+                            }
+                        }
                     }
 
                     ToolButton {
@@ -1899,12 +2539,20 @@ Rectangle {
         }
 
         Rectangle {
-            SplitView.preferredWidth: Math.max(320, (root.width - 16) / 2)
-            SplitView.minimumWidth: 320
+            visible: !root.remoteDetachedWindow
+            SplitView.preferredWidth: root.remoteDetachedWindow ? 0 : Math.max(320, (root.width - 16) / 2)
+            SplitView.minimumWidth: root.remoteDetachedWindow ? 0 : 320
             SplitView.fillWidth: true
             SplitView.fillHeight: true
             color: "#020617"
             radius: 4
+
+            MarchingAntsBorder {
+                anchors.fill: parent
+                z: 50
+                cornerRadius: parent.radius
+                active: root.remoteDetaching
+            }
 
             ColumnLayout {
                 anchors.fill: parent
@@ -1915,10 +2563,139 @@ Rectangle {
                     Layout.fillWidth: true
 
                     Label {
+                        id: remoteTitleLabel
+                        property bool detachHoldReady: false
+                        property bool detachStarted: false
                         text: qsTr("Remote")
                         color: "#cbd5f5"
                         font.bold: true
                         font.pixelSize: 12
+
+                        function resetDetachIfIdle() {
+                            if (!remoteTitleDrag.active && !remoteTitleLabel.detachStarted) {
+                                remoteTitleArmTimer.stop()
+                                remoteTitleLabel.detachHoldReady = false
+                                root.remoteDetaching = false
+                            }
+                        }
+
+                        // 按住一小会儿即“就位”，期间允许移动，不像 longPressed
+                        // 那样一动就取消，于是按下后可以顺势拖出。
+                        Timer {
+                            id: remoteTitleArmTimer
+                            interval: 250
+                            onTriggered: {
+                                remoteTitleLabel.detachHoldReady = true
+                                root.remoteDetaching = true
+                            }
+                        }
+
+                        TapHandler {
+                            acceptedButtons: Qt.LeftButton
+                            onPressedChanged: {
+                                if (pressed) {
+                                    remoteTitleLabel.detachHoldReady = false
+                                    remoteTitleLabel.detachStarted = false
+                                    remoteTitleArmTimer.restart()
+                                } else {
+                                    Qt.callLater(remoteTitleLabel.resetDetachIfIdle)
+                                }
+                            }
+                        }
+                        DragHandler {
+                            id: remoteTitleDrag
+                            target: null
+                            dragThreshold: 0
+                            onActiveChanged: {
+                                if (!active) {
+                                    remoteTitleArmTimer.stop()
+                                    remoteTitleLabel.detachHoldReady = false
+                                    remoteTitleLabel.detachStarted = false
+                                    root.remoteDetaching = false
+                                }
+                            }
+                            onTranslationChanged: {
+                                if (!active || !remoteTitleLabel.detachHoldReady
+                                        || remoteTitleLabel.detachStarted) {
+                                    return
+                                }
+                                // 长按就位后，开始拖动才真正拆出窗口；
+                                // 拆出后由系统窗口管理器接管，窗口跟随鼠标。
+                                if (Math.hypot(translation.x, translation.y) <= 6) {
+                                    return
+                                }
+                                remoteTitleLabel.detachStarted = true
+                                root.detachRemotePane(remoteTitleLabel)
+                            }
+                        }
+                    }
+
+                    ToolButton {
+                        id: remoteDetachButton
+                        property bool detachHoldReady: false
+                        property bool detachStarted: false
+                        implicitWidth: 30
+                        implicitHeight: 24
+                        text: "[]"
+                        enabled: root.connectionId !== ""
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Detach Window")
+
+                        function resetDetachIfIdle() {
+                            if (!remoteDetachDrag.active && !remoteDetachButton.detachStarted) {
+                                remoteDetachArmTimer.stop()
+                                remoteDetachButton.detachHoldReady = false
+                                root.remoteDetaching = false
+                            }
+                        }
+
+                        // 按住一小会儿即“就位”，期间允许移动，不像 longPressed
+                        // 那样一动就取消，于是按下后可以顺势拖出。
+                        Timer {
+                            id: remoteDetachArmTimer
+                            interval: 250
+                            onTriggered: {
+                                remoteDetachButton.detachHoldReady = true
+                                root.remoteDetaching = true
+                            }
+                        }
+
+                        TapHandler {
+                            acceptedButtons: Qt.LeftButton
+                            onPressedChanged: {
+                                if (pressed) {
+                                    remoteDetachButton.detachHoldReady = false
+                                    remoteDetachButton.detachStarted = false
+                                    remoteDetachArmTimer.restart()
+                                } else {
+                                    Qt.callLater(remoteDetachButton.resetDetachIfIdle)
+                                }
+                            }
+                        }
+                        DragHandler {
+                            id: remoteDetachDrag
+                            target: null
+                            dragThreshold: 0
+                            onActiveChanged: {
+                                if (!active) {
+                                    remoteDetachArmTimer.stop()
+                                    remoteDetachButton.detachHoldReady = false
+                                    remoteDetachButton.detachStarted = false
+                                    root.remoteDetaching = false
+                                }
+                            }
+                            onTranslationChanged: {
+                                if (!active || !remoteDetachButton.detachHoldReady
+                                        || remoteDetachButton.detachStarted) {
+                                    return
+                                }
+                                if (Math.hypot(translation.x, translation.y) <= 6) {
+                                    return
+                                }
+                                remoteDetachButton.detachStarted = true
+                                root.detachRemotePane(remoteDetachButton)
+                            }
+                        }
                     }
 
                     ToolButton {
@@ -2391,7 +3168,7 @@ Rectangle {
                         ToolButton {
                             implicitWidth: 24
                             implicitHeight: 22
-                            text: "×"
+                            text: "脳"
                             onClicked: root.transferPanelOpen = false
                         }
                     }

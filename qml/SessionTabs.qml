@@ -16,6 +16,7 @@ Rectangle {
     signal sessionClosed(string id)
     signal sessionDisconnected(string id)
     signal sessionReconnectRequested(string id, string connectionId)
+    signal sessionDetached(string id)
     signal connectionManagerActivated()
     signal systemInfoActivated()
     signal systemInfoClosed()
@@ -111,6 +112,11 @@ Rectangle {
 
                 readonly property bool isActive: modelData.id === root.activeSessionId
                 readonly property bool isConnected: modelData.status === "connected"
+                property real pressX: 0
+                property real pressY: 0
+                property bool detachedByDrag: false
+                property bool detachHoldReady: false
+                property bool suppressClickAfterHold: false
 
                 color: isActive && root.activeView === "terminal"
                        ? (root.classic ? "#e0f2fe" : "#1e293b")
@@ -124,7 +130,40 @@ Rectangle {
                     anchors.fill: parent
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
                     cursorShape: Qt.PointingHandCursor
+                    onPressed: function(mouse) {
+                        tab.pressX = mouse.x
+                        tab.pressY = mouse.y
+                        tab.detachedByDrag = false
+                        tab.detachHoldReady = false
+                        tab.suppressClickAfterHold = false
+                    }
+                    onPressAndHold: {
+                        tab.detachHoldReady = true
+                        tab.suppressClickAfterHold = true
+                    }
+                    onPositionChanged: function(mouse) {
+                        if ((mouse.buttons & Qt.LeftButton) === 0
+                                || tab.detachedByDrag
+                                || !tab.detachHoldReady) {
+                            return
+                        }
+                        const dx = mouse.x - tab.pressX
+                        const dy = mouse.y - tab.pressY
+                        if (Math.sqrt(dx * dx + dy * dy) > 8) {
+                            tab.detachedByDrag = true
+                            root.sessionDetached(modelData.id)
+                        }
+                    }
+                    onReleased: {
+                        tab.detachHoldReady = false
+                    }
+                    onCanceled: {
+                        tab.detachHoldReady = false
+                    }
                     onClicked: function(mouse) {
+                        if (tab.detachedByDrag || tab.suppressClickAfterHold) {
+                            return
+                        }
                         if (mouse.button === Qt.RightButton) {
                             tabMenu.popup()
                         } else {
@@ -149,6 +188,10 @@ Rectangle {
                         onTriggered: root.sessionReconnectRequested(modelData.id, modelData.connectionId)
                     }
                     MenuSeparator {}
+                    MenuItem {
+                        text: qsTr("Detach Window")
+                        onTriggered: root.sessionDetached(modelData.id)
+                    }
                     MenuItem {
                         text: qsTr("Close session")
                         onTriggered: root.sessionClosed(modelData.id)

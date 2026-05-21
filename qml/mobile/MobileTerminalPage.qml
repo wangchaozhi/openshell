@@ -36,6 +36,7 @@ Rectangle {
         return Math.min(rect.height, root.height * 0.42)
     }
     readonly property string sessionId: session && session.id ? session.id : ""
+    readonly property bool sessionConnected: session && session.status === "connected"
 
     signal backRequested()
 
@@ -357,6 +358,7 @@ Rectangle {
                 fontPixelSize: 13
                 background: "#020617"
                 cursorColor: "#38bdf8"
+                cursorBlinking: root.sessionConnected
                 onCellSizeRequested: function(cols, rows) {
                     if (root.sessionId.length > 0) {
                         appController.resizeSession(root.sessionId, cols, rows)

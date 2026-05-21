@@ -106,6 +106,9 @@ void SshSession::handleConnected()
 
 void SshSession::handleDisconnected(const QString &reason)
 {
+    if (m_status != QStringLiteral("disconnected")) {
+        appendSessionNotice(tr("Connection disconnected"));
+    }
     setStatus(QStringLiteral("disconnected"), reason);
 }
 
@@ -141,4 +144,13 @@ void SshSession::setStatus(const QString &status, const QString &message)
         m_lastMessage = message;
     }
     emit statusChanged();
+}
+
+void SshSession::appendSessionNotice(const QString &text)
+{
+    if (!m_screen || text.isEmpty()) {
+        return;
+    }
+    const QString line = QStringLiteral("\r\n%1\r\n").arg(text);
+    m_screen->feed(line.toUtf8());
 }

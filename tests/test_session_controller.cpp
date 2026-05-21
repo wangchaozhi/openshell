@@ -165,6 +165,8 @@ void TestSessionController::exitCommandTransitionsToDisconnected()
         }
     }
     QVERIFY(sawDisconnected);
+    QVERIFY2(waitForBuffer(controller, id, QStringLiteral("Connection disconnected")),
+             qPrintable(QStringLiteral("buffer was: %1").arg(controller.sessionBuffer(id))));
 }
 
 void TestSessionController::clearScreenKeepsPromptLine()

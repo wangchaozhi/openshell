@@ -26,6 +26,7 @@ class TerminalScreenItem : public QQuickPaintedItem
     Q_PROPERTY(int fontPixelSize READ fontPixelSize WRITE setFontPixelSize NOTIFY fontChanged)
     Q_PROPERTY(QColor background READ background WRITE setBackground NOTIFY backgroundChanged)
     Q_PROPERTY(QColor cursorColor READ cursorColor WRITE setCursorColor NOTIFY cursorColorChanged)
+    Q_PROPERTY(bool cursorBlinking READ cursorBlinking WRITE setCursorBlinking NOTIFY cursorBlinkingChanged)
     Q_PROPERTY(QString selectedText READ selectedText NOTIFY selectionChanged)
     Q_PROPERTY(bool hasSelection READ hasSelection NOTIFY selectionChanged)
 
@@ -54,6 +55,8 @@ public:
 
     QColor cursorColor() const { return m_cursorColor; }
     void setCursorColor(const QColor &c);
+    bool cursorBlinking() const { return m_cursorBlinking; }
+    void setCursorBlinking(bool enabled);
     QString selectedText() const;
     bool hasSelection() const;
 
@@ -72,6 +75,7 @@ signals:
     void fontChanged();
     void backgroundChanged();
     void cursorColorChanged();
+    void cursorBlinkingChanged();
     void selectionChanged();
     void copySelectionRequested(const QString &text);
     void cellSizeRequested(int cols, int rows);
@@ -121,6 +125,7 @@ private:
     void sendImeDeletion(int replacementStart, int replacementLength);
     QRectF cursorRectangle() const;
     void updateInputMethod(Qt::InputMethodQueries queries) const;
+    void updateCursorTimer();
 
     QPointer<VtScreen> m_screen;
     int m_cols = 0;
@@ -139,6 +144,7 @@ private:
     QPoint m_lastClickCell{-1, -1};
     qint64 m_lastClickMs = 0;
     int m_clickCount = 0;
+    bool m_cursorBlinking = true;
     bool m_cursorOn = true;
     QTimer m_cursorTimer;
     int m_scrollOffset = 0;            // 视口顶部相对实时屏幕顶行的偏移：0=贴底

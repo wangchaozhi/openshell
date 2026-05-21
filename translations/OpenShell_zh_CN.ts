@@ -665,6 +665,14 @@
     </message>
 </context>
 <context>
+    <name>SshSession</name>
+    <message>
+        <location filename="../src/ssh/SshSession.cpp" line="111"/>
+        <source>Connection disconnected</source>
+        <translation>连接已断开</translation>
+    </message>
+</context>
+<context>
     <name>Libssh2ChannelWorker</name>
     <message>
         <location filename="../src/ssh/Libssh2ChannelWorker.cpp" line="169"/>

@@ -19,7 +19,12 @@ Rectangle {
     readonly property bool sftpConnected: sftpStatus === "connected"
     readonly property bool sftpProblem: sftpStatus === "error"
 
+    // 长按某个把手后置为 true：四周显示流动虚线，提示可以拖出。
+    property bool detaching: false
+
     signal systemInfoRequested()
+    signal detachRequested(var sourceItem)
+    signal detachDragged(var sourceItem, var translation)
 
     color: classic ? "#f8fafc" : "#0b1220"
     border.color: classic ? "#cbd5e1" : "#1e293b"
@@ -69,6 +74,13 @@ Rectangle {
         }
     }
 
+    MarchingAntsBorder {
+        anchors.fill: parent
+        z: 50
+        cornerRadius: 0
+        active: root.detaching
+    }
+
     ColumnLayout {
         id: monitorColumn
 
@@ -102,10 +114,146 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             Label {
+                id: statusTitleLabel
+                property bool detachHoldReady: false
+                property bool detachStarted: false
                 text: qsTr("Status")
                 color: root.classic ? "#0f172a" : "#e2e8f0"
                 font.pixelSize: 12
                 Layout.fillWidth: true
+
+                function resetDetachIfIdle() {
+                    if (!statusTitleDrag.active && !statusTitleLabel.detachStarted) {
+                        statusTitleArmTimer.stop()
+                        statusTitleLabel.detachHoldReady = false
+                        root.detaching = false
+                    }
+                }
+
+                // 按住一小会儿即“就位”，期间允许移动，不像 longPressed
+                // 那样一动就取消，于是按下后可以顺势拖出。
+                Timer {
+                    id: statusTitleArmTimer
+                    interval: 250
+                    onTriggered: {
+                        statusTitleLabel.detachHoldReady = true
+                        root.detaching = true
+                    }
+                }
+
+                TapHandler {
+                    acceptedButtons: Qt.LeftButton
+                    onPressedChanged: {
+                        if (pressed) {
+                            statusTitleLabel.detachHoldReady = false
+                            statusTitleLabel.detachStarted = false
+                            statusTitleArmTimer.restart()
+                        } else {
+                            Qt.callLater(statusTitleLabel.resetDetachIfIdle)
+                        }
+                    }
+                }
+                DragHandler {
+                    id: statusTitleDrag
+                    target: null
+                    dragThreshold: 0
+                    onActiveChanged: {
+                        if (!active) {
+                            statusTitleArmTimer.stop()
+                            statusTitleLabel.detachHoldReady = false
+                            statusTitleLabel.detachStarted = false
+                            root.detaching = false
+                        }
+                    }
+                    onTranslationChanged: {
+                        if (!active || !statusTitleLabel.detachHoldReady
+                                || statusTitleLabel.detachStarted) {
+                            return
+                        }
+                        // 长按就位后，开始拖动才真正拆出窗口；
+                        // 拆出后由系统窗口管理器接管，窗口跟随鼠标。
+                        if (Math.hypot(translation.x, translation.y) <= 6) {
+                            return
+                        }
+                        statusTitleLabel.detachStarted = true
+                        root.detachRequested(statusTitleLabel)
+                    }
+                }
+            }
+            ToolButton {
+                id: sidebarDetachButton
+                property bool detachHoldReady: false
+                property bool detachStarted: false
+                implicitWidth: 20
+                implicitHeight: 20
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Detach Window")
+
+                function resetDetachIfIdle() {
+                    if (!sidebarDetachDrag.active && !sidebarDetachButton.detachStarted) {
+                        sidebarDetachArmTimer.stop()
+                        sidebarDetachButton.detachHoldReady = false
+                        root.detaching = false
+                    }
+                }
+
+                // 按住一小会儿即“就位”，期间允许移动，不像 longPressed
+                // 那样一动就取消，于是按下后可以顺势拖出。
+                Timer {
+                    id: sidebarDetachArmTimer
+                    interval: 250
+                    onTriggered: {
+                        sidebarDetachButton.detachHoldReady = true
+                        root.detaching = true
+                    }
+                }
+                contentItem: Label {
+                    text: "[]"
+                    color: root.classic ? "#475569" : "#93c5fd"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    font.pixelSize: 10
+                }
+                background: Rectangle {
+                    radius: 3
+                    color: parent.hovered ? (root.classic ? "#e2e8f0" : "#1e293b") : "transparent"
+                }
+                TapHandler {
+                    acceptedButtons: Qt.LeftButton
+                    onPressedChanged: {
+                        if (pressed) {
+                            sidebarDetachButton.detachHoldReady = false
+                            sidebarDetachButton.detachStarted = false
+                            sidebarDetachArmTimer.restart()
+                        } else {
+                            Qt.callLater(sidebarDetachButton.resetDetachIfIdle)
+                        }
+                    }
+                }
+                DragHandler {
+                    id: sidebarDetachDrag
+                    target: null
+                    dragThreshold: 0
+                    onActiveChanged: {
+                        if (!active) {
+                            sidebarDetachArmTimer.stop()
+                            sidebarDetachButton.detachHoldReady = false
+                            sidebarDetachButton.detachStarted = false
+                            root.detaching = false
+                        }
+                    }
+                    onTranslationChanged: {
+                        if (!active || !sidebarDetachButton.detachHoldReady
+                                || sidebarDetachButton.detachStarted) {
+                            return
+                        }
+                        if (Math.hypot(translation.x, translation.y) <= 6) {
+                            return
+                        }
+                        sidebarDetachButton.detachStarted = true
+                        root.detachRequested(sidebarDetachButton)
+                    }
+                }
             }
             Label {
                 text: "SSH"

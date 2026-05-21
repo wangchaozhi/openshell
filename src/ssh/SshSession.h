@@ -58,6 +58,7 @@ private slots:
 
 private:
     void setStatus(const QString &status, const QString &message = QString());
+    void appendSessionNotice(const QString &text);
 
     QString m_id;
     QString m_connectionId;

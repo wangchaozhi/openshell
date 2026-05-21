@@ -257,6 +257,7 @@ qt_add_qml_module(OpenShell
         MobileMain.qml
         qml/MainWindow.qml
         qml/Sidebar.qml
+        qml/MarchingAntsBorder.qml
         qml/ConnectionList.qml
         qml/ConnectionManagerView.qml
         qml/ConnectionEditor.qml

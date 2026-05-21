@@ -8,6 +8,7 @@ Rectangle {
 
     property var session: ({})
     readonly property string sessionId: session && session.id ? session.id : ""
+    readonly property bool sessionConnected: session && session.status === "connected"
     property string clipboardTextSnapshot: ""
     property string detectedRemotePath: ""
 
@@ -184,6 +185,7 @@ Rectangle {
                 fontPixelSize: 14
                 background: "#020617"
                 cursorColor: "#38bdf8"
+                cursorBlinking: root.sessionConnected
                 onCellSizeRequested: function(cols, rows) {
                     if (root.sessionId !== "") {
                         appController.resizeSession(root.sessionId, cols, rows)

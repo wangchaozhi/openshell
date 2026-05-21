@@ -152,6 +152,18 @@ void TerminalScreenItem::setCursorColor(const QColor &c)
     emit cursorColorChanged();
 }
 
+void TerminalScreenItem::setCursorBlinking(bool enabled)
+{
+    if (m_cursorBlinking == enabled) {
+        return;
+    }
+    m_cursorBlinking = enabled;
+    m_cursorOn = true;
+    updateCursorTimer();
+    update();
+    emit cursorBlinkingChanged();
+}
+
 QString TerminalScreenItem::selectedText() const
 {
     if (!m_screen || !m_selectionActive) {
@@ -451,7 +463,7 @@ void TerminalScreenItem::focusInEvent(QFocusEvent *event)
 {
     QQuickPaintedItem::focusInEvent(event);
     m_cursorOn = true;
-    m_cursorTimer.start();
+    updateCursorTimer();
     updateInputMethod(Qt::ImEnabled | Qt::ImHints | Qt::ImCursorRectangle);
 #if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
     // 移动端：拿到焦点就主动调起软键盘。覆盖切到 Terminal 页时（QML 调
@@ -466,8 +478,8 @@ void TerminalScreenItem::focusInEvent(QFocusEvent *event)
 void TerminalScreenItem::focusOutEvent(QFocusEvent *event)
 {
     QQuickPaintedItem::focusOutEvent(event);
-    m_cursorTimer.stop();
     m_cursorOn = true;
+    updateCursorTimer();
     update();
 }
 
@@ -508,6 +520,17 @@ void TerminalScreenItem::onCursorBlink()
 {
     m_cursorOn = !m_cursorOn;
     update();
+}
+
+void TerminalScreenItem::updateCursorTimer()
+{
+    if (m_cursorBlinking && hasActiveFocus()) {
+        if (!m_cursorTimer.isActive()) {
+            m_cursorTimer.start();
+        }
+    } else {
+        m_cursorTimer.stop();
+    }
 }
 
 void TerminalScreenItem::recomputeMetrics()
