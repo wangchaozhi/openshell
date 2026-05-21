@@ -69,7 +69,7 @@ jobs:
             qt_arch: win64_msvc2022_64
             qt_dir: msvc2022_64
             asset_name: OpenShell-windows-x64
-          - os: macos-15
+          - os: macos-26
             aqt_host: mac
             qt_arch: clang_64
             qt_dir: macos
@@ -120,7 +120,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/Qt
-          key: qt-v2-openshell-${{ runner.os }}-${{ env.QT_VERSION }}-${{ matrix.qt_arch }}-${{ matrix.qt_dir }}
+          key: qt-v3-openshell-${{ runner.os }}-${{ env.QT_VERSION }}-${{ matrix.qt_arch }}-${{ matrix.qt_dir }}
 
       - name: Install Qt
         if: steps.cache-qt.outputs.cache-hit != 'true'
