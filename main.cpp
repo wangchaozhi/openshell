@@ -6,9 +6,7 @@
 #include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#if defined(OPENSHELL_MOBILE)
 #include <QQuickStyle>
-#endif
 #include <QtQml>
 
 #include "src/AppController.h"
@@ -18,12 +16,13 @@
 int main(int argc, char *argv[])
 {
 #if defined(OPENSHELL_MOBILE)
-    QGuiApplication app(argc, argv);
     // 移动端强制使用 Material style，iOS 默认会挑系统 iOS style，导致
     // Android（Material）和 iOS（蓝色填充 UIKit 风）按钮配色完全不同。
     // 统一到 Material 后两端按钮一致，靠 MobileWindow.qml 里的 Material.* 属性主题化。
     QQuickStyle::setStyle(QStringLiteral("Material"));
+    QGuiApplication app(argc, argv);
 #else
+    QQuickStyle::setStyle(QStringLiteral("Basic"));
     QApplication app(argc, argv);
 #endif
     app.setOrganizationName(QStringLiteral("OpenShell"));

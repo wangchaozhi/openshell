@@ -1566,8 +1566,8 @@ Rectangle {
                         Menu {
                             id: remoteItemMenu
                             readonly property var entry: root.remoteMenuEntry || ({})
-                            readonly property bool hasEntry: entry && entry.path
-                            readonly property bool isDir: hasEntry && entry.isDir
+                            readonly property bool hasEntry: !!(entry && entry.path)
+                            readonly property bool isDir: hasEntry && !!entry.isDir
 
                             MenuItem {
                                 text: qsTr("Refresh")

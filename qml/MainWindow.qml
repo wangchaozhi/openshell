@@ -351,7 +351,7 @@ ApplicationWindow {
                 window.statusMessage = qsTr("Connected")
             }
             if (id === window.activeSessionId && status !== "connected") {
-                window.monitorTimer.stop()
+                monitorTimer.stop()
                 window.monitorSnapshot = ({})
                 window.monitorError = message || ""
                 window.monitorRequestId = ""
@@ -578,7 +578,7 @@ ApplicationWindow {
         id: monitorTimer
         interval: 5000
         repeat: true
-        running: window.activeSession && window.activeSession.connectionId && window.activeSession.status === "connected"
+        running: !!(window.activeSession && window.activeSession.connectionId && window.activeSession.status === "connected")
         triggeredOnStart: true
         onTriggered: {
             if (window.activeSession && window.activeSession.connectionId && !window.monitorRequestInFlight) {

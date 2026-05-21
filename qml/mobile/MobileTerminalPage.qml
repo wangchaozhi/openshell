@@ -353,7 +353,7 @@ Rectangle {
                 anchors.bottomMargin: root.terminalBottomInset
                 focus: false
                 activeFocusOnTab: false
-                fontFamily: "Consolas"
+                fontFamily: Qt.platform.os === "ios" ? "Menlo" : "Consolas"
                 fontPixelSize: 13
                 background: "#020617"
                 cursorColor: "#38bdf8"

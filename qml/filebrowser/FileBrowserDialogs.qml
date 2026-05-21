@@ -309,7 +309,7 @@ Item {
             anchors.fill: parent
             selectByMouse: true
             wrapMode: TextEdit.NoWrap
-            font.family: "Consolas"
+            font.family: Qt.platform.os === "osx" ? "Menlo" : "Consolas"
             font.pixelSize: 13
         }
 

@@ -21,7 +21,7 @@ Rectangle {
 
         text: glyph
         color: itemEnabled ? "#334155" : "#cbd5e1"
-        font.family: "Segoe MDL2 Assets"
+        font.family: Qt.platform.os === "osx" ? "Apple Symbols" : "Segoe MDL2 Assets"
         font.pixelSize: 13
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
@@ -180,7 +180,7 @@ Rectangle {
                 anchors.fill: parent
                 focus: true
                 activeFocusOnTab: true
-                fontFamily: "Consolas"
+                fontFamily: Qt.platform.os === "osx" ? "Menlo" : "Consolas"
                 fontPixelSize: 14
                 background: "#020617"
                 cursorColor: "#38bdf8"

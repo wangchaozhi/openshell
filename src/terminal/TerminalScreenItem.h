@@ -133,7 +133,7 @@ private:
     int m_cellW = 8;
     int m_cellH = 16;
     int m_baseline = 12;
-    QFont m_font{QStringLiteral("Consolas"), 0};
+    QFont m_font;
     QColor m_background{0x02, 0x06, 0x17};
     QColor m_cursorColor{0x38, 0xbd, 0xf8};
     bool m_selectionActive = false;

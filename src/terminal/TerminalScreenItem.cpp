@@ -35,6 +35,9 @@ TerminalScreenItem::TerminalScreenItem(QQuickItem *parent)
     setRenderTarget(QQuickPaintedItem::FramebufferObject);
     setPerformanceHint(QQuickPaintedItem::FastFBOResizing, true);
 
+#if defined(Q_OS_MACOS)
+    m_font.setFamily(QStringLiteral("Menlo"));
+#endif
     if (m_font.pixelSize() <= 0) {
         m_font.setPixelSize(14);
     }
