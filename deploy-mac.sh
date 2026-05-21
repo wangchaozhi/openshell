@@ -50,6 +50,7 @@ if [[ "$MAKE_DMG" == "1" ]]; then
 fi
 
 "$QT_PREFIX/bin/macdeployqt" "$APP_BUNDLE" "${DEPLOY_ARGS[@]}"
+rm -rf "$APP_BUNDLE/Contents/PlugIns/sqldrivers"
 
 if [[ -d "$ROOT_DIR/assets" ]]; then
     mkdir -p "$APP_BUNDLE/Contents/Resources/assets"

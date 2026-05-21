@@ -200,6 +200,9 @@ jobs:
           fi
 
           macdeployqt "${app_path}" -qmldir="${PWD}/qml"
+          rm -rf "${app_path}/Contents/PlugIns/sqldrivers"
+          mkdir -p "${app_path}/Contents/Resources/assets"
+          rsync -a --delete assets/ "${app_path}/Contents/Resources/assets/"
           codesign --force --deep --sign - "${app_path}"
 
           dmg_root="package/${{ matrix.asset_name }}"
