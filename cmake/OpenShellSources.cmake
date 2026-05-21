@@ -26,6 +26,10 @@ set(OPENSHELL_APP_SOURCES
     src/ssh/SshWorkerFactory.h
     src/ssh/SftpDirectoryLister.cpp
     src/ssh/SftpDirectoryLister.h
+    src/ssh/SftpConnectionPool.cpp
+    src/ssh/SftpConnectionPool.h
+    src/ssh/SftpTransfer.cpp
+    src/ssh/SftpTransfer.h
     src/ssh/Libssh2ChannelWorker.cpp
     src/ssh/Libssh2ChannelWorker.h
     src/terminal/VtScreen.cpp
@@ -62,6 +66,14 @@ set(OPENSHELL_QML_FILES
     qml/filebrowser/DataCell.qml
     qml/filebrowser/TransferPanel.qml
     qml/filebrowser/TransferTaskList.qml
+    qml/filebrowser/ParentIcon.qml
+    qml/filebrowser/RefreshIcon.qml
+    qml/filebrowser/SyncIcon.qml
+    qml/filebrowser/SettingsIcon.qml
+    qml/filebrowser/DetachedLocalWindow.qml
+    qml/filebrowser/DetachedRemoteWindow.qml
+    qml/filebrowser/DetachGesture.qml
+    qml/filebrowser/FileFormat.js
     qml/AccentCard.qml
     qml/ThemedTextField.qml
     qml/ThemedTextArea.qml
