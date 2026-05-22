@@ -7,8 +7,14 @@ Rectangle {
 
     property var snapshot: ({})
     property string error: ""
+    property string uiTheme: "dark"
 
-    color: "#020617"
+    color: theme.panel
+
+    ThemePalette {
+        id: theme
+        mode: root.uiTheme
+    }
 
     readonly property var info: snapshot.info || ({})
     readonly property var cpu: snapshot.cpu || ({})
@@ -42,7 +48,7 @@ Rectangle {
                 Layout.fillWidth: true
                 Label {
                     text: qsTr("System Information")
-                    color: "#f8fafc"
+                    color: theme.textPrimary
                     font.pixelSize: 20
                     font.bold: true
                     Layout.fillWidth: true
@@ -50,7 +56,7 @@ Rectangle {
                 Label {
                     text: root.error.length > 0 ? root.error
                           : (root.snapshot.updatedAt ? qsTr("Updated %1").arg(root.snapshot.updatedAt) : qsTr("Waiting for monitor data"))
-                    color: root.error.length > 0 ? "#fca5a5" : "#94a3b8"
+                    color: root.error.length > 0 ? theme.danger : theme.textMuted
                     font.pixelSize: 12
                     elide: Text.ElideRight
                 }
@@ -75,13 +81,13 @@ Rectangle {
                         Layout.fillWidth: true
                         Label {
                             text: modelData.label
-                            color: "#93c5fd"
+                            color: theme.textHeader
                             font.pixelSize: 12
                             Layout.preferredWidth: 150
                         }
                         Label {
                             text: modelData.value
-                            color: "#e2e8f0"
+                            color: theme.textSecondary
                             font.pixelSize: 13
                             Layout.fillWidth: true
                             elide: Text.ElideRight
@@ -90,7 +96,7 @@ Rectangle {
                 }
             }
 
-            Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: "#1e293b" }
+            Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: theme.border }
 
             GridLayout {
                 Layout.fillWidth: true
@@ -98,8 +104,8 @@ Rectangle {
                 columnSpacing: 24
                 rowSpacing: 8
 
-                Label { text: qsTr("CPU"); color: "#f8fafc"; font.bold: true; font.pixelSize: 14 }
-                Label { text: root.cpu.model || "--"; color: "#e2e8f0"; Layout.columnSpan: 3; Layout.fillWidth: true; elide: Text.ElideRight }
+                Label { text: qsTr("CPU"); color: theme.textPrimary; font.bold: true; font.pixelSize: 14 }
+                Label { text: root.cpu.model || "--"; color: theme.textSecondary; Layout.columnSpan: 3; Layout.fillWidth: true; elide: Text.ElideRight }
             }
 
             SectionTable {
@@ -135,16 +141,16 @@ Rectangle {
                 columnSpacing: 24
                 rowSpacing: 8
 
-                Label { text: qsTr("Memory"); color: "#f8fafc"; font.bold: true; font.pixelSize: 14 }
-                Label { text: qsTr("Used %1 / %2").arg(root.memory.memUsedText || "--").arg(root.memory.memTotalText || "--"); color: "#e2e8f0"; Layout.columnSpan: 3 }
-                Label { text: qsTr("Memory used"); color: "#93c5fd"; font.pixelSize: 12 }
-                Label { text: root.pct(root.memory.memUsedPercent); color: "#e2e8f0" }
-                Label { text: qsTr("Available"); color: "#93c5fd"; font.pixelSize: 12 }
-                Label { text: root.memory.memAvailableText || "--"; color: "#e2e8f0" }
-                Label { text: qsTr("Swap used"); color: "#93c5fd"; font.pixelSize: 12 }
-                Label { text: root.pct(root.memory.swapUsedPercent); color: "#e2e8f0" }
-                Label { text: qsTr("Swap"); color: "#93c5fd"; font.pixelSize: 12 }
-                Label { text: qsTr("%1 / %2").arg(root.memory.swapUsedText || "--").arg(root.memory.swapTotalText || "--"); color: "#e2e8f0" }
+                Label { text: qsTr("Memory"); color: theme.textPrimary; font.bold: true; font.pixelSize: 14 }
+                Label { text: qsTr("Used %1 / %2").arg(root.memory.memUsedText || "--").arg(root.memory.memTotalText || "--"); color: theme.textSecondary; Layout.columnSpan: 3 }
+                Label { text: qsTr("Memory used"); color: theme.textHeader; font.pixelSize: 12 }
+                Label { text: root.pct(root.memory.memUsedPercent); color: theme.textSecondary }
+                Label { text: qsTr("Available"); color: theme.textHeader; font.pixelSize: 12 }
+                Label { text: root.memory.memAvailableText || "--"; color: theme.textSecondary }
+                Label { text: qsTr("Swap used"); color: theme.textHeader; font.pixelSize: 12 }
+                Label { text: root.pct(root.memory.swapUsedPercent); color: theme.textSecondary }
+                Label { text: qsTr("Swap"); color: theme.textHeader; font.pixelSize: 12 }
+                Label { text: qsTr("%1 / %2").arg(root.memory.swapUsedText || "--").arg(root.memory.swapTotalText || "--"); color: theme.textSecondary }
             }
 
             SectionTable {
@@ -199,7 +205,7 @@ Rectangle {
 
         Label {
             text: parent.title
-            color: "#f8fafc"
+            color: theme.textPrimary
             font.bold: true
             font.pixelSize: 14
         }
@@ -207,8 +213,8 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: Math.max(34, 28 + parent.rows.length * 26)
-            color: "#0f172a"
-            border.color: "#1e293b"
+            color: theme.surface
+            border.color: theme.border
             radius: 4
 
             ColumnLayout {
@@ -224,7 +230,7 @@ Rectangle {
                         Label {
                             required property int index
                             text: table.headers[index]
-                            color: "#60a5fa"
+                            color: theme.textActive
                             font.bold: true
                             font.pixelSize: 12
                             horizontalAlignment: table.isNumericColumn(index) ? Text.AlignRight : Text.AlignLeft
@@ -248,7 +254,7 @@ Rectangle {
                             Label {
                                 required property int index
                                 text: String(rowDelegate.modelData[index] || "--")
-                                color: "#cbd5e1"
+                                color: theme.textSecondary
                                 font.pixelSize: 12
                                 horizontalAlignment: table.isNumericColumn(index) ? Text.AlignRight : Text.AlignLeft
                                 Layout.fillWidth: true

@@ -8,7 +8,7 @@ Rectangle {
     property var connections: []
     property string selectedConnectionId: ""
     property string uiTheme: "dark"
-    readonly property bool classic: uiTheme === "classic"
+    readonly property bool classic: theme.classic
 
     signal connectionPicked(string id)
     signal connectionOpenRequested(string id)
@@ -17,7 +17,12 @@ Rectangle {
     signal deleteConnectionRequested(string id)
     signal themeChanged(string theme)
 
-    color: classic ? "#ffffff" : "#020617"
+    ThemePalette {
+        id: theme
+        mode: root.uiTheme
+    }
+
+    color: theme.panel
 
     function filteredConnections() {
         const q = searchField.text.trim().toLowerCase()
@@ -57,8 +62,8 @@ Rectangle {
     component PlusIcon: Item {
         implicitWidth: 14
         implicitHeight: 14
-        Rectangle { anchors.centerIn: parent; width: 14; height: 2; radius: 1; color: root.classic ? "#0f172a" : "#dbeafe" }
-        Rectangle { anchors.centerIn: parent; width: 2; height: 14; radius: 1; color: root.classic ? "#0f172a" : "#dbeafe" }
+        Rectangle { anchors.centerIn: parent; width: 14; height: 2; radius: 1; color: theme.textPrimary }
+        Rectangle { anchors.centerIn: parent; width: 2; height: 14; radius: 1; color: theme.textPrimary }
     }
 
     component FolderIcon: Item {
@@ -70,8 +75,8 @@ Rectangle {
             width: 14
             height: 8
             radius: 1
-            color: root.classic ? "#fde68a" : "#38bdf8"
-            border.color: root.classic ? "#f59e0b" : "#93c5fd"
+            color: theme.iconAccent
+            border.color: theme.icon
         }
         Rectangle {
             x: 2
@@ -79,8 +84,8 @@ Rectangle {
             width: 7
             height: 5
             radius: 1
-            color: root.classic ? "#fde68a" : "#38bdf8"
-            border.color: root.classic ? "#f59e0b" : "#93c5fd"
+            color: theme.iconAccent
+            border.color: theme.icon
         }
     }
 
@@ -93,27 +98,27 @@ Rectangle {
             width: 12
             height: 9
             radius: 1
-            color: root.classic ? "#475569" : "#38bdf8"
-            border.color: root.classic ? "#0f172a" : "#93c5fd"
+            color: theme.iconAccent
+            border.color: theme.icon
         }
         Rectangle {
             x: 5
             y: 12
             width: 6
             height: 2
-            color: root.classic ? "#0f172a" : "#93c5fd"
+            color: theme.icon
         }
     }
 
     component ThemedTextField: TextField {
-        color: root.classic ? "#0f172a" : "#e2e8f0"
-        placeholderTextColor: root.classic ? "#94a3b8" : "#64748b"
-        selectedTextColor: "#ffffff"
-        selectionColor: "#2563eb"
+        color: theme.textPrimary
+        placeholderTextColor: theme.textMuted
+        selectedTextColor: theme.textOnAccent
+        selectionColor: theme.focus
         background: Rectangle {
             radius: 2
-            color: root.classic ? "#ffffff" : "#0f172a"
-            border.color: parent.activeFocus ? "#38bdf8" : (root.classic ? "#cbd5e1" : "#334155")
+            color: theme.surface
+            border.color: parent.activeFocus ? theme.focus : theme.borderMuted
         }
     }
 
@@ -127,7 +132,7 @@ Rectangle {
             rightPadding: 22
             verticalAlignment: Text.AlignVCenter
             text: combo.displayText
-            color: root.classic ? "#0f172a" : "#e2e8f0"
+            color: theme.textPrimary
             elide: Text.ElideRight
             font.pixelSize: 12
         }
@@ -143,14 +148,14 @@ Rectangle {
                 context.lineTo(width, 0)
                 context.lineTo(width / 2, height)
                 context.closePath()
-                context.fillStyle = root.classic ? "#475569" : "#94a3b8"
+                context.fillStyle = theme.textMuted
                 context.fill()
             }
         }
         background: Rectangle {
             radius: 2
-            color: root.classic ? "#ffffff" : "#0f172a"
-            border.color: combo.activeFocus || combo.down ? "#38bdf8" : (root.classic ? "#cbd5e1" : "#334155")
+            color: theme.surface
+            border.color: combo.activeFocus || combo.down ? theme.focus : theme.borderMuted
         }
         delegate: ItemDelegate {
             width: combo.width
@@ -158,12 +163,12 @@ Rectangle {
             highlighted: combo.highlightedIndex === index
             contentItem: Label {
                 text: combo.textRole && modelData[combo.textRole] !== undefined ? modelData[combo.textRole] : modelData
-                color: highlighted ? "#ffffff" : (root.classic ? "#0f172a" : "#e2e8f0")
+                color: highlighted ? theme.textOnAccent : theme.textPrimary
                 verticalAlignment: Text.AlignVCenter
                 font.pixelSize: 12
             }
             background: Rectangle {
-                color: highlighted ? "#2563eb" : (root.classic ? "#ffffff" : "#0f172a")
+                color: highlighted ? theme.focus : theme.surface
             }
         }
         popup: Popup {
@@ -178,8 +183,8 @@ Rectangle {
                 currentIndex: combo.highlightedIndex
             }
             background: Rectangle {
-                color: root.classic ? "#ffffff" : "#0f172a"
-                border.color: root.classic ? "#cbd5e1" : "#334155"
+                color: theme.surface
+                border.color: theme.borderMuted
             }
         }
     }
@@ -195,7 +200,7 @@ Rectangle {
 
             Label {
                 text: qsTr("Connection Manager")
-                color: root.classic ? "#334155" : "#e2e8f0"
+                color: theme.textPrimary
                 font.pixelSize: 13
                 Layout.preferredWidth: 150
             }
@@ -206,9 +211,8 @@ Rectangle {
                 contentItem: PlusIcon { anchors.centerIn: parent }
                 background: Rectangle {
                     radius: 2
-                    color: parent.hovered ? (root.classic ? "#e0f2fe" : "#1e3a8a")
-                                          : (root.classic ? "#f8fafc" : "#1e293b")
-                    border.color: parent.hovered ? "#38bdf8" : (root.classic ? "#cbd5e1" : "#334155")
+                    color: parent.hovered ? theme.selected : theme.surfaceRaised
+                    border.color: parent.hovered ? theme.focus : theme.borderMuted
                 }
                 ToolTip.visible: hovered
                 ToolTip.text: qsTr("New connection")
@@ -231,25 +235,26 @@ Rectangle {
 
             Label {
                 text: qsTr("Theme")
-                color: root.classic ? "#64748b" : "#94a3b8"
+                color: theme.textMuted
                 font.pixelSize: 11
             }
 
             ThemedComboBox {
                 id: themeBox
-                Layout.preferredWidth: 118
+                Layout.preferredWidth: 132
                 textRole: "label"
                 valueRole: "value"
                 model: [
                     { label: qsTr("Dark"), value: "dark" },
-                    { label: qsTr("Classic"), value: "classic" }
+                    { label: qsTr("Classic"), value: "classic" },
+                    { label: qsTr("Forest"), value: "forest" }
                 ]
-                Component.onCompleted: currentIndex = root.uiTheme === "classic" ? 1 : 0
+                Component.onCompleted: currentIndex = Math.max(0, indexOfValue(root.uiTheme))
                 onActivated: root.themeChanged(currentValue)
                 Connections {
                     target: root
                     function onUiThemeChanged() {
-                        themeBox.currentIndex = root.uiTheme === "classic" ? 1 : 0
+                        themeBox.currentIndex = Math.max(0, themeBox.indexOfValue(root.uiTheme))
                     }
                 }
             }
@@ -258,7 +263,7 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 1
-            color: root.classic ? "#cbd5e1" : "#1e293b"
+            color: theme.border
         }
 
         RowLayout {
@@ -266,25 +271,25 @@ Rectangle {
             spacing: 16
             Label {
                 text: qsTr("Name")
-                color: root.classic ? "#64748b" : "#60a5fa"
+                color: theme.textActive
                 font.pixelSize: 11
                 Layout.preferredWidth: 210
             }
             Label {
                 text: qsTr("Host")
-                color: root.classic ? "#64748b" : "#60a5fa"
+                color: theme.textActive
                 font.pixelSize: 11
                 Layout.preferredWidth: 180
             }
             Label {
                 text: qsTr("Port")
-                color: root.classic ? "#64748b" : "#60a5fa"
+                color: theme.textActive
                 font.pixelSize: 11
                 Layout.preferredWidth: 70
             }
             Label {
                 text: qsTr("Username")
-                color: root.classic ? "#64748b" : "#60a5fa"
+                color: theme.textActive
                 font.pixelSize: 11
                 Layout.preferredWidth: 120
             }
@@ -320,14 +325,14 @@ Rectangle {
                             FolderIcon {}
                             Label {
                                 text: modelData.name
-                                color: root.classic ? "#0f172a" : "#f8fafc"
+                                color: theme.textPrimary
                                 font.bold: true
                                 font.pixelSize: 12
                                 Layout.fillWidth: true
                             }
                             Label {
                                 text: String(modelData.rows.length)
-                                color: root.classic ? "#64748b" : "#94a3b8"
+                                color: theme.textMuted
                                 font.pixelSize: 11
                             }
                         }
@@ -346,9 +351,9 @@ Rectangle {
                                 Layout.preferredHeight: 28
                                 width: connectionScroll.availableWidth
                                 color: selected
-                                       ? (root.classic ? "#e0f2fe" : "#1e3a8a")
+                                       ? theme.selected
                                        : hovered
-                                         ? (root.classic ? "#f1f5f9" : "#172033")
+                                         ? theme.hover
                                        : "transparent"
 
                                 RowLayout {
@@ -363,7 +368,7 @@ Rectangle {
                                         HostIcon {}
                                         Label {
                                             text: modelData.name || qsTr("(unnamed)")
-                                            color: root.classic ? "#0f172a" : "#f8fafc"
+                                            color: theme.textPrimary
                                             font.pixelSize: 12
                                             elide: Text.ElideRight
                                             Layout.fillWidth: true
@@ -372,21 +377,21 @@ Rectangle {
 
                                     Label {
                                         text: modelData.host || ""
-                                        color: root.classic ? "#0f172a" : "#cbd5e1"
+                                        color: theme.textSecondary
                                         font.pixelSize: 12
                                         elide: Text.ElideRight
                                         Layout.preferredWidth: 180
                                     }
                                     Label {
                                         text: String(modelData.port || 22)
-                                        color: root.classic ? "#0f172a" : "#cbd5e1"
+                                        color: theme.textSecondary
                                         font.pixelSize: 12
                                         horizontalAlignment: Text.AlignRight
                                         Layout.preferredWidth: 70
                                     }
                                     Label {
                                         text: modelData.username || ""
-                                        color: root.classic ? "#0f172a" : "#cbd5e1"
+                                        color: theme.textSecondary
                                         font.pixelSize: 12
                                         elide: Text.ElideRight
                                         Layout.preferredWidth: 120
@@ -436,7 +441,7 @@ Rectangle {
                     Layout.fillWidth: true
                     visible: root.connections.length === 0
                     text: qsTr("No connections yet. Press + to add one.")
-                    color: "#94a3b8"
+                    color: theme.textMuted
                     horizontalAlignment: Text.AlignHCenter
                     font.pixelSize: 12
                     padding: 28

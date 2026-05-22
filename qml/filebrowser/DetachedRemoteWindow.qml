@@ -25,12 +25,12 @@ Window {
     minimumHeight: 300
     visible: false
     title: qsTr("Remote") + " - " + fileBrowser.remotePath
-    color: "#020617"
+    color: fileBrowser.panelColor
 
     Rectangle {
         id: remoteWindowContent
         anchors.fill: parent
-        color: "#020617"
+        color: remoteWindow.fileBrowser.panelColor
 
         ColumnLayout {
             anchors.fill: parent
@@ -41,24 +41,51 @@ Window {
                 Layout.fillWidth: true
                 Label {
                     text: qsTr("Remote")
-                    color: "#cbd5f5"
+                    color: remoteWindow.fileBrowser.secondaryTextColor
                     font.bold: true
                     font.pixelSize: 12
                 }
                 ToolButton {
                     implicitWidth: 30
                     implicitHeight: 24
-                    enabled: remoteWindow.fileBrowser.connectionId !== ""
-                    contentItem: ParentIcon {
+                    enabled: remoteWindow.fileBrowser.connectionId !== "" && remoteWindow.fileBrowser.remoteBackStack.length > 0
+                    contentItem: ArrowIcon {
                         anchors.centerIn: parent
+                        direction: "left"
+                        color: remoteWindow.fileBrowser.iconColor
+                        opacity: parent.enabled ? 1 : 0.35
+                    }
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Back")
+                    onClicked: remoteWindow.fileBrowser.goRemoteBack()
+                }
+                ToolButton {
+                    implicitWidth: 30
+                    implicitHeight: 24
+                    enabled: remoteWindow.fileBrowser.connectionId !== "" && remoteWindow.fileBrowser.remoteForwardStack.length > 0
+                    contentItem: ArrowIcon {
+                        anchors.centerIn: parent
+                        direction: "right"
+                        color: remoteWindow.fileBrowser.iconColor
+                        opacity: parent.enabled ? 1 : 0.35
+                    }
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Forward")
+                    onClicked: remoteWindow.fileBrowser.goRemoteForward()
+                }
+                ToolButton {
+                    implicitWidth: 30
+                    implicitHeight: 24
+                    enabled: remoteWindow.fileBrowser.connectionId !== ""
+                    contentItem: ArrowIcon {
+                        anchors.centerIn: parent
+                        direction: "up"
+                        color: remoteWindow.fileBrowser.iconColor
                         opacity: parent.enabled ? 1 : 0.35
                     }
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Parent folder")
-                    onClicked: {
-                        remoteWindow.fileBrowser.remotePath = appController.remoteParentPath(remoteWindow.fileBrowser.remotePath)
-                        remoteWindow.fileBrowser.refreshRemote()
-                    }
+                    onClicked: remoteWindow.fileBrowser.remoteParent()
                 }
                 ToolButton {
                     implicitWidth: 30
@@ -66,6 +93,8 @@ Window {
                     enabled: remoteWindow.fileBrowser.connectionId !== ""
                     contentItem: RefreshIcon {
                         anchors.centerIn: parent
+                        color: remoteWindow.fileBrowser.iconColor
+                        maskColor: remoteWindow.fileBrowser.panelColor
                         opacity: parent.enabled ? 1 : 0.35
                     }
                     ToolTip.visible: hovered
@@ -79,23 +108,22 @@ Window {
                 text: remoteWindow.fileBrowser.remotePath
                 enabled: remoteWindow.fileBrowser.connectionId !== ""
                 selectByMouse: true
-                color: "#dbeafe"
+                color: remoteWindow.fileBrowser.primaryTextColor
                 font.pixelSize: 11
                 background: Rectangle {
-                    color: "#0f172a"
-                    border.color: "#1e293b"
+                    color: remoteWindow.fileBrowser.surfaceColor
+                    border.color: remoteWindow.fileBrowser.borderColor
                     radius: 3
                 }
                 onAccepted: {
-                    remoteWindow.fileBrowser.remotePath = text
-                    remoteWindow.fileBrowser.refreshRemote()
+                    remoteWindow.fileBrowser.enterRemote(text)
                 }
             }
 
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 22
-                color: "#0f172a"
+                color: remoteWindow.fileBrowser.surfaceColor
                 Item {
                     id: detachedRemoteHeaderInner
                     anchors.fill: parent
@@ -134,7 +162,8 @@ Window {
                         required property int index
                         width: detachedRemoteList.width
                         height: 26
-                        color: detachedRemoteMouse.containsMouse ? "#111827" : "#020617"
+                        color: detachedRemoteMouse.containsMouse ? remoteWindow.fileBrowser.hoverColor
+                                                                 : remoteWindow.fileBrowser.panelColor
 
                         Item {
                             id: detachedRemoteRowInner
@@ -219,7 +248,7 @@ Window {
 
                 Label {
                     text: remoteWindow.fileBrowser.remoteListingLoading ? qsTr("Loading...") : remoteWindow.fileBrowser.remoteError
-                    color: "#64748b"
+                    color: remoteWindow.fileBrowser.mutedTextColor
                     font.pixelSize: 11
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter

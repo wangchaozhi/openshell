@@ -11,6 +11,8 @@ Rectangle {
     id: root
 
     property var session: ({})
+    property string uiTheme: "dark"
+    readonly property bool classic: theme.classic
     property string terminalRemotePath: ""
     property string localPath: appController.localHomePath()
     property var localEntries: []
@@ -46,6 +48,10 @@ Rectangle {
     property bool transferPanelOpen: false
     property var localDetachedWindow: null
     property var remoteDetachedWindow: null
+    property var localBackStack: []
+    property var localForwardStack: []
+    property var remoteBackStack: []
+    property var remoteForwardStack: []
     // 长按窗格把手后置为 true：四周显示流动虚线，提示可以拖出。
     property bool localDetaching: false
     property bool remoteDetaching: false
@@ -53,6 +59,22 @@ Rectangle {
     readonly property string sessionStatus: session && session.status ? session.status : ""
     readonly property bool sessionConnected: sessionStatus === "connected"
     readonly property bool sessionProblem: sessionStatus === "disconnected" || sessionStatus === "error"
+    property alias theme: browserTheme
+    readonly property color pageColor: theme.window
+    readonly property color panelColor: theme.panel
+    readonly property color surfaceColor: theme.surface
+    readonly property color hoverColor: theme.hover
+    readonly property color selectedColor: theme.selected
+    readonly property color dropHoverColor: theme.dropHover
+    readonly property color borderColor: theme.border
+    readonly property color mutedBorderColor: theme.borderMuted
+    readonly property color primaryTextColor: theme.textPrimary
+    readonly property color secondaryTextColor: theme.textSecondary
+    readonly property color mutedTextColor: theme.textMuted
+    readonly property color headerTextColor: theme.textHeader
+    readonly property color activeTextColor: theme.textActive
+    readonly property color iconColor: theme.icon
+    readonly property color iconAccentColor: theme.iconAccent
 
     signal sftpStatusChanged(string status, string message)
     signal panesDetachedChanged(bool bothDetached)
@@ -73,8 +95,13 @@ Rectangle {
 
     readonly property int columnSpacing: 8
 
-    color: "#0f172a"
-    border.color: "#1e293b"
+    color: pageColor
+    border.color: borderColor
+
+    ThemePalette {
+        id: browserTheme
+        mode: root.uiTheme
+    }
 
     Component.onCompleted: {
         loadTransferHistory()
@@ -242,7 +269,9 @@ Rectangle {
             remoteRequestId: remoteRequestId,
             remoteOperationRequestId: remoteOperationRequestId,
             remoteSortColumn: remoteSortColumn,
-            remoteSortAsc: remoteSortAsc
+            remoteSortAsc: remoteSortAsc,
+            remoteBackStack: remoteBackStack.slice(),
+            remoteForwardStack: remoteForwardStack.slice()
         }
     }
 
@@ -274,7 +303,9 @@ Rectangle {
             remoteRequestId: "",
             remoteOperationRequestId: "",
             remoteSortColumn: "name",
-            remoteSortAsc: true
+            remoteSortAsc: true,
+            remoteBackStack: [],
+            remoteForwardStack: []
         }
     }
 
@@ -287,6 +318,8 @@ Rectangle {
         remoteOperationRequestId = state.remoteOperationRequestId || ""
         remoteSortColumn = state.remoteSortColumn || "name"
         remoteSortAsc = state.remoteSortAsc === undefined ? true : state.remoteSortAsc
+        remoteBackStack = state.remoteBackStack ? state.remoteBackStack.slice() : []
+        remoteForwardStack = state.remoteForwardStack ? state.remoteForwardStack.slice() : []
         if (remoteLoading) {
             remoteRequestTimeout.restart()
         } else {
@@ -407,9 +440,52 @@ Rectangle {
         saveCurrentRemoteState()
     }
 
-    function enterLocal(path) {
+    function navigateLocal(path, recordHistory) {
+        if (!path || path.length === 0) {
+            return
+        }
+        if (path === localPath) {
+            refreshLocal()
+            return
+        }
+        if (recordHistory && localPath.length > 0) {
+            localBackStack = localBackStack.concat([localPath])
+            localForwardStack = []
+        }
         localPath = path
         refreshLocal()
+    }
+
+    function enterLocal(path) {
+        navigateLocal(path, true)
+    }
+
+    function localParent() {
+        enterLocal(appController.localParentPath(localPath))
+    }
+
+    function goLocalBack() {
+        if (localBackStack.length === 0) {
+            return
+        }
+        const previous = localBackStack[localBackStack.length - 1]
+        localBackStack = localBackStack.slice(0, localBackStack.length - 1)
+        if (localPath.length > 0) {
+            localForwardStack = localForwardStack.concat([localPath])
+        }
+        navigateLocal(previous, false)
+    }
+
+    function goLocalForward() {
+        if (localForwardStack.length === 0) {
+            return
+        }
+        const next = localForwardStack[localForwardStack.length - 1]
+        localForwardStack = localForwardStack.slice(0, localForwardStack.length - 1)
+        if (localPath.length > 0) {
+            localBackStack = localBackStack.concat([localPath])
+        }
+        navigateLocal(next, false)
     }
 
     function refreshRemote() {
@@ -426,9 +502,52 @@ Rectangle {
         requestRemoteForSession(sessionKey, connectionId, remotePath)
     }
 
-    function enterRemote(path) {
+    function navigateRemote(path, recordHistory) {
+        if (!path || path.length === 0) {
+            return
+        }
+        if (path === remotePath) {
+            refreshRemote()
+            return
+        }
+        if (recordHistory && remotePath.length > 0) {
+            remoteBackStack = remoteBackStack.concat([remotePath])
+            remoteForwardStack = []
+        }
         remotePath = path
         refreshRemote()
+    }
+
+    function enterRemote(path) {
+        navigateRemote(path, true)
+    }
+
+    function remoteParent() {
+        enterRemote(appController.remoteParentPath(remotePath))
+    }
+
+    function goRemoteBack() {
+        if (remoteBackStack.length === 0) {
+            return
+        }
+        const previous = remoteBackStack[remoteBackStack.length - 1]
+        remoteBackStack = remoteBackStack.slice(0, remoteBackStack.length - 1)
+        if (remotePath.length > 0) {
+            remoteForwardStack = remoteForwardStack.concat([remotePath])
+        }
+        navigateRemote(previous, false)
+    }
+
+    function goRemoteForward() {
+        if (remoteForwardStack.length === 0) {
+            return
+        }
+        const next = remoteForwardStack[remoteForwardStack.length - 1]
+        remoteForwardStack = remoteForwardStack.slice(0, remoteForwardStack.length - 1)
+        if (remotePath.length > 0) {
+            remoteBackStack = remoteBackStack.concat([remotePath])
+        }
+        navigateRemote(next, false)
     }
 
     function entryName(entry) {
@@ -1012,15 +1131,15 @@ Rectangle {
         handle: Rectangle {
             implicitWidth: 8
             implicitHeight: 8
-            color: SplitHandle.pressed ? "#38bdf8"
-                  : SplitHandle.hovered ? "#2563eb" : "#1e293b"
+                color: SplitHandle.pressed ? "#38bdf8"
+                  : SplitHandle.hovered ? "#2563eb" : root.borderColor
 
             Rectangle {
                 width: 2
                 height: Math.min(44, parent.height - 12)
                 radius: 1
                 anchors.centerIn: parent
-                color: SplitHandle.pressed || SplitHandle.hovered ? "#bfdbfe" : "#475569"
+                color: SplitHandle.pressed || SplitHandle.hovered ? "#bfdbfe" : root.iconColor
             }
         }
 
@@ -1030,7 +1149,7 @@ Rectangle {
             SplitView.minimumWidth: root.localDetachedWindow ? 0 : 260
             SplitView.fillWidth: !!root.remoteDetachedWindow
             SplitView.fillHeight: true
-            color: "#020617"
+            color: root.panelColor
             radius: 4
 
             MarchingAntsBorder {
@@ -1051,7 +1170,7 @@ Rectangle {
                     Label {
                         id: localTitleLabel
                         text: qsTr("Local")
-                        color: "#cbd5f5"
+                        color: root.secondaryTextColor
                         font.bold: true
                         font.pixelSize: 12
 
@@ -1067,6 +1186,8 @@ Rectangle {
                         implicitHeight: 24
                         contentItem: FileBrowserComponents.DetachIcon {
                             anchors.centerIn: parent
+                            color: root.iconColor
+                            accentColor: root.iconAccentColor
                         }
                         ToolTip.visible: hovered
                         ToolTip.text: qsTr("Detach Window")
@@ -1080,15 +1201,44 @@ Rectangle {
                     ToolButton {
                         implicitWidth: 30
                         implicitHeight: 24
-                        contentItem: FileBrowserComponents.ParentIcon {
+                        enabled: root.localBackStack.length > 0
+                        contentItem: FileBrowserComponents.ArrowIcon {
                             anchors.centerIn: parent
+                            direction: "left"
+                            color: root.iconColor
+                            opacity: parent.enabled ? 1 : 0.35
+                        }
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Back")
+                        onClicked: root.goLocalBack()
+                    }
+
+                    ToolButton {
+                        implicitWidth: 30
+                        implicitHeight: 24
+                        enabled: root.localForwardStack.length > 0
+                        contentItem: FileBrowserComponents.ArrowIcon {
+                            anchors.centerIn: parent
+                            direction: "right"
+                            color: root.iconColor
+                            opacity: parent.enabled ? 1 : 0.35
+                        }
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Forward")
+                        onClicked: root.goLocalForward()
+                    }
+
+                    ToolButton {
+                        implicitWidth: 30
+                        implicitHeight: 24
+                        contentItem: FileBrowserComponents.ArrowIcon {
+                            anchors.centerIn: parent
+                            direction: "up"
+                            color: root.iconColor
                         }
                         ToolTip.visible: hovered
                         ToolTip.text: qsTr("Parent folder")
-                        onClicked: {
-                            root.localPath = appController.localParentPath(root.localPath)
-                            root.refreshLocal()
-                        }
+                        onClicked: root.localParent()
                     }
 
                     ToolButton {
@@ -1096,6 +1246,8 @@ Rectangle {
                         implicitHeight: 24
                         contentItem: FileBrowserComponents.RefreshIcon {
                             anchors.centerIn: parent
+                            color: root.iconColor
+                            maskColor: root.panelColor
                         }
                         ToolTip.visible: hovered
                         ToolTip.text: qsTr("Refresh")
@@ -1107,23 +1259,22 @@ Rectangle {
                     Layout.fillWidth: true
                     text: root.localPath
                     selectByMouse: true
-                    color: "#dbeafe"
+                    color: root.primaryTextColor
                     font.pixelSize: 11
                     background: Rectangle {
-                        color: "#0f172a"
-                        border.color: "#1e293b"
+                        color: root.surfaceColor
+                        border.color: root.borderColor
                         radius: 3
                     }
                     onAccepted: {
-                        root.localPath = text
-                        root.refreshLocal()
+                        root.enterLocal(text)
                     }
                 }
 
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 22
-                    color: "#0f172a"
+                    color: root.surfaceColor
 
                     Item {
                         id: localHeaderInner
@@ -1157,7 +1308,7 @@ Rectangle {
                     activeFocusOnTab: true
                     highlightFollowsCurrentItem: true
                     highlight: Rectangle {
-                        color: "#172554"
+                        color: root.selectedColor
                     }
 
                     Keys.onPressed: function(event) {
@@ -1207,8 +1358,8 @@ Rectangle {
 
                         width: localList.width
                         height: 26
-                        color: localList.currentIndex === index ? "#172554"
-                              : mouseArea.containsMouse ? "#111827" : "#020617"
+                        color: localList.currentIndex === index ? root.selectedColor
+                              : mouseArea.containsMouse ? root.hoverColor : root.panelColor
 
                         Drag.active: localDragHandler.active
                         Drag.dragType: Drag.Automatic
@@ -1298,7 +1449,7 @@ Rectangle {
             SplitView.minimumWidth: root.remoteDetachedWindow ? 0 : 320
             SplitView.fillWidth: true
             SplitView.fillHeight: true
-            color: "#020617"
+            color: root.panelColor
             radius: 4
 
             MarchingAntsBorder {
@@ -1319,7 +1470,7 @@ Rectangle {
                     Label {
                         id: remoteTitleLabel
                         text: qsTr("Remote")
-                        color: "#cbd5f5"
+                        color: root.secondaryTextColor
                         font.bold: true
                         font.pixelSize: 12
 
@@ -1336,6 +1487,8 @@ Rectangle {
                         enabled: root.connectionId !== ""
                         contentItem: FileBrowserComponents.DetachIcon {
                             anchors.centerIn: parent
+                            color: root.iconColor
+                            accentColor: root.iconAccentColor
                             opacity: parent.enabled ? 1 : 0.35
                         }
                         ToolTip.visible: hovered
@@ -1350,17 +1503,46 @@ Rectangle {
                     ToolButton {
                         implicitWidth: 30
                         implicitHeight: 24
-                        enabled: root.connectionId !== ""
-                        contentItem: FileBrowserComponents.ParentIcon {
+                        enabled: root.connectionId !== "" && root.remoteBackStack.length > 0
+                        contentItem: FileBrowserComponents.ArrowIcon {
                             anchors.centerIn: parent
+                            direction: "left"
+                            color: root.iconColor
+                            opacity: parent.enabled ? 1 : 0.35
+                        }
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Back")
+                        onClicked: root.goRemoteBack()
+                    }
+
+                    ToolButton {
+                        implicitWidth: 30
+                        implicitHeight: 24
+                        enabled: root.connectionId !== "" && root.remoteForwardStack.length > 0
+                        contentItem: FileBrowserComponents.ArrowIcon {
+                            anchors.centerIn: parent
+                            direction: "right"
+                            color: root.iconColor
+                            opacity: parent.enabled ? 1 : 0.35
+                        }
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Forward")
+                        onClicked: root.goRemoteForward()
+                    }
+
+                    ToolButton {
+                        implicitWidth: 30
+                        implicitHeight: 24
+                        enabled: root.connectionId !== ""
+                        contentItem: FileBrowserComponents.ArrowIcon {
+                            anchors.centerIn: parent
+                            direction: "up"
+                            color: root.iconColor
                             opacity: parent.enabled ? 1 : 0.35
                         }
                         ToolTip.visible: hovered
                         ToolTip.text: qsTr("Parent folder")
-                        onClicked: {
-                            root.remotePath = appController.remoteParentPath(root.remotePath)
-                            root.refreshRemote()
-                        }
+                        onClicked: root.remoteParent()
                     }
 
                     ToolButton {
@@ -1369,6 +1551,8 @@ Rectangle {
                         enabled: root.connectionId !== ""
                         contentItem: FileBrowserComponents.RefreshIcon {
                             anchors.centerIn: parent
+                            color: root.iconColor
+                            maskColor: root.panelColor
                             opacity: parent.enabled ? 1 : 0.35
                         }
                         ToolTip.visible: hovered
@@ -1387,10 +1571,10 @@ Rectangle {
                         background: Rectangle {
                             color: root.sessionProblem ? "#2a1014"
                                   : !root.sessionConnected ? "#241b0a"
-                                  : syncButton.checked ? "#0f2742" : "#111827"
+                                  : syncButton.checked ? (root.classic ? "#e0f2fe" : "#0f2742") : root.hoverColor
                             border.color: root.sessionProblem ? "#ef4444"
                                           : !root.sessionConnected ? "#f59e0b"
-                                          : syncButton.checked ? "#38bdf8" : "#334155"
+                                          : syncButton.checked ? "#38bdf8" : root.mutedBorderColor
                             radius: 3
                         }
                         contentItem: FileBrowserComponents.SyncIcon {
@@ -1398,6 +1582,7 @@ Rectangle {
                             active: root.syncRemoteWithTerminal
                             connected: root.sessionConnected
                             problem: root.sessionProblem
+                            maskColor: root.panelColor
                             opacity: parent.enabled ? 1 : 0.35
                         }
                         ToolTip.visible: hovered
@@ -1410,6 +1595,8 @@ Rectangle {
                         implicitHeight: 24
                         contentItem: FileBrowserComponents.SettingsIcon {
                             anchors.centerIn: parent
+                            color: root.iconColor
+                            centerColor: root.panelColor
                         }
                         ToolTip.visible: hovered
                         ToolTip.text: qsTr("Remote file open settings")
@@ -1429,8 +1616,8 @@ Rectangle {
                         ToolTip.text: qsTr("Transfer tasks")
                         onClicked: root.transferPanelOpen = !root.transferPanelOpen
                         background: Rectangle {
-                            color: parent.enabled ? "#111827" : "#020617"
-                            border.color: root.transferPanelOpen ? "#38bdf8" : "#334155"
+                            color: parent.enabled ? root.hoverColor : root.panelColor
+                            border.color: root.transferPanelOpen ? "#38bdf8" : root.mutedBorderColor
                             radius: 3
                         }
                         contentItem: Row {
@@ -1440,12 +1627,12 @@ Rectangle {
                                 width: 12
                                 height: 10
                                 radius: 2
-                                color: root.transferTasks.length > 0 ? "#60a5fa" : "#475569"
+                                color: root.transferTasks.length > 0 ? root.iconAccentColor : root.iconColor
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Label {
                                 text: root.transferTasks.length > 0 ? String(root.transferTasks.length) : ""
-                                color: "#dbeafe"
+                                color: root.primaryTextColor
                                 font.pixelSize: 11
                                 anchors.verticalCenter: parent.verticalCenter
                             }
@@ -1458,23 +1645,22 @@ Rectangle {
                     text: root.remotePath
                     enabled: root.connectionId !== ""
                     selectByMouse: true
-                    color: "#dbeafe"
+                    color: root.primaryTextColor
                     font.pixelSize: 11
                     background: Rectangle {
-                        color: "#0f172a"
-                        border.color: "#1e293b"
+                        color: root.surfaceColor
+                        border.color: root.borderColor
                         radius: 3
                     }
                     onAccepted: {
-                        root.remotePath = text
-                        root.refreshRemote()
+                        root.enterRemote(text)
                     }
                 }
 
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 22
-                    color: "#0f172a"
+                    color: root.surfaceColor
 
                     Item {
                         id: remoteHeaderInner
@@ -1511,7 +1697,7 @@ Rectangle {
                         activeFocusOnTab: true
                         highlightFollowsCurrentItem: true
                         highlight: Rectangle {
-                            color: "#172554"
+                            color: root.selectedColor
                         }
 
                         Keys.onPressed: function(event) {
@@ -1699,9 +1885,9 @@ Rectangle {
 
                             width: remoteList.width
                             height: 26
-                            color: remoteRowDropArea.containsDrag ? "#1e3a5f"
-                                  : remoteList.currentIndex === index ? "#172554"
-                                  : remoteMouseArea.containsMouse ? "#111827" : "#020617"
+                            color: remoteRowDropArea.containsDrag ? root.dropHoverColor
+                                  : remoteList.currentIndex === index ? root.selectedColor
+                                  : remoteMouseArea.containsMouse ? root.hoverColor : root.panelColor
 
                             Item {
                                 id: remoteRowInner
@@ -1770,7 +1956,7 @@ Rectangle {
 
                     Label {
                         text: root.remoteListingLoading ? qsTr("Loading...") : root.remoteError
-                        color: "#64748b"
+                    color: root.mutedTextColor
                         font.pixelSize: 11
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
@@ -1807,9 +1993,9 @@ Rectangle {
                 anchors.fill: parent
                 anchors.margins: 8
                 visible: root.remoteDropActive
-                color: "#0ea5e9"
+                color: root.theme.focus
                 opacity: 0.12
-                border.color: "#38bdf8"
+                border.color: root.theme.focus
                 border.width: 2
                 radius: 4
                 z: 20
@@ -1819,7 +2005,7 @@ Rectangle {
                     text: root.dropRemoteTargetPath.length > 0
                           ? qsTr("Upload to %1").arg(root.dropRemoteTargetPath)
                           : qsTr("Upload to Remote")
-                    color: "#bfdbfe"
+                    color: root.activeTextColor
                     font.pixelSize: 13
                     font.bold: true
                     elide: Text.ElideMiddle

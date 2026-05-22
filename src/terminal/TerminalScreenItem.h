@@ -25,6 +25,7 @@ class TerminalScreenItem : public QQuickPaintedItem
     Q_PROPERTY(QString fontFamily READ fontFamily WRITE setFontFamily NOTIFY fontChanged)
     Q_PROPERTY(int fontPixelSize READ fontPixelSize WRITE setFontPixelSize NOTIFY fontChanged)
     Q_PROPERTY(QColor background READ background WRITE setBackground NOTIFY backgroundChanged)
+    Q_PROPERTY(QColor foreground READ foreground WRITE setForeground NOTIFY foregroundChanged)
     Q_PROPERTY(QColor cursorColor READ cursorColor WRITE setCursorColor NOTIFY cursorColorChanged)
     Q_PROPERTY(bool cursorBlinking READ cursorBlinking WRITE setCursorBlinking NOTIFY cursorBlinkingChanged)
     Q_PROPERTY(QString selectedText READ selectedText NOTIFY selectionChanged)
@@ -53,6 +54,9 @@ public:
     QColor background() const { return m_background; }
     void setBackground(const QColor &c);
 
+    QColor foreground() const { return m_foreground; }
+    void setForeground(const QColor &c);
+
     QColor cursorColor() const { return m_cursorColor; }
     void setCursorColor(const QColor &c);
     bool cursorBlinking() const { return m_cursorBlinking; }
@@ -74,6 +78,7 @@ signals:
     void metricsChanged();
     void fontChanged();
     void backgroundChanged();
+    void foregroundChanged();
     void cursorColorChanged();
     void cursorBlinkingChanged();
     void selectionChanged();
@@ -135,6 +140,7 @@ private:
     int m_baseline = 12;
     QFont m_font;
     QColor m_background{0x02, 0x06, 0x17};
+    QColor m_foreground{0xe2, 0xe8, 0xf0};
     QColor m_cursorColor{0x38, 0xbd, 0xf8};
     bool m_selectionActive = false;
     bool m_selecting = false;

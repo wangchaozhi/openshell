@@ -14,6 +14,8 @@ Loader {
     component FileTypeIcon: Item {
         property bool isDir: false
         property color accentColor: isDir ? "#3b82f6" : "#94a3b8"
+        property color fillColor: "#334155"
+        property color folderTabColor: "#60a5fa"
 
         implicitWidth: 16
         implicitHeight: 16
@@ -24,7 +26,7 @@ Loader {
             width: 12
             height: 12
             radius: 2
-            color: parent.isDir ? "#1d4ed8" : "#334155"
+            color: parent.isDir ? parent.fillColor : parent.fillColor
             border.color: parent.accentColor
         }
 
@@ -35,7 +37,7 @@ Loader {
             width: 7
             height: 4
             radius: 1
-            color: "#60a5fa"
+            color: parent.folderTabColor
         }
 
         Rectangle {
@@ -90,6 +92,10 @@ Loader {
             FileTypeIcon {
                 isDir: parent.entry.isDir || false
                 accentColor: root.fileBrowser.entryNameColor(parent.entry)
+                fillColor: root.fileBrowser.classic
+                           ? (parent.entry.isDir ? "#dbeafe" : "#ffffff")
+                           : (parent.entry.isDir ? "#1d4ed8" : "#334155")
+                folderTabColor: root.fileBrowser.iconAccentColor
                 anchors.verticalCenter: parent.verticalCenter
             }
 
@@ -110,7 +116,7 @@ Loader {
         Label {
             anchors.fill: parent
             text: root.fileBrowser.formatFileSize(root.entry ? root.entry.size : "")
-            color: "#94a3b8"
+            color: root.fileBrowser.mutedTextColor
             font.pixelSize: 11
             horizontalAlignment: Text.AlignRight
             verticalAlignment: Text.AlignVCenter
@@ -123,7 +129,7 @@ Loader {
         Label {
             anchors.fill: parent
             text: root.entry ? (root.entry.owner || "") : ""
-            color: "#94a3b8"
+            color: root.fileBrowser.mutedTextColor
             font.pixelSize: 11
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
@@ -138,7 +144,7 @@ Loader {
             text: root.entry
                   ? root.fileBrowser.permissionsToSymbolic(root.entry.permissions, root.entry.isDir)
                   : ""
-            color: "#94a3b8"
+            color: root.fileBrowser.mutedTextColor
             font.family: "Courier New"
             font.pixelSize: 11
             horizontalAlignment: Text.AlignRight
@@ -152,7 +158,7 @@ Loader {
         Label {
             anchors.fill: parent
             text: root.entry ? (root.entry.modified || "") : ""
-            color: "#94a3b8"
+            color: root.fileBrowser.mutedTextColor
             font.pixelSize: 11
             verticalAlignment: Text.AlignVCenter
         }

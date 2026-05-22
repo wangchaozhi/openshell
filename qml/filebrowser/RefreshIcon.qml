@@ -1,6 +1,11 @@
 import QtQuick
 
 Item {
+    id: root
+
+    property color color: "#93c5fd"
+    property color maskColor: "#020617"
+
     implicitWidth: 15
     implicitHeight: 15
     Rectangle {
@@ -10,7 +15,7 @@ Item {
         height: 11
         radius: 6
         color: "transparent"
-        border.color: "#93c5fd"
+        border.color: root.color
         border.width: 2
     }
     Rectangle {
@@ -19,7 +24,7 @@ Item {
         width: 5
         height: 5
         rotation: 45
-        color: "#93c5fd"
+        color: root.color
     }
     Rectangle {
         x: 0
@@ -27,20 +32,20 @@ Item {
         width: 5
         height: 5
         rotation: 45
-        color: "#93c5fd"
+        color: root.color
     }
     Rectangle {
         x: 1
         y: 6
         width: 5
         height: 4
-        color: "#020617"
+        color: root.maskColor
     }
     Rectangle {
         x: 9
         y: 5
         width: 5
         height: 4
-        color: "#020617"
+        color: root.maskColor
     }
 }

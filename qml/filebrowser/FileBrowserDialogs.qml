@@ -7,6 +7,66 @@ Item {
 
     required property var fileBrowser
 
+    component DialogButton: Button {
+        id: dialogButton
+
+        property bool primary: false
+
+        implicitWidth: 96
+        implicitHeight: 34
+        hoverEnabled: true
+
+        contentItem: Label {
+            text: dialogButton.text
+            color: dialogButton.primary ? root.fileBrowser.theme.textOnAccent : root.fileBrowser.theme.textPrimary
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            font.pixelSize: 13
+        }
+
+        background: Rectangle {
+            radius: 4
+            color: dialogButton.primary
+                   ? (dialogButton.hovered ? root.fileBrowser.theme.focus : root.fileBrowser.theme.textActive)
+                   : (dialogButton.hovered ? root.fileBrowser.theme.hover : root.fileBrowser.theme.surfaceRaised)
+            border.width: dialogButton.primary ? 0 : 1
+            border.color: root.fileBrowser.theme.borderMuted
+        }
+    }
+
+    component DialogCheckBox: CheckBox {
+        id: dialogCheck
+
+        spacing: 8
+
+        indicator: Rectangle {
+            implicitWidth: 20
+            implicitHeight: 20
+            x: dialogCheck.leftPadding
+            y: parent.height / 2 - height / 2
+            radius: 3
+            color: dialogCheck.checked ? root.fileBrowser.theme.textActive : root.fileBrowser.theme.surface
+            border.width: 1
+            border.color: dialogCheck.activeFocus ? root.fileBrowser.theme.focus : root.fileBrowser.theme.borderMuted
+
+            Label {
+                anchors.centerIn: parent
+                text: dialogCheck.checked ? "\u2713" : ""
+                color: root.fileBrowser.theme.textOnAccent
+                font.pixelSize: 16
+                font.bold: true
+            }
+        }
+
+        contentItem: Label {
+            text: dialogCheck.text
+            color: dialogCheck.enabled ? root.fileBrowser.theme.textPrimary : root.fileBrowser.theme.textMuted
+            verticalAlignment: Text.AlignVCenter
+            leftPadding: dialogCheck.indicator.width + dialogCheck.spacing
+            font.pixelSize: 13
+        }
+    }
+
     function openChmod(currentPermissions) {
         chmodDialog.applyOctal(currentPermissions && currentPermissions.length > 0
                                ? currentPermissions
@@ -92,7 +152,7 @@ Item {
 
                 Label {
                     text: root.fileBrowser.pendingChmodName
-                    color: "#020617"
+                    color: root.fileBrowser.theme.textPrimary
                     font.bold: true
                     font.pixelSize: 16
                     elide: Text.ElideMiddle
@@ -102,7 +162,7 @@ Item {
                 Label {
                     id: symbolicLabel
                     text: "----------"
-                    color: "#64748b"
+                    color: root.fileBrowser.theme.textMuted
                     font.family: "Courier New"
                     font.pixelSize: 12
                     font.bold: true
@@ -201,7 +261,7 @@ Item {
                 text: root.fileBrowser.nameDialogMode === "newDir" ? qsTr("Folder name")
                     : root.fileBrowser.nameDialogMode === "newFile" ? qsTr("File name")
                     : qsTr("New name")
-                color: "#334155"
+                color: root.fileBrowser.theme.textSecondary
             }
 
             TextField {
@@ -234,21 +294,57 @@ Item {
         modal: true
         anchors.centerIn: parent
         width: 420
-        standardButtons: Dialog.Ok | Dialog.Cancel
+        padding: 0
+        margins: 12
 
-        ColumnLayout {
-            anchors.fill: parent
-            spacing: 8
+        background: Rectangle {
+            color: root.fileBrowser.theme.panel
+            border.width: 1
+            border.color: root.fileBrowser.theme.borderMuted
+            radius: 4
+        }
+
+        header: Rectangle {
+            implicitHeight: 46
+            color: root.fileBrowser.theme.surface
 
             Label {
+                anchors.fill: parent
+                anchors.leftMargin: 14
+                anchors.rightMargin: 14
+                text: remoteOpenSettingsDialog.title
+                color: root.fileBrowser.theme.textPrimary
+                verticalAlignment: Text.AlignVCenter
+                font.pixelSize: 14
+                font.bold: true
+            }
+        }
+
+        contentItem: ColumnLayout {
+            implicitWidth: remoteOpenSettingsDialog.width
+            implicitHeight: 142
+            spacing: 10
+
+            Item {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 12
+            }
+
+            Label {
+                Layout.leftMargin: 12
+                Layout.rightMargin: 12
+                Layout.fillWidth: true
                 text: qsTr("Open remote files with")
-                color: "#020617"
+                color: root.fileBrowser.theme.textSecondary
                 font.pixelSize: 12
             }
 
             ComboBox {
                 id: openModeBox
+                Layout.leftMargin: 12
+                Layout.rightMargin: 12
                 Layout.fillWidth: true
+                Layout.preferredHeight: 36
                 textRole: "label"
                 valueRole: "value"
                 model: [
@@ -256,20 +352,103 @@ Item {
                     { label: qsTr("Specified text editor"), value: "custom" },
                     { label: qsTr("Built-in editor"), value: "internal" }
                 ]
+
+                contentItem: Label {
+                    leftPadding: 10
+                    rightPadding: 28
+                    text: openModeBox.displayText
+                    color: root.fileBrowser.theme.textPrimary
+                    verticalAlignment: Text.AlignVCenter
+                    font.pixelSize: 13
+                    elide: Text.ElideRight
+                }
+
+                indicator: Label {
+                    x: openModeBox.width - width - 10
+                    y: (openModeBox.height - height) / 2
+                    text: "\u2039\n\u203a"
+                    color: root.fileBrowser.theme.icon
+                    rotation: 90
+                    font.pixelSize: 17
+                    lineHeight: 0.55
+                }
+
+                background: Rectangle {
+                    color: root.fileBrowser.theme.surfaceRaised
+                    border.width: 1
+                    border.color: openModeBox.activeFocus || openModeBox.down
+                                  ? root.fileBrowser.theme.focus
+                                  : root.fileBrowser.theme.borderMuted
+                    radius: 4
+                }
+
+                delegate: ItemDelegate {
+                    width: openModeBox.width
+                    height: 30
+                    highlighted: openModeBox.highlightedIndex === index
+
+                    contentItem: Label {
+                        text: modelData.label
+                        color: highlighted ? root.fileBrowser.theme.textOnAccent : root.fileBrowser.theme.textPrimary
+                        verticalAlignment: Text.AlignVCenter
+                        font.pixelSize: 13
+                    }
+
+                    background: Rectangle {
+                        color: highlighted ? root.fileBrowser.theme.textActive : root.fileBrowser.theme.surfaceRaised
+                    }
+                }
+
+                popup: Popup {
+                    y: openModeBox.height + 2
+                    width: openModeBox.width
+                    implicitHeight: Math.min(contentItem.implicitHeight + 2, 120)
+                    padding: 1
+
+                    contentItem: ListView {
+                        clip: true
+                        implicitHeight: contentHeight
+                        model: openModeBox.popup.visible ? openModeBox.delegateModel : null
+                        currentIndex: openModeBox.highlightedIndex
+                    }
+
+                    background: Rectangle {
+                        color: root.fileBrowser.theme.surfaceRaised
+                        border.color: root.fileBrowser.theme.borderMuted
+                        radius: 4
+                    }
+                }
             }
 
             RowLayout {
+                Layout.leftMargin: 12
+                Layout.rightMargin: 12
                 Layout.fillWidth: true
                 enabled: openModeBox.currentValue === "custom"
+                opacity: enabled ? 1 : 0.62
 
                 TextField {
                     id: editorPathField
                     Layout.fillWidth: true
+                    Layout.preferredHeight: 36
                     selectByMouse: true
                     placeholderText: qsTr("Text editor path")
+                    color: root.fileBrowser.theme.textPrimary
+                    placeholderTextColor: root.fileBrowser.theme.textMuted
+                    selectedTextColor: root.fileBrowser.theme.textOnAccent
+                    selectionColor: root.fileBrowser.theme.textActive
+
+                    background: Rectangle {
+                        color: root.fileBrowser.theme.surfaceRaised
+                        border.width: 1
+                        border.color: editorPathField.activeFocus
+                                      ? root.fileBrowser.theme.focus
+                                      : root.fileBrowser.theme.borderMuted
+                        radius: 4
+                    }
                 }
 
-                Button {
+                DialogButton {
                     text: qsTr("Browse")
                     onClicked: {
                         const path = appController.chooseExternalTextEditor()
@@ -280,9 +459,44 @@ Item {
                 }
             }
 
-            CheckBox {
+            DialogCheckBox {
                 id: autoUploadCheck
+                Layout.leftMargin: 12
+                Layout.rightMargin: 12
+                Layout.fillWidth: true
                 text: qsTr("Auto upload after external edits")
+            }
+
+            Item {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 2
+            }
+        }
+
+        footer: Rectangle {
+            implicitHeight: 58
+            color: root.fileBrowser.theme.panel
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 12
+                anchors.rightMargin: 12
+                anchors.topMargin: 10
+                anchors.bottomMargin: 12
+                spacing: 1
+
+                Item { Layout.fillWidth: true }
+
+                DialogButton {
+                    primary: true
+                    text: qsTr("OK")
+                    onClicked: remoteOpenSettingsDialog.accept()
+                }
+
+                DialogButton {
+                    text: qsTr("Cancel")
+                    onClicked: remoteOpenSettingsDialog.reject()
+                }
             }
         }
 

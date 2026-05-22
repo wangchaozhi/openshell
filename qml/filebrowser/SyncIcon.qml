@@ -6,6 +6,7 @@ Item {
     property bool active: true
     property bool connected: true
     property bool problem: false
+    property color maskColor: "#020617"
     readonly property color strokeColor: problem ? "#f87171"
                                        : connected ? (active ? "#93c5fd" : "#64748b")
                                        : "#fbbf24"
@@ -50,14 +51,14 @@ Item {
         y: 5
         width: 5
         height: 5
-        color: "#020617"
+        color: root.maskColor
     }
     Rectangle {
         x: 8
         y: 5
         width: 5
         height: 5
-        color: "#020617"
+        color: root.maskColor
     }
     Rectangle {
         x: 6

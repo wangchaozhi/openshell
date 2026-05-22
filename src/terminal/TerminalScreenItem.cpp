@@ -14,6 +14,9 @@
 #include <QStyleHints>
 
 namespace {
+constexpr QRgb kDefaultTerminalBackground = 0xff020617;
+constexpr QRgb kDefaultTerminalForeground = 0xffe2e8f0;
+
 qint64 monotonicMs()
 {
     static QElapsedTimer timer = [] {
@@ -143,6 +146,16 @@ void TerminalScreenItem::setBackground(const QColor &c)
     m_background = c;
     update();
     emit backgroundChanged();
+}
+
+void TerminalScreenItem::setForeground(const QColor &c)
+{
+    if (m_foreground == c) {
+        return;
+    }
+    m_foreground = c;
+    update();
+    emit foregroundChanged();
 }
 
 void TerminalScreenItem::setCursorColor(const QColor &c)
@@ -919,9 +932,11 @@ void TerminalScreenItem::paint(QPainter *painter)
             const int y = r * m_cellH;
             const int w = m_cellW * cell.width;
             const int h = m_cellH;
+            const QColor cellBg = cell.bg.rgba() == kDefaultTerminalBackground ? m_background : cell.bg;
+            const QColor cellFg = cell.fg.rgba() == kDefaultTerminalForeground ? m_foreground : cell.fg;
 
-            if (cell.bg != m_background) {
-                painter->fillRect(x, y, w, h, cell.bg);
+            if (cellBg != m_background) {
+                painter->fillRect(x, y, w, h, cellBg);
             }
 
             if (isCellSelected(absRow, c)) {
@@ -940,14 +955,14 @@ void TerminalScreenItem::paint(QPainter *painter)
                 } else {
                     painter->setFont(m_font);
                 }
-                painter->setPen(cell.fg);
+                painter->setPen(cellFg);
                 painter->drawText(QRectF(x, y, w, h),
                                   Qt::AlignLeft | Qt::AlignVCenter,
                                   cell.text);
             }
 
             if (cell.underline) {
-                painter->setPen(cell.fg);
+                painter->setPen(cellFg);
                 painter->drawLine(x, y + h - 1, x + w, y + h - 1);
             }
         }

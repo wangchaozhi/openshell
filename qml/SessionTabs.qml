@@ -10,7 +10,7 @@ Rectangle {
     property string activeView: "terminal"
     property string uiTheme: "dark"
     property bool systemInfoTabVisible: false
-    readonly property bool classic: uiTheme === "classic"
+    readonly property bool classic: theme.classic
 
     signal sessionActivated(string id)
     signal sessionClosed(string id)
@@ -20,7 +20,12 @@ Rectangle {
     signal connectionManagerActivated()
     signal systemInfoActivated()
     signal systemInfoClosed()
-    color: classic ? "#f8fafc" : "#020617"
+    ThemePalette {
+        id: theme
+        mode: root.uiTheme
+    }
+
+    color: theme.surface
 
     component CloseIcon: Item {
         implicitWidth: 12
@@ -31,7 +36,7 @@ Rectangle {
             height: 2
             radius: 1
             rotation: 45
-            color: root.classic ? "#475569" : "#cbd5e1"
+            color: theme.icon
         }
         Rectangle {
             anchors.centerIn: parent
@@ -39,7 +44,7 @@ Rectangle {
             height: 2
             radius: 1
             rotation: -45
-            color: root.classic ? "#475569" : "#cbd5e1"
+            color: theme.icon
         }
     }
 
@@ -58,11 +63,11 @@ Rectangle {
             background: Rectangle {
                 radius: 4
                 color: root.activeView === "connections"
-                       ? (root.classic ? "#e0f2fe" : "#1e293b")
-                       : (root.classic ? "#ffffff" : "#0f172a")
+                       ? theme.selected
+                       : theme.panel
                 border.color: root.activeView === "connections"
-                              ? "#38bdf8"
-                              : (root.classic ? "#cbd5e1" : "#1e293b")
+                              ? theme.focus
+                              : theme.border
             }
             contentItem: Item {
                 Item {
@@ -77,7 +82,7 @@ Rectangle {
                         height: 11
                         radius: 2
                         color: "transparent"
-                        border.color: root.classic ? "#0284c7" : "#38bdf8"
+                        border.color: theme.iconAccent
                         border.width: 2
                     }
                     Rectangle {
@@ -86,7 +91,7 @@ Rectangle {
                         width: 4
                         height: 3
                         radius: 1
-                        color: root.classic ? "#0284c7" : "#38bdf8"
+                        color: theme.iconAccent
                     }
                     Rectangle {
                         x: 5
@@ -94,7 +99,7 @@ Rectangle {
                         width: 10
                         height: 2
                         radius: 1
-                        color: root.classic ? "#0284c7" : "#38bdf8"
+                        color: theme.iconAccent
                     }
                 }
             }
@@ -119,11 +124,11 @@ Rectangle {
                 property bool suppressClickAfterHold: false
 
                 color: isActive && root.activeView === "terminal"
-                       ? (root.classic ? "#e0f2fe" : "#1e293b")
-                       : (root.classic ? "#ffffff" : "#0f172a")
+                       ? theme.selected
+                       : theme.panel
                 border.color: isActive && root.activeView === "terminal"
-                              ? "#38bdf8"
-                              : (root.classic ? "#cbd5e1" : "#1e293b")
+                              ? theme.focus
+                              : theme.border
                 border.width: 1
 
                 MouseArea {
@@ -208,8 +213,8 @@ Rectangle {
                     Label {
                         text: modelData.title || qsTr("session")
                         color: tab.isActive && root.activeView === "terminal"
-                               ? (root.classic ? "#0f172a" : "#f1f5f9")
-                               : (root.classic ? "#334155" : "#cbd5f5")
+                               ? theme.textPrimary
+                               : theme.textSecondary
                         font.pixelSize: 12
                     }
 
@@ -235,11 +240,11 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             radius: 4
             color: root.activeView === "system"
-                   ? (root.classic ? "#e0f2fe" : "#1e293b")
-                   : (root.classic ? "#ffffff" : "#0f172a")
+                   ? theme.selected
+                   : theme.panel
             border.color: root.activeView === "system"
-                          ? "#38bdf8"
-                          : (root.classic ? "#cbd5e1" : "#1e293b")
+                          ? theme.focus
+                          : theme.border
             border.width: 1
 
             MouseArea {
@@ -259,8 +264,8 @@ Rectangle {
                 Label {
                     text: qsTr("System Info")
                     color: root.activeView === "system"
-                           ? (root.classic ? "#0f172a" : "#f1f5f9")
-                           : (root.classic ? "#334155" : "#cbd5f5")
+                           ? theme.textPrimary
+                           : theme.textSecondary
                     font.pixelSize: 12
                 }
 

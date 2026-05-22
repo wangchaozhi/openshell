@@ -12,7 +12,7 @@ ApplicationWindow {
     minimumHeight: 540
     visible: true
     title: qsTr("OpenShell")
-    color: "#0f172a"
+    color: theme.window
 
     property var connections: appController.connectionProfiles()
     property var activeSessions: appController.sessions()
@@ -32,6 +32,11 @@ ApplicationWindow {
     property bool systemInfoTabVisible: false
     property var detachedSessionWindows: ({})
     property var detachedSidebarWindow: null
+
+    ThemePalette {
+        id: theme
+        mode: window.uiTheme
+    }
 
     readonly property var activeSession: {
         for (let i = 0; i < activeSessions.length; ++i) {
@@ -237,11 +242,12 @@ ApplicationWindow {
             title: detachedSession && detachedSession.title
                    ? detachedSession.title + " - " + qsTr("OpenShell")
                    : qsTr("OpenShell")
-            color: "#020617"
+            color: theme.panel
 
             TerminalView {
                 anchors.fill: parent
                 session: detachedWindow.detachedSession
+                uiTheme: window.uiTheme
                 opacity: 0.55 + detachedWindow.detachPopProgress * 0.45
                 scale: 0.96 + detachedWindow.detachPopProgress * 0.04
                 transformOrigin: Item.Center
@@ -296,7 +302,7 @@ ApplicationWindow {
             minimumHeight: 420
             visible: false
             title: qsTr("Sidebar") + " - " + qsTr("OpenShell")
-            color: "#0b1220"
+            color: theme.window
 
             Sidebar {
                 anchors.fill: parent
@@ -480,6 +486,7 @@ ApplicationWindow {
                         SplitView.fillWidth: true
                         SplitView.fillHeight: true
                         session: window.activeSession
+                        uiTheme: window.uiTheme
                     }
 
                     Loader {
@@ -491,6 +498,7 @@ ApplicationWindow {
                         active: window.fileBrowserVisible && window.activeView === "terminal" && window.activeSessionId.length > 0
                         sourceComponent: FileBrowser {
                             session: window.activeSession
+                            uiTheme: window.uiTheme
                             terminalRemotePath: terminalView.detectedRemotePath
                             onSftpStatusChanged: (status, message) => {
                                 window.sftpStatus = status
@@ -508,11 +516,12 @@ ApplicationWindow {
                     sourceComponent: SystemInfoView {
                         snapshot: window.monitorSnapshot
                         error: window.monitorError
+                        uiTheme: window.uiTheme
                     }
                 }
 
                 Rectangle {
-                    color: window.uiTheme === "classic" ? "#ffffff" : "#0f172a"
+                    color: theme.surface
 
                     ColumnLayout {
                         anchors.centerIn: parent
@@ -520,12 +529,12 @@ ApplicationWindow {
 
                         Label {
                             text: qsTr("No active sessions")
-                            color: window.uiTheme === "classic" ? "#0f172a" : "#cbd5f5"
+                            color: theme.textPrimary
                             font.pixelSize: 18
                         }
                         Label {
                             text: qsTr("Open the connection manager folder and double-click a connection.")
-                            color: window.uiTheme === "classic" ? "#64748b" : "#94a3b8"
+                            color: theme.textMuted
                             font.pixelSize: 12
                         }
                     }
@@ -535,8 +544,8 @@ ApplicationWindow {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 22
-                color: window.uiTheme === "classic" ? "#f8fafc" : "#020617"
-                border.color: window.uiTheme === "classic" ? "#cbd5e1" : "#020617"
+                color: theme.surface
+                border.color: theme.border
 
                 RowLayout {
                     anchors.fill: parent
@@ -545,14 +554,14 @@ ApplicationWindow {
 
                     Label {
                         text: window.statusMessage
-                        color: window.uiTheme === "classic" ? "#475569" : "#94a3b8"
+                        color: theme.textMuted
                         font.pixelSize: 11
                         Layout.fillWidth: true
                         elide: Text.ElideRight
                     }
                     Label {
                         text: qsTr("Sessions: %1").arg(window.activeSessions.length)
-                        color: window.uiTheme === "classic" ? "#475569" : "#94a3b8"
+                        color: theme.textMuted
                         font.pixelSize: 11
                     }
                 }

@@ -25,12 +25,12 @@ Window {
     minimumHeight: 300
     visible: false
     title: qsTr("Local") + " - " + fileBrowser.localPath
-    color: "#020617"
+    color: fileBrowser.panelColor
 
     Rectangle {
         id: localWindowContent
         anchors.fill: parent
-        color: "#020617"
+        color: localWindow.fileBrowser.panelColor
 
         ColumnLayout {
             anchors.fill: parent
@@ -41,25 +41,58 @@ Window {
                 Layout.fillWidth: true
                 Label {
                     text: qsTr("Local")
-                    color: "#cbd5f5"
+                    color: localWindow.fileBrowser.secondaryTextColor
                     font.bold: true
                     font.pixelSize: 12
                 }
                 ToolButton {
                     implicitWidth: 30
                     implicitHeight: 24
-                    contentItem: ParentIcon { anchors.centerIn: parent }
-                    ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Parent folder")
-                    onClicked: {
-                        localWindow.fileBrowser.localPath = appController.localParentPath(localWindow.fileBrowser.localPath)
-                        localWindow.fileBrowser.refreshLocal()
+                    enabled: localWindow.fileBrowser.localBackStack.length > 0
+                    contentItem: ArrowIcon {
+                        anchors.centerIn: parent
+                        direction: "left"
+                        color: localWindow.fileBrowser.iconColor
+                        opacity: parent.enabled ? 1 : 0.35
                     }
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Back")
+                    onClicked: localWindow.fileBrowser.goLocalBack()
                 }
                 ToolButton {
                     implicitWidth: 30
                     implicitHeight: 24
-                    contentItem: RefreshIcon { anchors.centerIn: parent }
+                    enabled: localWindow.fileBrowser.localForwardStack.length > 0
+                    contentItem: ArrowIcon {
+                        anchors.centerIn: parent
+                        direction: "right"
+                        color: localWindow.fileBrowser.iconColor
+                        opacity: parent.enabled ? 1 : 0.35
+                    }
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Forward")
+                    onClicked: localWindow.fileBrowser.goLocalForward()
+                }
+                ToolButton {
+                    implicitWidth: 30
+                    implicitHeight: 24
+                    contentItem: ArrowIcon {
+                        anchors.centerIn: parent
+                        direction: "up"
+                        color: localWindow.fileBrowser.iconColor
+                    }
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Parent folder")
+                    onClicked: localWindow.fileBrowser.localParent()
+                }
+                ToolButton {
+                    implicitWidth: 30
+                    implicitHeight: 24
+                    contentItem: RefreshIcon {
+                        anchors.centerIn: parent
+                        color: localWindow.fileBrowser.iconColor
+                        maskColor: localWindow.fileBrowser.panelColor
+                    }
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("Refresh")
                     onClicked: localWindow.fileBrowser.refreshLocal()
@@ -70,23 +103,22 @@ Window {
                 Layout.fillWidth: true
                 text: localWindow.fileBrowser.localPath
                 selectByMouse: true
-                color: "#dbeafe"
+                color: localWindow.fileBrowser.primaryTextColor
                 font.pixelSize: 11
                 background: Rectangle {
-                    color: "#0f172a"
-                    border.color: "#1e293b"
+                    color: localWindow.fileBrowser.surfaceColor
+                    border.color: localWindow.fileBrowser.borderColor
                     radius: 3
                 }
                 onAccepted: {
-                    localWindow.fileBrowser.localPath = text
-                    localWindow.fileBrowser.refreshLocal()
+                    localWindow.fileBrowser.enterLocal(text)
                 }
             }
 
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 22
-                color: "#0f172a"
+                color: localWindow.fileBrowser.surfaceColor
                 Item {
                     id: detachedLocalHeaderInner
                     anchors.fill: parent
@@ -122,7 +154,8 @@ Window {
                     required property int index
                     width: detachedLocalList.width
                     height: 26
-                    color: detachedLocalMouse.containsMouse ? "#111827" : "#020617"
+                    color: detachedLocalMouse.containsMouse ? localWindow.fileBrowser.hoverColor
+                                                            : localWindow.fileBrowser.panelColor
 
                     Item {
                         id: detachedLocalRowInner

@@ -287,6 +287,11 @@
       <source>No connections yet. Press + to add one.</source>
       <translation>接続がありません。+ を押して追加してください。</translation>
     </message>
+    <message>
+      <location filename="../qml/ConnectionManagerView.qml" line="246" />
+      <source>Forest</source>
+      <translation>フォレスト</translation>
+    </message>
   </context>
   <context>
     <name>CopyAction</name>
@@ -401,6 +406,18 @@
       <location filename="../qml/FileBrowser.qml" line="1765" />
       <source>Local</source>
       <translation>ローカル</translation>
+    </message>
+    <message>
+      <location filename="../qml/FileBrowser.qml" line="1185" />
+      <location filename="../qml/FileBrowser.qml" line="1480" />
+      <source>Back</source>
+      <translation>戻る</translation>
+    </message>
+    <message>
+      <location filename="../qml/FileBrowser.qml" line="1200" />
+      <location filename="../qml/FileBrowser.qml" line="1495" />
+      <source>Forward</source>
+      <translation>進む</translation>
     </message>
     <message>
       <location filename="../qml/FileBrowser.qml" line="1343" />

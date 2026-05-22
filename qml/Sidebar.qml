@@ -14,7 +14,7 @@ Rectangle {
     property string sftpStatus: ""
     property string sftpMessage: ""
     property string connectionHost: ""
-    readonly property bool classic: uiTheme === "classic"
+    readonly property bool classic: theme.classic
     readonly property bool sessionConnected: sessionStatus === "connected"
     readonly property bool sessionProblem: sessionStatus === "disconnected" || sessionStatus === "error"
     readonly property bool sftpConnected: sftpStatus === "connected"
@@ -27,8 +27,13 @@ Rectangle {
     signal detachRequested(var sourceItem)
     signal detachDragged(var sourceItem, var translation)
 
-    color: classic ? "#f8fafc" : "#0b1220"
-    border.color: classic ? "#cbd5e1" : "#1e293b"
+    ThemePalette {
+        id: theme
+        mode: root.uiTheme
+    }
+
+    color: theme.window
+    border.color: theme.border
 
     component MeterBar: Item {
         property real value: 0
@@ -45,23 +50,23 @@ Rectangle {
 
         Rectangle {
             anchors.fill: parent
-            color: root.classic ? "#f1f5f9" : "#111827"
-            border.color: root.classic ? "#cbd5e1" : "#334155"
+            color: theme.surfaceRaised
+            border.color: theme.borderMuted
         }
         Rectangle {
             anchors.left: parent.left
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             width: parent.width * clampedValue() / 100
-            color: clampedValue() >= 85 ? "#ef4444"
-                   : (clampedValue() >= 65 ? "#f59e0b" : (root.classic ? "#bbf7d0" : "#22c55e"))
+            color: clampedValue() >= 85 ? theme.danger
+                   : (clampedValue() >= 65 ? theme.warning : theme.success)
         }
         Label {
             anchors.left: parent.left
             anchors.leftMargin: 6
             anchors.verticalCenter: parent.verticalCenter
             text: clampedValue().toFixed(1) + "%"
-            color: root.classic ? "#334155" : "#e2e8f0"
+            color: theme.textSecondary
             font.pixelSize: 10
         }
         Label {
@@ -69,7 +74,7 @@ Rectangle {
             anchors.rightMargin: 6
             anchors.verticalCenter: parent.verticalCenter
             text: detailText
-            color: root.classic ? "#334155" : "#e2e8f0"
+            color: theme.textSecondary
             font.pixelSize: 10
             elide: Text.ElideRight
         }
@@ -101,15 +106,15 @@ Rectangle {
 
         function statusColor(status, connected, problem) {
             if (problem) {
-                return "#ef4444"
+                return theme.danger
             }
             if (connected) {
-                return "#22c55e"
+                return theme.success
             }
             if (status === "connecting" || root.hasActiveSession) {
-                return "#f59e0b"
+                return theme.warning
             }
-            return "#94a3b8"
+            return theme.textMuted
         }
 
         RowLayout {
@@ -119,7 +124,7 @@ Rectangle {
                 property bool detachHoldReady: false
                 property bool detachStarted: false
                 text: qsTr("Status")
-                color: root.classic ? "#0f172a" : "#e2e8f0"
+                color: theme.textPrimary
                 font.pixelSize: 12
                 Layout.fillWidth: true
 
@@ -210,12 +215,12 @@ Rectangle {
                 }
                 contentItem: FileBrowserComponents.DetachIcon {
                     anchors.centerIn: parent
-                    color: root.classic ? "#475569" : "#93c5fd"
-                    accentColor: root.classic ? "#0284c7" : "#60a5fa"
+                    color: theme.icon
+                    accentColor: theme.iconAccent
                 }
                 background: Rectangle {
                     radius: 3
-                    color: parent.hovered ? (root.classic ? "#e2e8f0" : "#1e293b") : "transparent"
+                    color: parent.hovered ? theme.hover : "transparent"
                 }
                 TapHandler {
                     acceptedButtons: Qt.LeftButton
@@ -256,7 +261,7 @@ Rectangle {
             }
             Label {
                 text: "SSH"
-                color: root.classic ? "#64748b" : "#94a3b8"
+                color: theme.textMuted
                 font.pixelSize: 10
             }
             Rectangle {
@@ -267,7 +272,7 @@ Rectangle {
             }
             Label {
                 text: "SFTP"
-                color: root.classic ? "#64748b" : "#94a3b8"
+                color: theme.textMuted
                 font.pixelSize: 10
             }
             Rectangle {
@@ -284,14 +289,14 @@ Rectangle {
 
             Label {
                 text: qsTr("IP")
-                color: root.classic ? "#0f172a" : "#93c5fd"
+                color: theme.textHeader
                 font.pixelSize: 11
             }
             Label {
                 id: ipLabel
                 Layout.fillWidth: true
                 text: root.connectionHost.length > 0 ? root.connectionHost : "-"
-                color: root.classic ? "#0f172a" : "#cbd5e1"
+                color: theme.textSecondary
                 font.pixelSize: 11
                 elide: Text.ElideRight
             }
@@ -305,21 +310,21 @@ Rectangle {
                     Rectangle {
                         x: 3; y: 5; width: 10; height: 8
                         color: "transparent"
-                        border.color: root.classic ? "#64748b" : "#94a3b8"
+                        border.color: theme.textMuted
                         border.width: 1.5
                         radius: 1
                     }
                     Rectangle {
                         x: 6; y: 3; width: 10; height: 8
-                        color: root.classic ? "#f8fafc" : "#0b1220"
-                        border.color: root.classic ? "#64748b" : "#94a3b8"
+                        color: theme.window
+                        border.color: theme.textMuted
                         border.width: 1.5
                         radius: 1
                     }
                 }
                 background: Rectangle {
                     radius: 3
-                    color: parent.hovered ? (root.classic ? "#e2e8f0" : "#1e293b") : "transparent"
+                    color: parent.hovered ? theme.hover : "transparent"
                 }
                 onClicked: appController.copyTextToClipboard(ipLabel.text)
             }
@@ -332,7 +337,7 @@ Rectangle {
                   : root.sessionProblem ? qsTr("SSH disconnected")
                   : root.sftpProblem ? (root.sftpMessage.length > 0 ? root.sftpMessage : qsTr("SFTP disconnected"))
                   : (root.monitorSnapshot.updatedAt ? qsTr("Monitor online") : qsTr("Open a session to monitor."))
-            color: root.monitorError.length > 0 || root.sessionProblem || root.sftpProblem ? "#fca5a5" : (root.classic ? "#64748b" : "#94a3b8")
+            color: root.monitorError.length > 0 || root.sessionProblem || root.sftpProblem ? theme.danger : theme.textMuted
             font.pixelSize: 11
             elide: Text.ElideRight
         }
@@ -345,16 +350,14 @@ Rectangle {
             implicitHeight: 28
             background: Rectangle {
                 radius: 4
-                color: !parent.enabled ? (root.classic ? "#f1f5f9" : "#0f172a")
-                       : parent.hovered ? (root.classic ? "#e0f2fe" : "#1e3a5f")
-                       : (root.classic ? "#ffffff" : "#1e293b")
-                border.color: root.classic ? (parent.enabled ? "#cbd5e1" : "#e2e8f0")
-                                           : (parent.enabled ? "#475569" : "#1e293b")
+                color: !parent.enabled ? theme.surface
+                       : parent.hovered ? theme.selected
+                       : theme.surfaceRaised
+                border.color: parent.enabled ? theme.borderMuted : theme.border
             }
             contentItem: Label {
                 text: parent.text
-                color: !parent.enabled ? (root.classic ? "#94a3b8" : "#475569")
-                       : (root.classic ? "#334155" : "#cbd5e1")
+                color: !parent.enabled ? theme.textMuted : theme.textSecondary
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 font.pixelSize: 12
@@ -367,18 +370,18 @@ Rectangle {
             columnSpacing: 6
             rowSpacing: 4
 
-            Label { text: qsTr("CPU"); color: root.classic ? "#0f172a" : "#93c5fd"; font.pixelSize: 11 }
+            Label { text: qsTr("CPU"); color: theme.textHeader; font.pixelSize: 11 }
             MeterBar {
                 Layout.fillWidth: true
                 value: monitorColumn.percentValue(monitorColumn.cpu, "busyPercent")
             }
-            Label { text: qsTr("Mem"); color: root.classic ? "#0f172a" : "#93c5fd"; font.pixelSize: 11 }
+            Label { text: qsTr("Mem"); color: theme.textHeader; font.pixelSize: 11 }
             MeterBar {
                 Layout.fillWidth: true
                 value: monitorColumn.percentValue(monitorColumn.memory, "memUsedPercent")
                 detailText: (monitorColumn.memory.memUsedText || "--") + "/" + (monitorColumn.memory.memTotalText || "--")
             }
-            Label { text: qsTr("Swap"); color: root.classic ? "#0f172a" : "#93c5fd"; font.pixelSize: 11 }
+            Label { text: qsTr("Swap"); color: theme.textHeader; font.pixelSize: 11 }
             MeterBar {
                 Layout.fillWidth: true
                 value: monitorColumn.percentValue(monitorColumn.memory, "swapUsedPercent")
@@ -391,23 +394,23 @@ Rectangle {
             spacing: 1
             Label {
                 text: qsTr("Memory")
-                color: "#ffffff"
+                color: theme.textOnAccent
                 horizontalAlignment: Text.AlignHCenter
-                background: Rectangle { color: "#60a5fa" }
+                background: Rectangle { color: theme.iconAccent }
                 Layout.preferredWidth: 66
             }
             Label {
                 text: qsTr("CPU")
-                color: "#ffffff"
+                color: theme.textOnAccent
                 horizontalAlignment: Text.AlignHCenter
-                background: Rectangle { color: "#ef4444" }
+                background: Rectangle { color: theme.danger }
                 Layout.preferredWidth: 42
             }
             Label {
                 text: qsTr("Command")
-                color: "#ffffff"
+                color: theme.textOnAccent
                 horizontalAlignment: Text.AlignHCenter
-                background: Rectangle { color: "#60a5fa" }
+                background: Rectangle { color: theme.iconAccent }
                 Layout.fillWidth: true
             }
         }
@@ -415,8 +418,8 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 96
-            color: root.classic ? "#f8fafc" : "#020617"
-            border.color: root.classic ? "#cbd5e1" : "#1e293b"
+            color: theme.surface
+            border.color: theme.border
 
             ListView {
                 id: processList
@@ -429,21 +432,21 @@ Rectangle {
                     height: 22
                     Label {
                         text: modelData.rss || "0"
-                        color: root.classic ? "#334155" : "#cbd5e1"
+                        color: theme.textSecondary
                         font.pixelSize: 11
                         horizontalAlignment: Text.AlignRight
                         Layout.preferredWidth: 66
                     }
                     Label {
                         text: (modelData.cpu || 0).toFixed(1)
-                        color: root.classic ? "#334155" : "#cbd5e1"
+                        color: theme.textSecondary
                         font.pixelSize: 11
                         horizontalAlignment: Text.AlignRight
                         Layout.preferredWidth: 42
                     }
                     Label {
                         text: modelData.name || ""
-                        color: root.classic ? "#334155" : "#dbeafe"
+                        color: theme.textPrimary
                         font.pixelSize: 11
                         elide: Text.ElideRight
                         Layout.fillWidth: true
@@ -455,7 +458,7 @@ Rectangle {
                 anchors.centerIn: parent
                 visible: processList.count === 0
                 text: root.monitorSnapshot.updatedAt ? qsTr("No process data") : qsTr("Waiting for monitor data")
-                color: root.classic ? "#94a3b8" : "#64748b"
+                color: theme.textMuted
                 font.pixelSize: 11
             }
         }
@@ -463,13 +466,13 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 1
-            color: root.classic ? "#cbd5e1" : "#1e293b"
+            color: theme.border
         }
 
         Label {
             Layout.fillWidth: true
             text: qsTr("Path")
-            color: root.classic ? "#0f172a" : "#e2e8f0"
+            color: theme.textPrimary
             horizontalAlignment: Text.AlignHCenter
             font.pixelSize: 12
         }
@@ -477,8 +480,8 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            color: root.classic ? "#ffffff" : "#020617"
-            border.color: root.classic ? "#cbd5e1" : "#1e293b"
+            color: theme.panel
+            border.color: theme.border
 
             ListView {
                 id: filesystemList
@@ -491,14 +494,14 @@ Rectangle {
                     height: 24
                     Label {
                         text: modelData.mount || ""
-                        color: root.classic ? "#0f172a" : "#cbd5e1"
+                        color: theme.textSecondary
                         font.pixelSize: 11
                         elide: Text.ElideRight
                         Layout.fillWidth: true
                     }
                     Label {
                         text: (modelData.available || "--") + "/" + (modelData.size || "--")
-                        color: root.classic ? "#0f172a" : "#cbd5e1"
+                        color: theme.textSecondary
                         font.pixelSize: 11
                         horizontalAlignment: Text.AlignRight
                         Layout.preferredWidth: 110
@@ -510,7 +513,7 @@ Rectangle {
                 anchors.centerIn: parent
                 visible: filesystemList.count === 0
                 text: root.monitorSnapshot.updatedAt ? qsTr("No file system data") : qsTr("Waiting for monitor data")
-                color: root.classic ? "#94a3b8" : "#64748b"
+                color: theme.textMuted
                 font.pixelSize: 11
             }
         }

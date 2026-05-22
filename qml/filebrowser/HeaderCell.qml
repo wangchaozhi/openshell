@@ -37,7 +37,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: root.dragActive ? "#1e293b" : "transparent"
+        color: root.dragActive ? root.fileBrowser.hoverColor : "transparent"
         radius: 3
         opacity: root.dragActive ? 0.9 : 1
     }
@@ -52,7 +52,7 @@ Item {
                                           ? root.fileBrowser.localSortColumn
                                           : root.fileBrowser.remoteSortColumn,
                                           root.sortAsc)
-        color: root.isActiveSort ? "#60a5fa" : "#93c5fd"
+        color: root.isActiveSort ? root.fileBrowser.activeTextColor : root.fileBrowser.headerTextColor
         font.pixelSize: 11
         horizontalAlignment: root.fileBrowser.columnAlignsRight(root.colId)
                              ? Text.AlignRight

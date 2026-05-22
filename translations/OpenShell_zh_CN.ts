@@ -295,6 +295,11 @@
       <source>No connections yet. Press + to add one.</source>
       <translation>还没有连接，点 + 添加一个。</translation>
     </message>
+    <message>
+      <location filename="../qml/ConnectionManagerView.qml" line="246" />
+      <source>Forest</source>
+      <translation>森林</translation>
+    </message>
   </context>
   <context>
     <name>CopyAction</name>
@@ -404,6 +409,18 @@
       <location filename="../qml/FileBrowser.qml" line="1765" />
       <source>Local</source>
       <translation>本地</translation>
+    </message>
+    <message>
+      <location filename="../qml/FileBrowser.qml" line="1185" />
+      <location filename="../qml/FileBrowser.qml" line="1480" />
+      <source>Back</source>
+      <translation>后退</translation>
+    </message>
+    <message>
+      <location filename="../qml/FileBrowser.qml" line="1200" />
+      <location filename="../qml/FileBrowser.qml" line="1495" />
+      <source>Forward</source>
+      <translation>前进</translation>
     </message>
     <message>
       <location filename="../qml/FileBrowser.qml" line="1343" />

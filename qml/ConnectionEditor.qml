@@ -11,7 +11,12 @@ Dialog {
     property string validationMessage: ""
     property bool validationShown: false
 
-    readonly property bool classic: uiTheme === "classic"
+    readonly property bool classic: theme.classic
+
+    ThemePalette {
+        id: theme
+        mode: root.uiTheme
+    }
 
     signal saved()
     signal saveFailed(string message)
@@ -95,13 +100,13 @@ Dialog {
     }
 
     background: Rectangle {
-        color: root.classic ? "#ffffff" : "#1e293b"
-        border.color: root.classic ? "#cbd5e1" : "#334155"
+        color: theme.panel
+        border.color: theme.borderMuted
         radius: 6
     }
 
     header: Rectangle {
-        color: root.classic ? "#f8fafc" : "#0f172a"
+        color: theme.surface
         height: 44
         radius: 6
 
@@ -116,7 +121,7 @@ Dialog {
             anchors.bottom: parent.bottom
             width: parent.width
             height: 1
-            color: root.classic ? "#e2e8f0" : "#1e293b"
+            color: theme.border
         }
 
         Label {
@@ -124,7 +129,7 @@ Dialog {
             anchors.left: parent.left
             anchors.leftMargin: 16
             text: root.title
-            color: root.classic ? "#0f172a" : "#f8fafc"
+            color: theme.textPrimary
             font.pixelSize: 14
             font.bold: true
         }
@@ -132,7 +137,7 @@ Dialog {
 
     footer: Rectangle {
         height: 56
-        color: root.classic ? "#f8fafc" : "#0f172a"
+        color: theme.surface
         radius: 6
 
         Rectangle {
@@ -146,7 +151,7 @@ Dialog {
             anchors.top: parent.top
             width: parent.width
             height: 1
-            color: root.classic ? "#e2e8f0" : "#1e293b"
+            color: theme.border
         }
 
         RowLayout {
@@ -189,7 +194,7 @@ Dialog {
             columnSpacing: 12
             rowSpacing: 8
 
-            Label { text: qsTr("Name"); color: root.classic ? "#334155" : "#94a3b8"; font.pixelSize: 12 }
+            Label { text: qsTr("Name"); color: theme.textMuted; font.pixelSize: 12 }
             ThemedTextField {
                 id: nameField
                 classic: root.classic
@@ -199,7 +204,7 @@ Dialog {
                 onTextChanged: if (nameField.text.trim().length > 0 && hostField.text.trim().length > 0) root.validationShown = false
             }
 
-            Label { text: qsTr("Protocol"); color: root.classic ? "#334155" : "#94a3b8"; font.pixelSize: 12 }
+            Label { text: qsTr("Protocol"); color: theme.textMuted; font.pixelSize: 12 }
             ThemedComboBox {
                 id: protocolBox
                 classic: root.classic
@@ -207,7 +212,7 @@ Dialog {
                 model: ["ssh", "sftp", "telnet"]
             }
 
-            Label { text: qsTr("Host"); color: root.classic ? "#334155" : "#94a3b8"; font.pixelSize: 12 }
+            Label { text: qsTr("Host"); color: theme.textMuted; font.pixelSize: 12 }
             ThemedTextField {
                 id: hostField
                 classic: root.classic
@@ -217,7 +222,7 @@ Dialog {
                 onTextChanged: if (nameField.text.trim().length > 0 && hostField.text.trim().length > 0) root.validationShown = false
             }
 
-            Label { text: qsTr("Port"); color: root.classic ? "#334155" : "#94a3b8"; font.pixelSize: 12 }
+            Label { text: qsTr("Port"); color: theme.textMuted; font.pixelSize: 12 }
             ThemedTextField {
                 id: portField
                 classic: root.classic
@@ -231,10 +236,10 @@ Dialog {
                 }
             }
 
-            Label { text: qsTr("Username"); color: root.classic ? "#334155" : "#94a3b8"; font.pixelSize: 12 }
+            Label { text: qsTr("Username"); color: theme.textMuted; font.pixelSize: 12 }
             ThemedTextField { id: userField; classic: root.classic; Layout.fillWidth: true }
 
-            Label { text: qsTr("Auth Method"); color: root.classic ? "#334155" : "#94a3b8"; font.pixelSize: 12 }
+            Label { text: qsTr("Auth Method"); color: theme.textMuted; font.pixelSize: 12 }
             ThemedComboBox {
                 id: authBox
                 classic: root.classic
@@ -242,7 +247,7 @@ Dialog {
                 model: ["password", "key", "agent"]
             }
 
-            Label { text: qsTr("Password"); color: root.classic ? "#334155" : "#94a3b8"; font.pixelSize: 12 }
+            Label { text: qsTr("Password"); color: theme.textMuted; font.pixelSize: 12 }
             ThemedTextField {
                 id: passwordField
                 classic: root.classic
@@ -252,7 +257,7 @@ Dialog {
                 opacity: enabled ? 1.0 : 0.4
             }
 
-            Label { text: qsTr("Private Key"); color: root.classic ? "#334155" : "#94a3b8"; font.pixelSize: 12 }
+            Label { text: qsTr("Private Key"); color: theme.textMuted; font.pixelSize: 12 }
             ThemedTextField {
                 id: keyPathField
                 classic: root.classic
@@ -262,12 +267,12 @@ Dialog {
                 opacity: enabled ? 1.0 : 0.4
             }
 
-            Label { text: qsTr("Group"); color: root.classic ? "#334155" : "#94a3b8"; font.pixelSize: 12 }
+            Label { text: qsTr("Group"); color: theme.textMuted; font.pixelSize: 12 }
             ThemedTextField { id: groupField; classic: root.classic; Layout.fillWidth: true }
 
             Label {
                 text: qsTr("Notes")
-                color: root.classic ? "#334155" : "#94a3b8"
+                color: theme.textMuted
                 font.pixelSize: 12
                 Layout.alignment: Qt.AlignTop
             }
@@ -294,7 +299,7 @@ Dialog {
             Layout.preferredHeight: 20
             radius: 3
             color: root.validationMessage.length > 0
-                   ? (root.classic ? "#fee2e2" : "#450a0a")
+                   ? theme.dangerSoft
                    : "transparent"
 
             Label {
@@ -302,7 +307,7 @@ Dialog {
                 anchors.leftMargin: 8
                 anchors.rightMargin: 8
                 text: root.validationMessage
-                color: root.classic ? "#b91c1c" : "#fca5a5"
+                color: theme.danger
                 font.pixelSize: 12
                 verticalAlignment: Text.AlignVCenter
                 elide: Text.ElideRight

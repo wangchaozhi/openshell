@@ -118,12 +118,17 @@ void AppController::setMinimizeToTray(bool enabled)
 QString AppController::uiTheme() const
 {
     const QString theme = m_settings->uiTheme();
-    return theme == QStringLiteral("classic") ? theme : QStringLiteral("dark");
+    return (theme == QStringLiteral("classic") || theme == QStringLiteral("forest"))
+               ? theme
+               : QStringLiteral("dark");
 }
 
 void AppController::setUiTheme(const QString &theme)
 {
-    const QString normalized = theme == QStringLiteral("classic") ? theme : QStringLiteral("dark");
+    const QString normalized =
+        (theme == QStringLiteral("classic") || theme == QStringLiteral("forest"))
+            ? theme
+            : QStringLiteral("dark");
     if (uiTheme() == normalized) {
         return;
     }
@@ -189,4 +194,3 @@ void AppController::saveMainWindowGeometry(int x, int y, int w, int h)
 {
     m_settings->setMainWindowGeometry(QRect(x, y, w, h));
 }
-

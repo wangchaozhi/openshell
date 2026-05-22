@@ -6,6 +6,7 @@ Rectangle {
     id: root
 
     property var session: ({})
+    property string uiTheme: "dark"
     readonly property string sessionId: session && session.id ? session.id : ""
     readonly property bool sessionConnected: session && session.status === "connected"
     property string clipboardTextSnapshot: ""
@@ -13,14 +14,19 @@ Rectangle {
 
     signal remoteDirectoryDetected(string path)
 
-    color: "#020617"
+    color: theme.panel
+
+    ThemePalette {
+        id: theme
+        mode: root.uiTheme
+    }
 
     component MenuGlyph: Label {
         property string glyph: ""
         property bool itemEnabled: true
 
         text: glyph
-        color: itemEnabled ? "#334155" : "#cbd5e1"
+        color: itemEnabled ? theme.textSecondary : theme.textMuted
         font.family: Qt.platform.os === "osx" ? "Apple Symbols" : "Segoe MDL2 Assets"
         font.pixelSize: 13
         horizontalAlignment: Text.AlignHCenter
@@ -40,7 +46,7 @@ Rectangle {
         }
         Label {
             text: parent.label
-            color: parent.itemEnabled ? "#111827" : "#cbd5e1"
+            color: parent.itemEnabled ? theme.textPrimary : theme.textMuted
             Layout.fillWidth: true
         }
     }
@@ -143,7 +149,7 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 28
-            color: "#0f172a"
+            color: theme.surface
 
             RowLayout {
                 anchors.fill: parent
@@ -152,7 +158,7 @@ Rectangle {
 
                 Label {
                     text: root.session && root.session.title ? root.session.title : qsTr("(no session)")
-                    color: "#cbd5f5"
+                    color: theme.textSecondary
                     font.pixelSize: 12
                     Layout.fillWidth: true
                 }
@@ -161,10 +167,10 @@ Rectangle {
                     text: root.session && root.session.status ? root.session.status : ""
                     color: {
                         const s = root.session && root.session.status
-                        if (s === "connected") return "#34d399"
-                        if (s === "connecting") return "#fbbf24"
-                        if (s === "error") return "#f87171"
-                        return "#94a3b8"
+                        if (s === "connected") return theme.success
+                        if (s === "connecting") return theme.warning
+                        if (s === "error") return theme.danger
+                        return theme.textMuted
                     }
                     font.pixelSize: 11
                 }
@@ -182,8 +188,9 @@ Rectangle {
                 activeFocusOnTab: true
                 fontFamily: Qt.platform.os === "osx" ? "Menlo" : "Consolas"
                 fontPixelSize: 14
-                background: "#020617"
-                cursorColor: "#38bdf8"
+                background: theme.panel
+                foreground: theme.textPrimary
+                cursorColor: theme.focus
                 cursorBlinking: root.sessionConnected
                 onCellSizeRequested: function(cols, rows) {
                     if (root.sessionId !== "") {

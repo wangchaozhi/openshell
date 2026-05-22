@@ -61,11 +61,13 @@ set(OPENSHELL_QML_FILES
     qml/TerminalView.qml
     qml/SystemInfoView.qml
     qml/FileBrowser.qml
+    qml/ThemePalette.qml
     qml/filebrowser/FileBrowserDialogs.qml
     qml/filebrowser/HeaderCell.qml
     qml/filebrowser/DataCell.qml
     qml/filebrowser/TransferPanel.qml
     qml/filebrowser/TransferTaskList.qml
+    qml/filebrowser/ArrowIcon.qml
     qml/filebrowser/ParentIcon.qml
     qml/filebrowser/RefreshIcon.qml
     qml/filebrowser/DetachIcon.qml

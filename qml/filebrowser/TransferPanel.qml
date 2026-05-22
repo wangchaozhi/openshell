@@ -16,7 +16,7 @@ Rectangle {
             width: 9
             height: 4
             radius: 1
-            color: "#93c5fd"
+            color: root.fileBrowser.iconColor
         }
         Rectangle {
             x: 5
@@ -25,14 +25,14 @@ Rectangle {
             height: 8
             radius: 1
             rotation: -18
-            color: "#60a5fa"
+            color: root.fileBrowser.iconAccentColor
         }
         Rectangle {
             x: 2
             y: 12
             width: 11
             height: 1
-            color: "#bfdbfe"
+            color: root.fileBrowser.activeTextColor
         }
     }
 
@@ -45,8 +45,8 @@ Rectangle {
     anchors.right: parent.right
     anchors.rightMargin: 8
     radius: 4
-    color: "#020617"
-    border.color: "#334155"
+    color: fileBrowser.panelColor
+    border.color: fileBrowser.mutedBorderColor
 
     ColumnLayout {
         anchors.fill: parent
@@ -58,7 +58,7 @@ Rectangle {
 
             Label {
                 text: qsTr("Transfer tasks")
-                color: "#dbeafe"
+                color: root.fileBrowser.primaryTextColor
                 font.bold: true
                 font.pixelSize: 12
                 Layout.fillWidth: true
@@ -94,7 +94,7 @@ Rectangle {
                 fileBrowser: root.fileBrowser
                 operation: "upload"
                 title: qsTr("Upload")
-                titleColor: "#93c5fd"
+                titleColor: root.fileBrowser.headerTextColor
             }
 
             TransferTaskList {
@@ -103,7 +103,7 @@ Rectangle {
                 fileBrowser: root.fileBrowser
                 operation: "download"
                 title: qsTr("Download")
-                titleColor: "#86efac"
+                titleColor: root.fileBrowser.classic ? "#16a34a" : "#86efac"
             }
         }
     }
