@@ -40,6 +40,7 @@ if(NOT Libssh2_FOUND)
         message(STATUS "OpenShell: bundled build uses mbedTLS for libssh2")
         set(ENABLE_PROGRAMS OFF CACHE BOOL "" FORCE)
         set(ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+        set(MBEDTLS_FATAL_WARNINGS OFF CACHE BOOL "" FORCE)
         FetchContent_Declare(mbedtls
             GIT_REPOSITORY https://github.com/Mbed-TLS/mbedtls.git
             GIT_TAG        v3.6.2
