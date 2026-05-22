@@ -68,17 +68,20 @@ jobs:
             aqt_host: windows
             qt_arch: win64_msvc2022_64
             qt_dir: msvc2022_64
+            build_parallel: 4
             asset_name: OpenShell-windows-x64
           - os: macos-26
             aqt_host: mac
             qt_arch: clang_64
             qt_dir: macos
-            cmake_extra_args: -DCMAKE_OSX_ARCHITECTURES=arm64
+            cmake_extra_args: -DCMAKE_OSX_ARCHITECTURES=arm64 -DQT_QML_NO_CACHEGEN=ON
+            build_parallel: 2
             asset_name: OpenShell-macos-arm64
           - os: ubuntu-22.04
             aqt_host: linux
             qt_arch: linux_gcc_64
             qt_dir: gcc_64
+            build_parallel: 4
             asset_name: OpenShell-linux-x64
 
     steps:
@@ -163,7 +166,7 @@ jobs:
         run: cmake -S . -B build -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" ${{ matrix.cmake_extra_args || '' }}
 
       - name: Build
-        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel ${{ matrix.build_parallel }}
 
       - name: Package Windows
         if: runner.os == 'Windows'
