@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Window
+import ".." as OpenShellComponents
 
 Window {
     id: localWindow
@@ -196,10 +197,12 @@ Window {
                     }
                 }
 
-                Menu {
+                OpenShellComponents.ThemedMenu {
                     id: detachedLocalMenu
+                    menuTheme: localWindow.fileBrowser.theme
                     property string path: ""
-                    MenuItem {
+                    OpenShellComponents.ThemedMenuItem {
+                        theme: localWindow.fileBrowser.theme
                         text: qsTr("Upload to Remote")
                         enabled: localWindow.fileBrowser.connectionId !== "" && detachedLocalMenu.path.length > 0
                         onTriggered: localWindow.fileBrowser.uploadLocalPath(detachedLocalMenu.path)

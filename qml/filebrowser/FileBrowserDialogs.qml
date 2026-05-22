@@ -67,6 +67,40 @@ Item {
         }
     }
 
+    component DialogRadioButton: RadioButton {
+        id: dialogRadio
+
+        spacing: 8
+
+        indicator: Rectangle {
+            implicitWidth: 18
+            implicitHeight: 18
+            x: dialogRadio.leftPadding
+            y: parent.height / 2 - height / 2
+            radius: width / 2
+            color: root.fileBrowser.theme.surface
+            border.width: 1
+            border.color: dialogRadio.activeFocus ? root.fileBrowser.theme.focus : root.fileBrowser.theme.borderMuted
+
+            Rectangle {
+                anchors.centerIn: parent
+                width: 8
+                height: 8
+                radius: 4
+                visible: dialogRadio.checked
+                color: root.fileBrowser.theme.textActive
+            }
+        }
+
+        contentItem: Label {
+            text: dialogRadio.text
+            color: dialogRadio.enabled ? root.fileBrowser.theme.textPrimary : root.fileBrowser.theme.textMuted
+            verticalAlignment: Text.AlignVCenter
+            leftPadding: dialogRadio.indicator.width + dialogRadio.spacing
+            font.pixelSize: 13
+        }
+    }
+
     function openChmod(currentPermissions) {
         chmodDialog.applyOctal(currentPermissions && currentPermissions.length > 0
                                ? currentPermissions
@@ -98,6 +132,31 @@ Item {
         modal: true
         anchors.centerIn: parent
         width: 280
+        padding: 12
+        margins: 12
+
+        background: Rectangle {
+            color: root.fileBrowser.theme.panel
+            border.width: 1
+            border.color: root.fileBrowser.theme.borderMuted
+            radius: 4
+        }
+
+        header: Rectangle {
+            implicitHeight: 46
+            color: root.fileBrowser.theme.surface
+
+            Label {
+                anchors.fill: parent
+                anchors.leftMargin: 14
+                anchors.rightMargin: 14
+                text: chmodDialog.title
+                color: root.fileBrowser.theme.textPrimary
+                verticalAlignment: Text.AlignVCenter
+                font.pixelSize: 14
+                font.bold: true
+            }
+        }
 
         function applyOctal(value) {
             const normalized = (value && value.length > 0 ? value : "755").slice(-3)
@@ -176,48 +235,58 @@ Item {
                 rowSpacing: 2
 
                 Item { Layout.preferredWidth: 44 }
-                Label { text: qsTr("Read"); font.pixelSize: 12 }
-                Label { text: qsTr("Write"); font.pixelSize: 12 }
-                Label { text: qsTr("Exec"); font.pixelSize: 12 }
+                Label { text: qsTr("Read"); color: root.fileBrowser.theme.textSecondary; font.pixelSize: 12 }
+                Label { text: qsTr("Write"); color: root.fileBrowser.theme.textSecondary; font.pixelSize: 12 }
+                Label { text: qsTr("Exec"); color: root.fileBrowser.theme.textSecondary; font.pixelSize: 12 }
 
-                Label { text: qsTr("Owner"); font.pixelSize: 12 }
-                CheckBox { id: ownerRead; onCheckedChanged: chmodDialog.updateSymbolic() }
-                CheckBox { id: ownerWrite; onCheckedChanged: chmodDialog.updateSymbolic() }
-                CheckBox { id: ownerExec; onCheckedChanged: chmodDialog.updateSymbolic() }
+                Label { text: qsTr("Owner"); color: root.fileBrowser.theme.textSecondary; font.pixelSize: 12 }
+                DialogCheckBox { id: ownerRead; onCheckedChanged: chmodDialog.updateSymbolic() }
+                DialogCheckBox { id: ownerWrite; onCheckedChanged: chmodDialog.updateSymbolic() }
+                DialogCheckBox { id: ownerExec; onCheckedChanged: chmodDialog.updateSymbolic() }
 
-                Label { text: qsTr("Group"); font.pixelSize: 12 }
-                CheckBox { id: groupRead; onCheckedChanged: chmodDialog.updateSymbolic() }
-                CheckBox { id: groupWrite; onCheckedChanged: chmodDialog.updateSymbolic() }
-                CheckBox { id: groupExec; onCheckedChanged: chmodDialog.updateSymbolic() }
+                Label { text: qsTr("Group"); color: root.fileBrowser.theme.textSecondary; font.pixelSize: 12 }
+                DialogCheckBox { id: groupRead; onCheckedChanged: chmodDialog.updateSymbolic() }
+                DialogCheckBox { id: groupWrite; onCheckedChanged: chmodDialog.updateSymbolic() }
+                DialogCheckBox { id: groupExec; onCheckedChanged: chmodDialog.updateSymbolic() }
 
-                Label { text: qsTr("Other"); font.pixelSize: 12 }
-                CheckBox { id: otherRead; onCheckedChanged: chmodDialog.updateSymbolic() }
-                CheckBox { id: otherWrite; onCheckedChanged: chmodDialog.updateSymbolic() }
-                CheckBox { id: otherExec; onCheckedChanged: chmodDialog.updateSymbolic() }
+                Label { text: qsTr("Other"); color: root.fileBrowser.theme.textSecondary; font.pixelSize: 12 }
+                DialogCheckBox { id: otherRead; onCheckedChanged: chmodDialog.updateSymbolic() }
+                DialogCheckBox { id: otherWrite; onCheckedChanged: chmodDialog.updateSymbolic() }
+                DialogCheckBox { id: otherExec; onCheckedChanged: chmodDialog.updateSymbolic() }
             }
 
             GroupBox {
                 Layout.fillWidth: true
                 visible: root.fileBrowser.pendingChmodIsDir
+                label: Label {
+                    text: qsTr("Scope")
+                    color: root.fileBrowser.theme.textSecondary
+                    font.pixelSize: 12
+                }
+                background: Rectangle {
+                    color: root.fileBrowser.theme.surface
+                    border.color: root.fileBrowser.theme.borderMuted
+                    radius: 4
+                }
 
                 ColumnLayout {
                     anchors.fill: parent
 
-                    CheckBox {
+                    DialogCheckBox {
                         id: recursiveCheck
                         text: qsTr("Apply recursively")
                     }
 
-                    RadioButton {
+                    DialogRadioButton {
                         text: qsTr("Apply to files and folders")
                         checked: true
                     }
 
-                    RadioButton {
+                    DialogRadioButton {
                         text: qsTr("Apply to files only")
                     }
 
-                    RadioButton {
+                    DialogRadioButton {
                         text: qsTr("Apply to folders only")
                     }
                 }
@@ -226,12 +295,13 @@ Item {
             RowLayout {
                 Layout.alignment: Qt.AlignRight
 
-                Button {
+                DialogButton {
                     text: qsTr("OK")
+                    primary: true
                     onClicked: chmodDialog.accept()
                 }
 
-                Button {
+                DialogButton {
                     text: qsTr("Cancel")
                     onClicked: chmodDialog.reject()
                 }
@@ -249,9 +319,58 @@ Item {
         id: nameDialog
         title: root.fileBrowser.nameDialogMode === "rename" ? qsTr("Rename") : qsTr("New")
         modal: true
-        standardButtons: Dialog.Ok | Dialog.Cancel
         anchors.centerIn: parent
         width: 300
+        padding: 12
+        margins: 12
+
+        background: Rectangle {
+            color: root.fileBrowser.theme.panel
+            border.width: 1
+            border.color: root.fileBrowser.theme.borderMuted
+            radius: 4
+        }
+
+        header: Rectangle {
+            implicitHeight: 46
+            color: root.fileBrowser.theme.surface
+
+            Label {
+                anchors.fill: parent
+                anchors.leftMargin: 14
+                anchors.rightMargin: 14
+                text: nameDialog.title
+                color: root.fileBrowser.theme.textPrimary
+                verticalAlignment: Text.AlignVCenter
+                font.pixelSize: 14
+                font.bold: true
+            }
+        }
+
+        footer: Rectangle {
+            implicitHeight: 58
+            color: root.fileBrowser.theme.panel
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 12
+                anchors.rightMargin: 12
+                spacing: 8
+
+                Item { Layout.fillWidth: true }
+
+                DialogButton {
+                    text: qsTr("OK")
+                    primary: true
+                    onClicked: nameDialog.accept()
+                }
+
+                DialogButton {
+                    text: qsTr("Cancel")
+                    onClicked: nameDialog.reject()
+                }
+            }
+        }
 
         ColumnLayout {
             anchors.fill: parent
@@ -267,7 +386,20 @@ Item {
             TextField {
                 id: nameField
                 Layout.fillWidth: true
+                Layout.preferredHeight: 34
                 selectByMouse: true
+                color: root.fileBrowser.theme.textPrimary
+                placeholderTextColor: root.fileBrowser.theme.textMuted
+                selectedTextColor: root.fileBrowser.theme.textOnAccent
+                selectionColor: root.fileBrowser.theme.textActive
+                background: Rectangle {
+                    color: root.fileBrowser.theme.surfaceRaised
+                    border.width: 1
+                    border.color: nameField.activeFocus
+                                  ? root.fileBrowser.theme.focus
+                                  : root.fileBrowser.theme.borderMuted
+                    radius: 4
+                }
             }
         }
 

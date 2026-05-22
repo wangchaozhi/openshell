@@ -208,6 +208,7 @@ Dialog {
             ThemedComboBox {
                 id: protocolBox
                 classic: root.classic
+                menuTheme: theme
                 Layout.fillWidth: true
                 model: ["ssh", "sftp", "telnet"]
             }
@@ -243,6 +244,7 @@ Dialog {
             ThemedComboBox {
                 id: authBox
                 classic: root.classic
+                menuTheme: theme
                 Layout.fillWidth: true
                 model: ["password", "key", "agent"]
             }

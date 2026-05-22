@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Window
+import ".." as OpenShellComponents
 
 Window {
     id: remoteWindow
@@ -206,37 +207,44 @@ Window {
                         }
                     }
 
-                    Menu {
+                    OpenShellComponents.ThemedMenu {
                         id: detachedRemoteMenu
+                        menuTheme: remoteWindow.fileBrowser.theme
                         readonly property var entry: remoteWindow.fileBrowser.remoteMenuEntry || ({})
                         readonly property bool hasEntry: entry && entry.path
                         readonly property bool isDir: hasEntry && entry.isDir
-                        MenuItem {
+                        OpenShellComponents.ThemedMenuItem {
+                            theme: remoteWindow.fileBrowser.theme
                             text: qsTr("Download")
                             enabled: detachedRemoteMenu.hasEntry
                             onTriggered: remoteWindow.fileBrowser.downloadRemotePath(detachedRemoteMenu.entry.path)
                         }
-                        Menu {
+                        OpenShellComponents.ThemedMenu {
+                            menuTheme: remoteWindow.fileBrowser.theme
                             title: qsTr("Upload...")
                             enabled: detachedRemoteMenu.hasEntry && remoteWindow.fileBrowser.connectionId !== ""
-                            MenuItem {
+                            OpenShellComponents.ThemedMenuItem {
+                                theme: remoteWindow.fileBrowser.theme
                                 text: qsTr("File")
                                 onTriggered: remoteWindow.fileBrowser.chooseAndUploadFileTo(remoteWindow.fileBrowser.uploadTargetForRemoteMenuEntry())
                             }
-                            MenuItem {
+                            OpenShellComponents.ThemedMenuItem {
+                                theme: remoteWindow.fileBrowser.theme
                                 text: qsTr("Folder")
                                 onTriggered: remoteWindow.fileBrowser.chooseAndUploadFolderTo(remoteWindow.fileBrowser.uploadTargetForRemoteMenuEntry())
                             }
                         }
-                        MenuSeparator {}
-                        MenuItem {
+                        OpenShellComponents.ThemedMenuSeparator { theme: remoteWindow.fileBrowser.theme }
+                        OpenShellComponents.ThemedMenuItem {
+                            theme: remoteWindow.fileBrowser.theme
                             text: qsTr("Rename")
                             enabled: detachedRemoteMenu.hasEntry
                             onTriggered: remoteWindow.fileBrowser.openNameDialog("rename",
                                                                                 detachedRemoteMenu.entry.path,
                                                                                 detachedRemoteMenu.entry.name)
                         }
-                        MenuItem {
+                        OpenShellComponents.ThemedMenuItem {
+                            theme: remoteWindow.fileBrowser.theme
                             text: qsTr("Delete")
                             enabled: detachedRemoteMenu.hasEntry
                             onTriggered: remoteWindow.fileBrowser.deleteRemotePath(detachedRemoteMenu.entry.path, false)

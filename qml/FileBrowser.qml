@@ -1330,21 +1330,26 @@ Rectangle {
                         }
                     }
 
-                    Menu {
+                    ThemedMenu {
+                        menuTheme: root.theme
                         id: localBlankMenu
-                        MenuItem {
+                        ThemedMenuItem {
+                            theme: root.theme
                             text: qsTr("Refresh")
                             onTriggered: root.refreshLocal()
                         }
-                        MenuSeparator {}
-                        Menu {
+                        ThemedMenuSeparator { theme: root.theme }
+                        ThemedMenu {
+                            menuTheme: root.theme
                             title: qsTr("Upload to Remote")
                             enabled: root.connectionId !== ""
-                            MenuItem {
+                            ThemedMenuItem {
+                                theme: root.theme
                                 text: qsTr("File")
                                 onTriggered: root.chooseAndUploadFile()
                             }
-                            MenuItem {
+                            ThemedMenuItem {
+                                theme: root.theme
                                 text: qsTr("Folder")
                                 onTriggered: root.chooseAndUploadFolder()
                             }
@@ -1427,9 +1432,11 @@ Rectangle {
                                 }
                             }
 
-                            Menu {
+                            ThemedMenu {
+                                menuTheme: root.theme
                                 id: localItemMenu
-                                MenuItem {
+                                ThemedMenuItem {
+                                    theme: root.theme
                                     text: qsTr("Upload to Remote")
                                     enabled: root.connectionId !== ""
                                     onTriggered: root.uploadLocalPath(localRow.modelData.path)
@@ -1719,75 +1726,90 @@ Rectangle {
                             }
                         }
 
-                        Menu {
+                        ThemedMenu {
+                            menuTheme: root.theme
                             id: remoteBlankMenu
-                            MenuItem {
+                            ThemedMenuItem {
+                                theme: root.theme
                                 text: qsTr("Refresh")
                                 enabled: root.connectionId !== ""
                                 onTriggered: root.refreshRemote()
                             }
-                            MenuSeparator {}
-                            Menu {
+                            ThemedMenuSeparator { theme: root.theme }
+                            ThemedMenu {
+                                menuTheme: root.theme
                                 title: qsTr("Upload...")
                                 enabled: root.connectionId !== ""
-                                MenuItem {
+                                ThemedMenuItem {
+                                    theme: root.theme
                                     text: qsTr("File")
                                     onTriggered: root.chooseAndUploadFile()
                                 }
-                                MenuItem {
+                                ThemedMenuItem {
+                                    theme: root.theme
                                     text: qsTr("Folder")
                                     onTriggered: root.chooseAndUploadFolder()
                                 }
                             }
-                            MenuSeparator {}
-                            Menu {
+                            ThemedMenuSeparator { theme: root.theme }
+                            ThemedMenu {
+                                menuTheme: root.theme
                                 title: qsTr("New")
                                 enabled: root.connectionId !== ""
-                                MenuItem {
+                                ThemedMenuItem {
+                                    theme: root.theme
                                     text: qsTr("File")
                                     onTriggered: root.openNameDialog("newFile", "", "new-file")
                                 }
-                                MenuItem {
+                                ThemedMenuItem {
+                                    theme: root.theme
                                     text: qsTr("Folder")
                                     onTriggered: root.openNameDialog("newDir", "", "new-folder")
                                 }
                             }
                         }
 
-                        Menu {
+                        ThemedMenu {
+                            menuTheme: root.theme
                             id: remoteItemMenu
                             readonly property var entry: root.remoteMenuEntry || ({})
                             readonly property bool hasEntry: !!(entry && entry.path)
                             readonly property bool isDir: hasEntry && !!entry.isDir
 
-                            MenuItem {
+                            ThemedMenuItem {
+                                theme: root.theme
                                 text: qsTr("Refresh")
                                 onTriggered: root.refreshRemote()
                             }
-                            MenuSeparator {}
-                            MenuItem {
+                            ThemedMenuSeparator { theme: root.theme }
+                            ThemedMenuItem {
+                                theme: root.theme
                                 text: qsTr("Open")
                                 enabled: remoteItemMenu.hasEntry && !remoteItemMenu.isDir
                                 onTriggered: root.openRemotePath(remoteItemMenu.entry.path)
                             }
-                            Menu {
+                            ThemedMenu {
+                                menuTheme: root.theme
                                 title: qsTr("Open With")
                                 enabled: remoteItemMenu.hasEntry && !remoteItemMenu.isDir
-                                MenuItem {
+                                ThemedMenuItem {
+                                    theme: root.theme
                                     text: qsTr("System default app")
                                     onTriggered: {
                                         appController.remoteFileOpenMode = "system"
                                         root.openRemotePath(remoteItemMenu.entry.path)
                                     }
                                 }
-                                MenuItem {
+                                ThemedMenuItem {
+                                    theme: root.theme
                                     text: qsTr("Specified text editor")
                                     onTriggered: {
                                         appController.remoteFileOpenMode = "custom"
                                         root.openRemotePath(remoteItemMenu.entry.path)
                                     }
                                 }
-                                MenuItem {
+                                ThemedMenuItem {
+                                    theme: root.theme
                                     text: qsTr("Built-in editor")
                                     onTriggered: {
                                         appController.remoteFileOpenMode = "internal"
@@ -1795,81 +1817,97 @@ Rectangle {
                                     }
                                 }
                             }
-                            Menu {
+                            ThemedMenu {
+                                menuTheme: root.theme
                                 title: qsTr("Select Text Editor")
-                                MenuItem {
+                                ThemedMenuItem {
+                                    theme: root.theme
                                     text: appController.externalTextEditorPath && appController.externalTextEditorPath.length > 0
                                           ? appController.externalTextEditorPath
                                           : qsTr("Browse...")
                                     onTriggered: root.chooseExternalEditor()
                                 }
-                                MenuItem {
+                                ThemedMenuItem {
+                                    theme: root.theme
                                     text: qsTr("Open settings")
                                     onTriggered: root.openRemoteOpenSettings()
                                 }
                             }
-                            MenuSeparator {}
-                            MenuItem {
+                            ThemedMenuSeparator { theme: root.theme }
+                            ThemedMenuItem {
+                                theme: root.theme
                                 text: qsTr("Copy Path")
                                 enabled: remoteItemMenu.hasEntry
                                 onTriggered: appController.copyTextToClipboard(remoteItemMenu.entry.path)
                             }
-                            MenuSeparator {}
-                            MenuItem {
+                            ThemedMenuSeparator { theme: root.theme }
+                            ThemedMenuItem {
+                                theme: root.theme
                                 text: qsTr("Download")
                                 enabled: remoteItemMenu.hasEntry
                                 onTriggered: root.downloadRemotePath(remoteItemMenu.entry.path)
                             }
-                            Menu {
+                            ThemedMenu {
+                                menuTheme: root.theme
                                 title: qsTr("Upload...")
                                 enabled: remoteItemMenu.hasEntry && root.connectionId !== ""
-                                MenuItem {
+                                ThemedMenuItem {
+                                    theme: root.theme
                                     text: qsTr("File")
                                     onTriggered: root.chooseAndUploadFileTo(root.uploadTargetForRemoteMenuEntry())
                                 }
-                                MenuItem {
+                                ThemedMenuItem {
+                                    theme: root.theme
                                     text: qsTr("Folder")
                                     onTriggered: root.chooseAndUploadFolderTo(root.uploadTargetForRemoteMenuEntry())
                                 }
                             }
-                            Menu {
+                            ThemedMenu {
+                                menuTheme: root.theme
                                 title: qsTr("Transfer Package")
                                 enabled: false
-                                MenuItem { text: qsTr("Coming soon") }
+                                ThemedMenuItem { theme: root.theme; text: qsTr("Coming soon") }
                             }
-                            MenuSeparator {}
-                            Menu {
+                            ThemedMenuSeparator { theme: root.theme }
+                            ThemedMenu {
+                                menuTheme: root.theme
                                 title: qsTr("New")
                                 enabled: remoteItemMenu.hasEntry
-                                MenuItem {
+                                ThemedMenuItem {
+                                    theme: root.theme
                                     text: qsTr("File")
                                     onTriggered: root.openNameDialog("newFile", "", "new-file")
                                 }
-                                MenuItem {
+                                ThemedMenuItem {
+                                    theme: root.theme
                                     text: qsTr("Folder")
                                     onTriggered: root.openNameDialog("newDir", "", "new-folder")
                                 }
                             }
-                            MenuSeparator {}
-                            MenuItem {
+                            ThemedMenuSeparator { theme: root.theme }
+                            ThemedMenuItem {
+                                theme: root.theme
                                 text: qsTr("Rename")
                                 enabled: remoteItemMenu.hasEntry
                                 onTriggered: root.openNameDialog("rename",
                                                                  remoteItemMenu.entry.path,
                                                                  remoteItemMenu.entry.name)
                             }
-                            MenuItem {
+                            ThemedMenuItem {
+                                theme: root.theme
                                 text: qsTr("Delete")
                                 enabled: remoteItemMenu.hasEntry
                                 onTriggered: root.deleteRemotePath(remoteItemMenu.entry.path, false)
                             }
-                            MenuItem {
+                            ThemedMenuItem {
+                                theme: root.theme
                                 text: qsTr("Quick Delete (rm)")
                                 enabled: remoteItemMenu.hasEntry
                                 onTriggered: root.deleteRemotePath(remoteItemMenu.entry.path, true)
                             }
-                            MenuSeparator {}
-                            MenuItem {
+                            ThemedMenuSeparator { theme: root.theme }
+                            ThemedMenuItem {
+                                theme: root.theme
                                 text: qsTr("Permissions (%1)").arg(remoteItemMenu.entry.permissions || qsTr("?"))
                                 enabled: remoteItemMenu.hasEntry
                                 onTriggered: root.openChmodDialog(remoteItemMenu.entry.path,

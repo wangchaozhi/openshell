@@ -11,6 +11,7 @@ Rectangle {
     readonly property bool sessionConnected: session && session.status === "connected"
     property string clipboardTextSnapshot: ""
     property string detectedRemotePath: ""
+    property alias themePalette: theme
 
     signal remoteDirectoryDetected(string path)
 
@@ -215,12 +216,14 @@ Rectangle {
                     }
                 }
 
-                Menu {
+                ThemedMenu {
                     id: terminalMenu
+                    menuTheme: root.themePalette
                     onAboutToShow: root.refreshTerminalMenu()
 
-                    MenuItem {
+                    ThemedMenuItem {
                         id: copyMenuItem
+                        theme: root.themePalette
                         text: qsTr("Copy")
                         enabled: terminal.hasSelection
                         contentItem: TerminalMenuContent {
@@ -230,8 +233,9 @@ Rectangle {
                         }
                         onTriggered: root.copySelection()
                     }
-                    MenuItem {
+                    ThemedMenuItem {
                         id: pasteMenuItem
+                        theme: root.themePalette
                         text: qsTr("Paste")
                         enabled: root.sessionId !== "" && root.clipboardTextSnapshot.length > 0
                         contentItem: TerminalMenuContent {
@@ -246,8 +250,9 @@ Rectangle {
                             }
                         }
                     }
-                    MenuItem {
+                    ThemedMenuItem {
                         id: selectAllMenuItem
+                        theme: root.themePalette
                         text: qsTr("Select All")
                         enabled: root.sessionId !== "" && terminal.screen !== null
                         contentItem: TerminalMenuContent {
@@ -257,9 +262,10 @@ Rectangle {
                         }
                         onTriggered: terminal.selectAll()
                     }
-                    MenuSeparator {}
-                    MenuItem {
+                    ThemedMenuSeparator { theme: root.themePalette }
+                    ThemedMenuItem {
                         id: sendCtrlCMenuItem
+                        theme: root.themePalette
                         text: qsTr("Send Ctrl+C")
                         enabled: root.sessionId !== ""
                         contentItem: TerminalMenuContent {
@@ -273,8 +279,9 @@ Rectangle {
                             }
                         }
                     }
-                    MenuItem {
+                    ThemedMenuItem {
                         id: clearScreenMenuItem
+                        theme: root.themePalette
                         text: qsTr("Clear Screen")
                         enabled: root.sessionId !== ""
                         contentItem: TerminalMenuContent {

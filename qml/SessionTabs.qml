@@ -10,6 +10,7 @@ Rectangle {
     property string activeView: "terminal"
     property string uiTheme: "dark"
     property bool systemInfoTabVisible: false
+    property alias themePalette: theme
     readonly property bool classic: theme.classic
 
     signal sessionActivated(string id)
@@ -180,24 +181,29 @@ Rectangle {
                     }
                 }
 
-                Menu {
+                ThemedMenu {
                     id: tabMenu
-                    MenuItem {
+                    menuTheme: root.themePalette
+                    ThemedMenuItem {
+                        theme: root.themePalette
                         text: tab.isConnected ? qsTr("Disconnect") : qsTr("Disconnected")
                         enabled: tab.isConnected
                         onTriggered: root.sessionDisconnected(modelData.id)
                     }
-                    MenuItem {
+                    ThemedMenuItem {
+                        theme: root.themePalette
                         text: qsTr("Reconnect")
                         enabled: modelData.connectionId && modelData.connectionId.length > 0
                         onTriggered: root.sessionReconnectRequested(modelData.id, modelData.connectionId)
                     }
-                    MenuSeparator {}
-                    MenuItem {
+                    ThemedMenuSeparator { theme: root.themePalette }
+                    ThemedMenuItem {
+                        theme: root.themePalette
                         text: qsTr("Detach Window")
                         onTriggered: root.sessionDetached(modelData.id)
                     }
-                    MenuItem {
+                    ThemedMenuItem {
+                        theme: root.themePalette
                         text: qsTr("Close session")
                         onTriggered: root.sessionClosed(modelData.id)
                     }

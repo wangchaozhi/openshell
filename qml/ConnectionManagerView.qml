@@ -8,6 +8,7 @@ Rectangle {
     property var connections: []
     property string selectedConnectionId: ""
     property string uiTheme: "dark"
+    property alias themePalette: theme
     readonly property bool classic: theme.classic
 
     signal connectionPicked(string id)
@@ -416,17 +417,21 @@ Rectangle {
                                         }
                                     }
 
-                                    Menu {
+                                    ThemedMenu {
                                         id: contextMenu
-                                        MenuItem {
+                                        menuTheme: root.themePalette
+                                        ThemedMenuItem {
+                                            theme: root.themePalette
                                             text: qsTr("Open Session")
                                             onTriggered: root.connectionOpenRequested(modelData.id)
                                         }
-                                        MenuItem {
+                                        ThemedMenuItem {
+                                            theme: root.themePalette
                                             text: qsTr("Edit")
                                             onTriggered: root.editConnectionRequested(modelData.id)
                                         }
-                                        MenuItem {
+                                        ThemedMenuItem {
+                                            theme: root.themePalette
                                             text: qsTr("Delete")
                                             onTriggered: root.deleteConnectionRequested(modelData.id)
                                         }

@@ -83,6 +83,9 @@ set(OPENSHELL_QML_FILES
     qml/ThemedComboBox.qml
     qml/ThemedSpinBox.qml
     qml/ThemedButton.qml
+    qml/ThemedMenu.qml
+    qml/ThemedMenuItem.qml
+    qml/ThemedMenuSeparator.qml
     qml/mobile/MobileWindow.qml
     qml/mobile/MobileConnectionsPage.qml
     qml/mobile/MobileConnectionEditorPage.qml
