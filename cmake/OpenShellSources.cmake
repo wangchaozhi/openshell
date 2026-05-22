@@ -68,6 +68,7 @@ set(OPENSHELL_QML_FILES
     qml/filebrowser/TransferTaskList.qml
     qml/filebrowser/ParentIcon.qml
     qml/filebrowser/RefreshIcon.qml
+    qml/filebrowser/DetachIcon.qml
     qml/filebrowser/SyncIcon.qml
     qml/filebrowser/SettingsIcon.qml
     qml/filebrowser/DetachedLocalWindow.qml

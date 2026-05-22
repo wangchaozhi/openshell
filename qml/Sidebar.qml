@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "filebrowser" as FileBrowserComponents
 
 Rectangle {
     id: root
@@ -207,12 +208,10 @@ Rectangle {
                         root.detaching = true
                     }
                 }
-                contentItem: Label {
-                    text: "[]"
+                contentItem: FileBrowserComponents.DetachIcon {
+                    anchors.centerIn: parent
                     color: root.classic ? "#475569" : "#93c5fd"
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    font.pixelSize: 10
+                    accentColor: root.classic ? "#0284c7" : "#60a5fa"
                 }
                 background: Rectangle {
                     radius: 3

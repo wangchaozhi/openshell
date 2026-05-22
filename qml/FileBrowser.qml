@@ -1065,7 +1065,9 @@ Rectangle {
                         id: localDetachButton
                         implicitWidth: 30
                         implicitHeight: 24
-                        text: "[]"
+                        contentItem: FileBrowserComponents.DetachIcon {
+                            anchors.centerIn: parent
+                        }
                         ToolTip.visible: hovered
                         ToolTip.text: qsTr("Detach Window")
 
@@ -1331,8 +1333,11 @@ Rectangle {
                         id: remoteDetachButton
                         implicitWidth: 30
                         implicitHeight: 24
-                        text: "[]"
                         enabled: root.connectionId !== ""
+                        contentItem: FileBrowserComponents.DetachIcon {
+                            anchors.centerIn: parent
+                            opacity: parent.enabled ? 1 : 0.35
+                        }
                         ToolTip.visible: hovered
                         ToolTip.text: qsTr("Detach Window")
 
