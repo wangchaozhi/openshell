@@ -30,6 +30,38 @@ void installEchoFactory(SessionController &controller)
     });
 }
 
+class SlowStartWorker final : public SshChannelWorker
+{
+    Q_OBJECT
+
+public:
+    explicit SlowStartWorker(const ConnectionProfile &profile)
+        : SshChannelWorker(profile)
+    {
+    }
+
+public slots:
+    void start() override
+    {
+        QThread::msleep(500);
+        emit disconnected(QStringLiteral("Slow start finished."));
+    }
+
+    void stop() override
+    {
+        emit disconnected(QStringLiteral("Slow start cancelled."));
+    }
+
+    void sendInput(const QByteArray &) override {}
+};
+
+void installSlowStartFactory(SessionController &controller)
+{
+    controller.setWorkerFactory([](const ConnectionProfile &p) -> SshChannelWorker * {
+        return new SlowStartWorker(p);
+    });
+}
+
 // 等待信号至少触发一次（默认 2s），或累计触发 minCount 次。
 bool waitForCount(QSignalSpy &spy, int minCount, int timeoutMs = 2000)
 {
@@ -67,6 +99,7 @@ private slots:
     void openProducesIdAndStreamsBanner();
     void inputIsEchoedBack();
     void closeReleasesSession();
+    void closeDuringConnectReturnsImmediately();
     void exitCommandTransitionsToDisconnected();
     void clearScreenKeepsPromptLine();
     void redrawingDoesNotGrowBufferUnbounded();
@@ -138,6 +171,27 @@ void TestSessionController::closeReleasesSession()
     QVERIFY(!controller.contains(id));
     QCOMPARE(controller.sessionsAsVariantList().size(), 0);
     QVERIFY(changedSpy.count() >= 1);
+}
+
+void TestSessionController::closeDuringConnectReturnsImmediately()
+{
+    SessionController controller;
+    installSlowStartFactory(controller);
+
+    QString error;
+    const QString id = controller.open(makeProfile(), &error);
+    QVERIFY2(!id.isEmpty(), qPrintable(error));
+    QVERIFY(controller.contains(id));
+
+    QElapsedTimer timer;
+    timer.start();
+    controller.close(id);
+
+    QVERIFY2(timer.elapsed() < 100,
+             qPrintable(QStringLiteral("close() blocked for %1 ms").arg(timer.elapsed())));
+    QVERIFY(!controller.contains(id));
+
+    QTest::qWait(700);
 }
 
 void TestSessionController::exitCommandTransitionsToDisconnected()

@@ -24,8 +24,10 @@ SshSession::SshSession(const QString &id,
     // worker -> session 一律 queued，跨线程安全。
     connect(m_worker, &SshChannelWorker::connected, this, &SshSession::handleConnected);
     connect(m_worker, &SshChannelWorker::disconnected, this, &SshSession::handleDisconnected);
+    connect(m_worker, &SshChannelWorker::disconnected, &m_thread, &QThread::quit);
     connect(m_worker, &SshChannelWorker::output, this, &SshSession::handleOutput);
     connect(m_worker, &SshChannelWorker::errorOccurred, this, &SshSession::handleError);
+    connect(&m_thread, &QThread::finished, this, &SshSession::workerThreadFinished);
 
     // VtScreen 任何变化都告诉 SessionController/QML 重绘
     connect(m_screen, &VtScreen::damaged, this, [this](const QRect &) { emit screenUpdated(); });
@@ -59,6 +61,7 @@ QString SshSession::connectionId() const { return m_connectionId; }
 QString SshSession::title() const { return m_title; }
 QString SshSession::status() const { return m_status; }
 QString SshSession::lastMessage() const { return m_lastMessage; }
+bool SshSession::isWorkerThreadRunning() const { return m_thread.isRunning(); }
 QString SshSession::buffer() const { return m_screen->plainTextSnapshot(); }
 
 void SshSession::start()

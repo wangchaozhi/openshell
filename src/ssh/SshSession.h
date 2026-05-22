@@ -33,6 +33,7 @@ public:
     QString title() const;
     QString status() const; // connecting/connected/disconnected/error
     QString lastMessage() const;
+    bool isWorkerThreadRunning() const;
 
     // 纯文本快照（行末空白裁掉），仅用于切 tab 重放与单测断言。
     QString buffer() const;
@@ -48,6 +49,7 @@ public:
 signals:
     void statusChanged();
     void screenUpdated(); // 终端模型已变更（光标/cells/title 等任意维度）
+    void workerThreadFinished();
 
 private slots:
     void handleConnected();

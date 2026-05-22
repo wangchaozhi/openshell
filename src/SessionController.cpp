@@ -69,8 +69,14 @@ void SessionController::close(const QString &sessionId)
     for (int i = 0; i < m_sessions.size(); ++i) {
         if (m_sessions.at(i)->id() == sessionId) {
             SshSession *session = m_sessions.takeAt(i);
-            session->requestStop();
-            session->deleteLater();
+            session->setParent(nullptr);
+            if (session->isWorkerThreadRunning()) {
+                connect(session, &SshSession::workerThreadFinished,
+                        session, &QObject::deleteLater);
+                session->requestStop();
+            } else {
+                session->deleteLater();
+            }
             emit sessionsChanged();
             return;
         }
