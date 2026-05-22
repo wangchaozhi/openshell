@@ -35,12 +35,16 @@ set(OPENSHELL_APP_SOURCES
     src/terminal/VtScreen.cpp
     src/terminal/VtScreen.h
     src/terminal/TerminalScreenItem.cpp
+    src/terminal/TerminalScreenItemInput.cpp
+    src/terminal/TerminalScreenItemSelection.cpp
     src/terminal/TerminalScreenItem.h
 )
 
 set(OPENSHELL_DESKTOP_SOURCES
     src/TrayController.cpp
     src/TrayController.h
+    src/CredentialStore.cpp
+    src/CredentialStore.h
 )
 
 set(OPENSHELL_ECHO_BACKEND_SOURCES
@@ -62,6 +66,8 @@ set(OPENSHELL_QML_FILES
     qml/SystemInfoView.qml
     qml/FileBrowser.qml
     qml/ThemePalette.qml
+    qml/filebrowser/LocalPane.qml
+    qml/filebrowser/RemotePane.qml
     qml/filebrowser/FileBrowserDialogs.qml
     qml/filebrowser/HeaderCell.qml
     qml/filebrowser/DataCell.qml
@@ -102,6 +108,12 @@ set(OPENSHELL_TEST_CONNECTION_CATALOG_SOURCES
     tests/test_connection_catalog.cpp
     src/ConnectionCatalog.cpp
     src/ConnectionCatalog.h
+)
+
+set(OPENSHELL_TEST_VT_SCREEN_SOURCES
+    tests/test_vt_screen.cpp
+    src/terminal/VtScreen.cpp
+    src/terminal/VtScreen.h
 )
 
 set(OPENSHELL_TEST_SESSION_CONTROLLER_SOURCES

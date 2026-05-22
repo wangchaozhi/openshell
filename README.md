@@ -19,7 +19,7 @@ The project is no longer only a UI skeleton. It already includes real SSH sessio
 - Remote file opening: double-click remote files and open them with the system default app, a configured editor, or the built-in editor.
 - Edit upload-back: external editor saves can be watched and uploaded back to the original remote path; the built-in editor uploads on save.
 - System tray: show/hide window, quick-open connections, language switching, and quit.
-- Localization: Simplified Chinese and Japanese are included; English currently uses source-string fallback.
+- Localization: English, Simplified Chinese, and Japanese. English is the source language so it needs no translation file; Chinese and Japanese ship as compiled `.qm` resources.
 
 ## Requirements
 

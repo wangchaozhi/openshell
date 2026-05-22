@@ -1,11 +1,16 @@
 #include "ConnectionCatalog.h"
 
+#ifdef OPENSHELL_USE_KEYCHAIN
+#include "CredentialStore.h"
+#endif
+
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSaveFile>
 #include <QStandardPaths>
 #include <QUuid>
 
@@ -153,6 +158,11 @@ bool ConnectionCatalog::remove(const QString &id, QString *error)
         return false;
     }
 
+#ifdef OPENSHELL_USE_KEYCHAIN
+    CredentialStore::remove(id, QStringLiteral("password"));
+    CredentialStore::remove(id, QStringLiteral("keyPassphrase"));
+#endif
+
     reload();
     return true;
 }
@@ -170,21 +180,66 @@ ConnectionProfile ConnectionCatalog::loadFromFile(const QString &path) const
     if (!doc.isObject()) {
         return {};
     }
-    return ConnectionProfile::fromVariantMap(doc.object().toVariantMap());
+    const QJsonObject obj = doc.object();
+    ConnectionProfile p = ConnectionProfile::fromVariantMap(obj.toVariantMap());
+
+#ifdef OPENSHELL_USE_KEYCHAIN
+    if (!p.id.isEmpty()) {
+        // 旧版本把明文密码写在 JSON 里。这里优先用文件里残留的明文（保证升级
+        // 不丢凭据），否则回落到钥匙串。一旦发现文件还带着 secret 字段，立即
+        // 重存一次：saveToFile 会把 secret 移进钥匙串并从文件里抹掉。
+        const bool hadPlainSecret = obj.contains(QStringLiteral("password"))
+                                    || obj.contains(QStringLiteral("keyPassphrase"));
+        if (p.password.isEmpty()) {
+            p.password = CredentialStore::load(p.id, QStringLiteral("password"));
+        }
+        if (p.keyPassphrase.isEmpty()) {
+            p.keyPassphrase = CredentialStore::load(p.id, QStringLiteral("keyPassphrase"));
+        }
+        if (hadPlainSecret) {
+            saveToFile(p, nullptr);
+        }
+    }
+#endif
+
+    return p;
 }
 
 bool ConnectionCatalog::saveToFile(const ConnectionProfile &profile, QString *error) const
 {
+    QVariantMap map = profile.toVariantMap();
+
+#ifdef OPENSHELL_USE_KEYCHAIN
+    // 敏感字段进系统钥匙串，绝不落进 JSON 明文。
+    if (!CredentialStore::save(profile.id, QStringLiteral("password"),
+                               profile.password, error)) {
+        return false;
+    }
+    if (!CredentialStore::save(profile.id, QStringLiteral("keyPassphrase"),
+                               profile.keyPassphrase, error)) {
+        return false;
+    }
+    map.remove(QStringLiteral("password"));
+    map.remove(QStringLiteral("keyPassphrase"));
+#endif
+
+    // QSaveFile writes to a temp file and atomically renames on commit, so a
+    // crash mid-write leaves the previous connection JSON intact.
     const QString path = filePathFor(profile.id);
-    QFile file(path);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+    QSaveFile file(path);
+    if (!file.open(QIODevice::WriteOnly)) {
         if (error) {
             *error = tr("Cannot write %1").arg(path);
         }
         return false;
     }
-    file.write(QJsonDocument(QJsonObject::fromVariantMap(profile.toVariantMap()))
+    file.write(QJsonDocument(QJsonObject::fromVariantMap(map))
                    .toJson(QJsonDocument::Indented));
-    file.close();
+    if (!file.commit()) {
+        if (error) {
+            *error = tr("Cannot write %1").arg(path);
+        }
+        return false;
+    }
     return true;
 }

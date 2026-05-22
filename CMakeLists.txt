@@ -195,6 +195,36 @@ if(NOT OPENSHELL_VTERM_TARGET)
     message(FATAL_ERROR "OpenShell: failed to resolve libvterm")
 endif()
 
+# --- QtKeychain ----------------------------------------------------------
+# 凭据进系统钥匙串（Windows 凭据管理器 / macOS Keychain / Linux libsecret）。
+# 只在桌面端启用；移动端凭据留在各自 App 私有沙箱里的 JSON。统一走 FetchContent，
+# 这样 BUILD_INTERFACE 的头路径固定，源码里直接 #include <keychain.h>。
+set(OPENSHELL_KEYCHAIN_TARGET "" CACHE INTERNAL "Resolved QtKeychain target")
+if(NOT ANDROID AND NOT IOS)
+    include(FetchContent)
+    message(STATUS "OpenShell: fetching QtKeychain from upstream")
+    set(BUILD_SHARED_LIBS OFF)
+    set(BUILD_TEST_APPLICATION OFF CACHE BOOL "" FORCE)
+    set(BUILD_WITH_QT6 ON CACHE BOOL "" FORCE)
+    FetchContent_Declare(qtkeychain
+        GIT_REPOSITORY https://github.com/frankosterfeld/qtkeychain.git
+        GIT_TAG        0.14.3
+    )
+    FetchContent_MakeAvailable(qtkeychain)
+    if(TARGET qt6keychain)
+        set(OPENSHELL_KEYCHAIN_TARGET qt6keychain)
+    elseif(TARGET Qt6Keychain::Qt6Keychain)
+        set(OPENSHELL_KEYCHAIN_TARGET Qt6Keychain::Qt6Keychain)
+    else()
+        message(FATAL_ERROR "OpenShell: failed to resolve QtKeychain target")
+    endif()
+    # QtKeychain 只给 install 配了头路径，FetchContent 消费时拿不到，
+    # 这里手动补上：源码目录有 keychain.h，构建目录有生成的 qkeychain_export.h。
+    set(OPENSHELL_KEYCHAIN_INCLUDE_DIRS
+        "${qtkeychain_SOURCE_DIR}" "${qtkeychain_BINARY_DIR}"
+        CACHE INTERNAL "QtKeychain include dirs")
+endif()
+
 # --- Main executable -----------------------------------------------------
 
 include(cmake/OpenShellSources.cmake)
@@ -254,7 +284,9 @@ target_link_libraries(OpenShell
         ${OPENSHELL_VTERM_TARGET}
 )
 if(NOT ANDROID AND NOT IOS)
-    target_link_libraries(OpenShell PRIVATE Qt6::Widgets)
+    target_link_libraries(OpenShell PRIVATE Qt6::Widgets ${OPENSHELL_KEYCHAIN_TARGET})
+    target_include_directories(OpenShell PRIVATE ${OPENSHELL_KEYCHAIN_INCLUDE_DIRS})
+    target_compile_definitions(OpenShell PRIVATE OPENSHELL_USE_KEYCHAIN=1)
 endif()
 
 install(TARGETS OpenShell
@@ -283,6 +315,21 @@ if(OPENSHELL_BUILD_TESTS)
     )
 
     add_test(NAME connection_catalog COMMAND test_connection_catalog)
+
+    qt_add_executable(test_vt_screen ${OPENSHELL_TEST_VT_SCREEN_SOURCES})
+    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${OPENSHELL_TEST_VT_SCREEN_SOURCES})
+
+    target_include_directories(test_vt_screen PRIVATE src)
+
+    target_link_libraries(test_vt_screen
+        PRIVATE
+            Qt6::Core
+            Qt6::Gui
+            Qt6::Test
+            ${OPENSHELL_VTERM_TARGET}
+    )
+
+    add_test(NAME vt_screen COMMAND test_vt_screen)
 
     qt_add_executable(test_session_controller ${OPENSHELL_TEST_SESSION_CONTROLLER_SOURCES})
     source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${OPENSHELL_TEST_SESSION_CONTROLLER_SOURCES})

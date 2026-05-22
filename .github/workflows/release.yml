@@ -97,6 +97,7 @@ jobs:
             desktop-file-utils \
             libgl1-mesa-dev \
             libegl1-mesa-dev \
+            libsecret-1-dev \
             patchelf \
             wget \
             libxkbcommon-x11-0 \
