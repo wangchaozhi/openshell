@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.16)
 
 project(OpenShell VERSION 0.1 LANGUAGES C CXX)
 
+if(IOS)
+    enable_language(OBJCXX)
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -299,6 +303,7 @@ if(IOS)
     target_sources(OpenShell PRIVATE src/CredentialStoreIos.mm)
     target_compile_definitions(OpenShell PRIVATE OPENSHELL_USE_KEYCHAIN=1)
     set_source_files_properties(src/CredentialStoreIos.mm PROPERTIES
+        LANGUAGE OBJCXX
         COMPILE_FLAGS "-fobjc-arc")
     target_link_libraries(OpenShell PRIVATE "-framework Security" "-framework Foundation")
 elseif(ANDROID)

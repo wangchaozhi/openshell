@@ -15,21 +15,21 @@ NSString *toNs(const QString &s)
     return [NSString stringWithUTF8String:s.toUtf8().constData()];
 }
 
-NSDictionary *baseQuery(const QString &id, const QString &field)
+NSDictionary *baseQuery(const QString &profileId, const QString &field)
 {
     return @{
         (__bridge id)kSecClass: (__bridge id)kSecClassGenericPassword,
         (__bridge id)kSecAttrService: @"OpenShell",
-        (__bridge id)kSecAttrAccount: toNs(id + QStringLiteral("/") + field)
+        (__bridge id)kSecAttrAccount: toNs(profileId + QStringLiteral("/") + field)
     };
 }
 
 } // namespace
 
-bool CredentialStore::save(const QString &id, const QString &field,
+bool CredentialStore::save(const QString &profileId, const QString &field,
                            const QString &secret, QString *error)
 {
-    NSDictionary *q = baseQuery(id, field);
+    NSDictionary *q = baseQuery(profileId, field);
     // Upsert: remove the prior entry then add the new value. Errors other
     // than "not found" are surfaced to the caller.
     OSStatus deleteStatus = SecItemDelete((__bridge CFDictionaryRef)q);
@@ -58,9 +58,9 @@ bool CredentialStore::save(const QString &id, const QString &field,
     return true;
 }
 
-QString CredentialStore::load(const QString &id, const QString &field)
+QString CredentialStore::load(const QString &profileId, const QString &field)
 {
-    NSMutableDictionary *q = [baseQuery(id, field) mutableCopy];
+    NSMutableDictionary *q = [baseQuery(profileId, field) mutableCopy];
     q[(__bridge id)kSecReturnData] = @YES;
     q[(__bridge id)kSecMatchLimit] = (__bridge id)kSecMatchLimitOne;
     CFTypeRef result = NULL;
@@ -73,7 +73,7 @@ QString CredentialStore::load(const QString &id, const QString &field)
                              static_cast<int>([data length]));
 }
 
-void CredentialStore::remove(const QString &id, const QString &field)
+void CredentialStore::remove(const QString &profileId, const QString &field)
 {
-    save(id, field, QString(), nullptr);
+    save(profileId, field, QString(), nullptr);
 }

@@ -63,8 +63,16 @@ Rectangle {
             terminal.screen = next
         }
         if (root.pageActive && terminal.screen !== null) {
-            keyboardProxy.activate()
+            activateKeyboard()
         }
+    }
+
+    function activateKeyboard() {
+        if (!root.pageActive || root.sessionId.length === 0) {
+            return
+        }
+        root.keyboardRequested = true
+        keyboardProxy.activate()
     }
 
     function sendText(text) {
@@ -72,7 +80,7 @@ Rectangle {
             return
         }
         appController.sendSessionInput(sessionId, applyPendingModifiers(text))
-        keyboardProxy.activate()
+        activateKeyboard()
     }
 
     function sendRaw(text) {
@@ -82,7 +90,7 @@ Rectangle {
         ctrlModifier = false
         altModifier = false
         appController.sendSessionInput(sessionId, text)
-        keyboardProxy.activate()
+        activateKeyboard()
     }
 
     function sendBackspace() {
@@ -129,12 +137,12 @@ Rectangle {
 
     function toggleCtrl() {
         ctrlModifier = !ctrlModifier
-        keyboardProxy.activate()
+        activateKeyboard()
     }
 
     function toggleAlt() {
         altModifier = !altModifier
-        keyboardProxy.activate()
+        activateKeyboard()
     }
 
     function toggleKeyboard() {
@@ -148,7 +156,7 @@ Rectangle {
             Qt.inputMethod.hide()
             return
         }
-        keyboardProxy.activate()
+        activateKeyboard()
     }
 
     onSessionIdChanged: bindScreen()
@@ -165,6 +173,17 @@ Rectangle {
             altModifier = false
             keyboardRequested = false
             Qt.inputMethod.hide()
+        }
+    }
+
+    Connections {
+        target: Qt.inputMethod
+        function onVisibleChanged() {
+            if (!Qt.inputMethod.visible) {
+                root.keyboardRequested = false
+            } else if (root.pageActive && root.sessionId.length > 0) {
+                root.keyboardRequested = true
+            }
         }
     }
 
@@ -372,29 +391,19 @@ Rectangle {
                 Component.onCompleted: root.bindScreen()
             }
 
-            MouseArea {
-                anchors.fill: parent
-                acceptedButtons: Qt.LeftButton
-                preventStealing: false
-                propagateComposedEvents: true
-                onClicked: (mouse) => {
-                    root.toggleKeyboard()
-                    mouse.accepted = false
-                }
-            }
-
             TextInput {
                 id: keyboardProxy
 
                 readonly property string sentinel: " "
-                anchors.left: parent.left
-                anchors.top: parent.top
-                width: 1
-                height: 1
+                anchors.fill: terminal
+                activeFocusOnPress: true
+                color: "transparent"
+                selectedTextColor: "transparent"
+                selectionColor: "transparent"
+                cursorVisible: false
                 opacity: 0.01
                 text: sentinel
                 cursorPosition: text.length
-                activeFocusOnPress: false
                 inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText
                                   | Qt.ImhSensitiveData | Qt.ImhNoExtractedText
                                   | Qt.ImhNoEditMenu | Qt.ImhNoTextHandles
@@ -416,12 +425,20 @@ Rectangle {
                     cursorPosition = text.length
                 }
 
+                onActiveFocusChanged: {
+                    if (activeFocus && root.pageActive && root.sessionId.length > 0) {
+                        root.keyboardRequested = true
+                        reset()
+                        Qt.inputMethod.show()
+                    }
+                }
+
                 onTextEdited: {
                     if (!root.pageActive || root.sessionId.length === 0) {
                         reset()
                         return
                     }
-                    if (text.length === 0) {
+                    if (text.length < sentinel.length) {
                         root.sendBackspace()
                         reset()
                         return
