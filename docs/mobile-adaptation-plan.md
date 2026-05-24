@@ -137,23 +137,33 @@ engine.loadFromModule("OpenShell", "Main");
 
 ### 文件选择
 
-桌面端可以使用本地路径和 `QFileDialog`。
+桌面端继续使用 `chooseLocalFile` / `chooseLocalFolder` / `chooseDownloadFolder`
+（同步返回路径，背后是 `QFileDialog`）。
 
-移动端需要改为平台文件选择：
+移动端走一套独立的异步 API：
 
-- Android：Storage Access Framework 或 Qt Android 文件选择能力。
-- iOS：UIDocumentPicker 相关能力。
-- 私钥文件只保存授权后的可访问路径或导入副本，不假设任意路径长期可读。
+- `pickMobileFileAsync()` → 通过 `QFileDialog::getOpenFileContent` 触发系统
+  picker（Android SAF / iOS UIDocumentPicker），把选中文件落盘到
+  `QStandardPaths::TempLocation`，再通过 `mobileFilePicked(path, error)` 信号
+  把可用路径回 QML。
+- 文件夹上传当前在移动端是显式 "not yet supported"：SAF 给的是 tree URI，
+  iOS 给的是 security-scoped tree bookmark，都需要专门的目录走查器才能复用
+  `SftpTransfer::uploadPathRecursive`，独立工程。
+- 下载目录：移动端固定落到 `AppDataLocation`，不弹 picker。
+- 私钥文件应仅保存导入副本，不假设任意路径长期可读。
 
 ### 安全存储
 
-移动端不应长期明文保存密码。
+`CredentialStore` 已经做了平台分发：
 
-后续应接入：
-
-- Android Keystore。
-- iOS Keychain。
-- 桌面端可继续规划 QtKeychain / 系统 Credential Store。
+- 桌面：QtKeychain（`src/CredentialStore.cpp`，宏 `OPENSHELL_USE_KEYCHAIN`）。
+- iOS：`src/CredentialStoreIos.mm`，调 Sec API
+  (`kSecClassGenericPassword` + `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`)。
+- Android：`src/CredentialStoreAndroid.cpp` 是 **占位实现** —— base64 写
+  app 私有 `QSettings`，沙箱保护但未在静态层面加密。正式做法是
+  `AndroidKeyStore` 生成 AES key + `Cipher` GCM 包装；可经 QJniObject 直接调
+  Java 标准库或引入 AndroidX Security `EncryptedSharedPreferences`。文件里有
+  FIXME 标注，是独立后续工程。
 
 ### 后台行为
 

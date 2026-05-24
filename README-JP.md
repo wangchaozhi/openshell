@@ -18,8 +18,12 @@ OpenShell は Qt 6 / QML / C++20 で構築されたクロスプラットフォ�
 - リモートディレクトリ同期：ターミナルのプロンプトが示すカレントディレクトリとリモートファイルブラウザーを自動同期。
 - リモートファイルオープン：リモートファイルをダブルクリックして、システム既定アプリ・指定エディター・内蔵エディターで開く。
 - 編集アップロードバック：外部エディターで保存後に自動でリモートへアップロード。内蔵エディターは保存時にアップロード。
+- 踏み台ホスト (ProxyJump)：libssh2 のカスタム send/recv コールバック経由で `direct-tcpip` トンネルを張り、目標サーバーへ接続。
+- ローカルポート転送 (`-L`)：ローカルポートをバインドし、確立済みセッション経由でリモートへトンネリング。Remote (`-R`) / Dynamic (`-D`) は未実装で、設定すると明示的なエラーになります。
+- 自動再接続：プロファイルごとに設定可能。指数バックオフ（最大 30 秒）。
+- 認証情報：パスワード/秘密鍵パスフレーズは OS の鍵束（デスクトップは QtKeychain 経由で macOS Keychain / Windows 資格情報マネージャー / Linux libsecret、iOS はネイティブ Sec API）に保存。旧 JSON の平文は初回ロード時に鍵束へ移行されます。
 - システムトレイ：ウィンドウの表示/非表示、接続のクイックオープン、言語切り替え、終了。
-- 多言語対応：簡体字中国語・日本語を内蔵。英語はソース文字列フォールバック。
+- 多言語対応：簡体字中国語・日本語を `.qm` で内蔵。韓国語・ドイツ語は翻訳待ちの空骨格。英語はソース文字列フォールバック。
 
 ## 動作要件
 
@@ -91,12 +95,19 @@ ctest --test-dir build
 │   └── AccentCard.qml
 ├── translations/
 │   ├── OpenShell_zh_CN.ts
-│   └── OpenShell_ja_JP.ts
+│   ├── OpenShell_ja_JP.ts
+│   ├── OpenShell_ko_KR.ts        # 空骨格
+│   └── OpenShell_de_DE.ts        # 空骨格
 ├── tests/
 │   ├── test_connection_catalog.cpp
-│   └── test_session_controller.cpp
+│   ├── test_vt_screen.cpp
+│   ├── test_session_controller.cpp
+│   ├── test_sftp_transfer.cpp
+│   └── test_sftp_connection_pool.cpp
 └── docs/
-    └── architecture.md
+    ├── architecture.md
+    ├── mobile-adaptation-plan.md
+    └── connection-encryption-design.md
 ```
 
 ## データストレージ
@@ -107,7 +118,9 @@ ctest --test-dir build
 QStandardPaths::AppDataLocation/connections/<id>.json
 ```
 
-パスワードや秘密鍵のパスフレーズは現時点でローカルの設定ファイルに平文で保存される場合があります。将来のバージョンでは QtKeychain または OS のクレデンシャルストアへの統合を予定しています。
+パスワードや秘密鍵のパスフレーズ（踏み台ホストのクレデンシャル含む）は OS の鍵束に保存されます。デスクトップでは QtKeychain 経由で macOS Keychain / Windows 資格情報マネージャー / Linux libsecret を、iOS ではネイティブの Sec API を使用します。旧 JSON に残っていた平文は初回ロード時に自動で鍵束へ移行されます。Android では現状 base64 を被せて app プライベートな `QSettings` に書き込む暫定実装で、サンドボックスで保護されているものの **静止状態では暗号化されていません**。AndroidKeyStore + AES-GCM への置き換えは [AGENTS.md](AGENTS.md) に課題として記録されています。
+
+JSON ファイル全体の暗号化（Git 同期向け）は未実装です。設計案は [docs/connection-encryption-design.md](docs/connection-encryption-design.md) を参照してください。
 
 リモートファイルのオープン/編集ワークフローでは、まずファイルをシステムの一時ディレクトリにダウンロードします：
 
@@ -136,11 +149,14 @@ OpenShell は余暇に開発されています。役に立った場合は、コ�
 
 ## ロードマップ
 
-- クレデンシャルセキュリティ：QtKeychain または OS クレデンシャルストアへの統合。
+- 接続 JSON の暗号化（Git 同期のため、設計は `docs/connection-encryption-design.md`）。
+- Android のクレデンシャル保管強化：現在の `QSettings` 暫定実装を `AndroidKeyStore` 経由の AES-GCM ラップに置き換える。
+- モバイルのフォルダーアップロード：SAF / iOS security-scoped tree ブックマーク対応の走査器（ファイル選択は `pickMobileFileAsync` で既に接続済み）。
+- Remote (`-R`) と Dynamic (`-D`) ポートフォワーディング（Local `-L` は実装済み）。
 - ターミナル強化：スクロールバック履歴、検索、より広い VT 互換性、コピー書式の改善。
 - SFTP 強化：転送キュー、レジューム対応、競合処理、バッチ操作。
-- SSH 強化：踏み台ホスト、ポートフォワーディング、再接続、エージェントの完全サポート。
 - サーバー監視：SSH exec 経由で CPU・メモリ・ディスク・ネットワーク統計を収集してダッシュボードに表示。
+- 翻訳：`OpenShell_ko_KR.ts` / `OpenShell_de_DE.ts` の充足（現在は空骨格）。
 - パッケージング：Windows/macOS/Linux のリリースワークフローの整備。
 
 詳細なアーキテクチャについては [docs/architecture.md](docs/architecture.md) および [AGENTS.md](AGENTS.md) を参照してください。

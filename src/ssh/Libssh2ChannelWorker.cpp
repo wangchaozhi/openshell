@@ -6,6 +6,8 @@
 #include <QHostInfo>
 #include <QSocketNotifier>
 #include <QString>
+#include <QTcpServer>
+#include <QTcpSocket>
 #include <QTimer>
 
 #include <cstring>
@@ -37,6 +39,13 @@ inline int openshell_close_socket(OpenShellSocket s) { return ::close(s); }
 inline int openshell_socket_errno() { return errno; }
 inline bool openshell_socket_would_block(int err) { return err == EWOULDBLOCK || err == EAGAIN || err == EINPROGRESS; }
 #endif
+
+// Note: SessionAbstract is declared at file scope (not in anonymous namespace)
+// so that Libssh2ChannelWorker member pointers can use it across TU boundaries.
+struct SessionAbstract {
+    LIBSSH2_CHANNEL **jumpTunnelSlot = nullptr;
+    const QByteArray *kbdintPassword = nullptr;
+};
 
 namespace {
 
@@ -119,6 +128,55 @@ void applyTcpNoDelay(OpenShellSocket sock)
                  reinterpret_cast<const char *>(&one), sizeof(one));
 }
 
+// libssh2 的 session abstract 是一个 void* 槽位，被 jump callbacks
+// 和 kbdint callback 同时使用。统一放一个 SessionAbstract，避免互相覆盖。
+ssize_t jumpSendCallback(libssh2_socket_t /*socket*/, const void *buffer, size_t length,
+                         int /*flags*/, void **abstract)
+{
+    auto *ctx = static_cast<SessionAbstract *>(*abstract);
+    LIBSSH2_CHANNEL *tunnel = (ctx && ctx->jumpTunnelSlot) ? *ctx->jumpTunnelSlot : nullptr;
+    if (!tunnel) {
+        errno = ECONNRESET;
+        return -1;
+    }
+    const ssize_t rc = libssh2_channel_write(tunnel,
+                                             static_cast<const char *>(buffer),
+                                             length);
+    if (rc == LIBSSH2_ERROR_EAGAIN) {
+        errno = EAGAIN;
+        return -EAGAIN;
+    }
+    if (rc < 0) {
+        errno = EIO;
+        return -1;
+    }
+    return rc;
+}
+
+ssize_t jumpRecvCallback(libssh2_socket_t /*socket*/, void *buffer, size_t length,
+                         int /*flags*/, void **abstract)
+{
+    auto *ctx = static_cast<SessionAbstract *>(*abstract);
+    LIBSSH2_CHANNEL *tunnel = (ctx && ctx->jumpTunnelSlot) ? *ctx->jumpTunnelSlot : nullptr;
+    if (!tunnel) {
+        errno = ECONNRESET;
+        return -1;
+    }
+    const ssize_t rc = libssh2_channel_read(tunnel, static_cast<char *>(buffer), length);
+    if (rc == LIBSSH2_ERROR_EAGAIN) {
+        errno = EAGAIN;
+        return -EAGAIN;
+    }
+    if (rc == 0 && libssh2_channel_eof(tunnel)) {
+        return 0;
+    }
+    if (rc < 0) {
+        errno = EIO;
+        return -1;
+    }
+    return rc;
+}
+
 LIBSSH2_USERAUTH_KBDINT_RESPONSE_FUNC(keyboardInteractiveCallback)
 {
     Q_UNUSED(name);
@@ -131,7 +189,11 @@ LIBSSH2_USERAUTH_KBDINT_RESPONSE_FUNC(keyboardInteractiveCallback)
         return;
     }
 
-    const auto *password = static_cast<const QByteArray *>(*abstract);
+    auto *ctx = static_cast<SessionAbstract *>(*abstract);
+    if (!ctx->kbdintPassword) {
+        return;
+    }
+    const QByteArray *password = ctx->kbdintPassword;
     for (int i = 0; i < num_prompts; ++i) {
         char *copy = static_cast<char *>(std::malloc(static_cast<size_t>(password->size()) + 1));
         if (!copy) {
@@ -172,7 +234,43 @@ void Libssh2ChannelWorker::start()
     }
     m_libsshInited = true;
 
-    if (!openSocket(&err) || !handshake(&err) || !authenticate(&err) || !openShell(&err)) {
+    const bool useJump = !m_profile.jumpHost.trimmed().isEmpty();
+    if (useJump) {
+        if (!openSocket(m_profile.jumpHost, m_profile.jumpPort > 0 ? m_profile.jumpPort : 22, &err)
+            || !openJumpAndTunnel(&err)) {
+            if (!err.isEmpty()) {
+                emit errorOccurred(err);
+            }
+            emit disconnected(err.isEmpty() ? tr("Jump host connection failed") : err);
+            teardown();
+            return;
+        }
+    } else if (!openSocket(m_profile.host, m_profile.port > 0 ? m_profile.port : 22, &err)) {
+        if (!err.isEmpty()) {
+            emit errorOccurred(err);
+        }
+        emit disconnected(err.isEmpty() ? tr("Connection failed") : err);
+        teardown();
+        return;
+    }
+
+    m_session = libssh2_session_init();
+    if (!m_session) {
+        emit errorOccurred(tr("libssh2_session_init failed"));
+        emit disconnected(tr("libssh2_session_init failed"));
+        teardown();
+        return;
+    }
+    m_sessionAbstract = new SessionAbstract;
+    *libssh2_session_abstract(m_session) = m_sessionAbstract;
+    if (useJump) {
+        installJumpCallbacks();
+    }
+
+    AuthSpec targetSpec{m_profile.username, m_profile.authType, m_profile.password,
+                        m_profile.privateKeyPath, m_profile.keyPassphrase};
+    if (!handshake(m_session, &err) || !authenticate(m_session, targetSpec, &err)
+        || !openShell(&err)) {
         if (!err.isEmpty()) {
             emit errorOccurred(err);
         }
@@ -182,6 +280,7 @@ void Libssh2ChannelWorker::start()
     }
 
     m_running = true;
+    setupForwarding();
     emit connected();
     schedulePump();
 }
@@ -283,6 +382,8 @@ void Libssh2ChannelWorker::pump()
         return;
     }
 
+    pumpForwards();
+
     if (m_profile.keepaliveSec > 0) {
         int nextSec = 0;
         if (libssh2_keepalive_send(m_session, &nextSec) < 0) {
@@ -301,15 +402,16 @@ void Libssh2ChannelWorker::pump()
     }
 }
 
-bool Libssh2ChannelWorker::openSocket(QString *errorOut)
+bool Libssh2ChannelWorker::openSocket(const QString &host, int port, QString *errorOut)
 {
-    const QString hostStr = m_profile.host.isEmpty() ? QStringLiteral("127.0.0.1") : m_profile.host;
+    const QString hostStr = host.isEmpty() ? QStringLiteral("127.0.0.1") : host;
     QHostAddress addr;
     if (!resolveHostAddress(hostStr, &addr, errorOut)) {
         return false;
     }
-
-    const int port = m_profile.port > 0 ? m_profile.port : 22;
+    if (port <= 0) {
+        port = 22;
+    }
 
 #ifdef _WIN32
     WSADATA wsa;
@@ -433,40 +535,44 @@ bool Libssh2ChannelWorker::openSocket(QString *errorOut)
     return false;
 }
 
-bool Libssh2ChannelWorker::handshake(QString *errorOut)
+bool Libssh2ChannelWorker::handshake(LIBSSH2_SESSION *session, QString *errorOut)
 {
-    m_session = libssh2_session_init();
-    if (!m_session) {
+    if (!session) {
         if (errorOut) {
-            *errorOut = tr("libssh2_session_init failed");
+            *errorOut = tr("libssh2 session not initialized");
         }
         return false;
     }
-    libssh2_session_set_blocking(m_session, 1);
-    libssh2_session_set_timeout(m_session, connectTimeoutMs(m_profile));
+    libssh2_session_set_blocking(session, 1);
+    // 用 jump 时 socket fd 对应跳板机连接，没法 select 出主 session 的活动；
+    // 把 timeout 设到底层 socket 上仍是 OK 的，因为 callback 会接管 I/O。
+    libssh2_session_set_timeout(session, connectTimeoutMs(m_profile));
 
-    const int rc = libssh2_session_handshake(m_session, static_cast<int>(m_socket));
+    const int rc = libssh2_session_handshake(session, static_cast<int>(m_socket));
     if (rc != 0) {
         if (errorOut) {
-            *errorOut = tr("SSH handshake failed: %1").arg(lastSessionError());
+            *errorOut = tr("SSH handshake failed: %1").arg(lastSessionError(session));
         }
         return false;
     }
     return true;
 }
-bool Libssh2ChannelWorker::authenticate(QString *errorOut)
+
+bool Libssh2ChannelWorker::authenticate(LIBSSH2_SESSION *session,
+                                        const AuthSpec &spec,
+                                        QString *errorOut)
 {
-    const QString type = m_profile.authType.isEmpty()
+    const QString type = spec.authType.isEmpty()
                              ? QStringLiteral("password")
-                             : m_profile.authType.toLower();
+                             : spec.authType.toLower();
     bool ok = false;
     QString err;
     if (type == QStringLiteral("password")) {
-        ok = authPassword(&err);
+        ok = authPassword(session, spec, &err);
     } else if (type == QStringLiteral("key") || type == QStringLiteral("publickey")) {
-        ok = authKey(&err);
+        ok = authKey(session, spec, &err);
     } else if (type == QStringLiteral("agent")) {
-        ok = authAgent(&err);
+        ok = authAgent(session, spec, &err);
     } else {
         err = tr("Unknown auth type '%1'").arg(type);
     }
@@ -477,54 +583,67 @@ bool Libssh2ChannelWorker::authenticate(QString *errorOut)
     return ok;
 }
 
-bool Libssh2ChannelWorker::authPassword(QString *errorOut)
+bool Libssh2ChannelWorker::authPassword(LIBSSH2_SESSION *session,
+                                        const AuthSpec &spec,
+                                        QString *errorOut)
 {
-    const QByteArray user = m_profile.username.toUtf8();
-    const QByteArray pwd = m_profile.password.toUtf8();
-    const int rc = libssh2_userauth_password(m_session, user.constData(), pwd.constData());
+    const QByteArray user = spec.username.toUtf8();
+    const QByteArray pwd = spec.password.toUtf8();
+    const int rc = libssh2_userauth_password(session, user.constData(), pwd.constData());
     if (rc != 0) {
-        if (authKeyboardInteractive(errorOut)) {
+        if (authKeyboardInteractive(session, spec, errorOut)) {
             return true;
         }
         if (errorOut) {
-            *errorOut = tr("Password auth failed: %1").arg(lastSessionError());
+            *errorOut = tr("Password auth failed: %1").arg(lastSessionError(session));
         }
         return false;
     }
     return true;
 }
 
-bool Libssh2ChannelWorker::authKeyboardInteractive(QString *errorOut)
+bool Libssh2ChannelWorker::authKeyboardInteractive(LIBSSH2_SESSION *session,
+                                                   const AuthSpec &spec,
+                                                   QString *errorOut)
 {
-    const QByteArray user = m_profile.username.toUtf8();
-    const QByteArray pwd = m_profile.password.toUtf8();
-    void **abstract = libssh2_session_abstract(m_session);
-    *abstract = const_cast<QByteArray *>(&pwd);
-    const int rc = libssh2_userauth_keyboard_interactive(m_session,
+    const QByteArray user = spec.username.toUtf8();
+    const QByteArray pwd = spec.password.toUtf8();
+    void **abstract = libssh2_session_abstract(session);
+    auto *ctx = static_cast<SessionAbstract *>(*abstract);
+    if (!ctx) {
+        if (errorOut) {
+            *errorOut = tr("session abstract not initialized");
+        }
+        return false;
+    }
+    ctx->kbdintPassword = &pwd;
+    const int rc = libssh2_userauth_keyboard_interactive(session,
                                                          user.constData(),
                                                          keyboardInteractiveCallback);
-    *abstract = nullptr;
+    ctx->kbdintPassword = nullptr;
     if (rc != 0) {
         if (errorOut) {
-            *errorOut = tr("Keyboard-interactive auth failed: %1").arg(lastSessionError());
+            *errorOut = tr("Keyboard-interactive auth failed: %1").arg(lastSessionError(session));
         }
         return false;
     }
     return true;
 }
 
-bool Libssh2ChannelWorker::authKey(QString *errorOut)
+bool Libssh2ChannelWorker::authKey(LIBSSH2_SESSION *session,
+                                   const AuthSpec &spec,
+                                   QString *errorOut)
 {
-    if (m_profile.privateKeyPath.isEmpty()) {
+    if (spec.privateKeyPath.isEmpty()) {
         if (errorOut) {
             *errorOut = tr("Private key path is empty");
         }
         return false;
     }
-    const QByteArray user = m_profile.username.toUtf8();
-    const QByteArray keyPath = QFile::encodeName(m_profile.privateKeyPath);
-    const QByteArray passphrase = m_profile.keyPassphrase.toUtf8();
-    const int rc = libssh2_userauth_publickey_fromfile(m_session,
+    const QByteArray user = spec.username.toUtf8();
+    const QByteArray keyPath = QFile::encodeName(spec.privateKeyPath);
+    const QByteArray passphrase = spec.keyPassphrase.toUtf8();
+    const int rc = libssh2_userauth_publickey_fromfile(session,
                                                        user.constData(),
                                                        nullptr,
                                                        keyPath.constData(),
@@ -532,16 +651,18 @@ bool Libssh2ChannelWorker::authKey(QString *errorOut)
                                                                             : passphrase.constData());
     if (rc != 0) {
         if (errorOut) {
-            *errorOut = tr("Key auth failed: %1").arg(lastSessionError());
+            *errorOut = tr("Key auth failed: %1").arg(lastSessionError(session));
         }
         return false;
     }
     return true;
 }
 
-bool Libssh2ChannelWorker::authAgent(QString *errorOut)
+bool Libssh2ChannelWorker::authAgent(LIBSSH2_SESSION *session,
+                                     const AuthSpec &spec,
+                                     QString *errorOut)
 {
-    LIBSSH2_AGENT *agent = libssh2_agent_init(m_session);
+    LIBSSH2_AGENT *agent = libssh2_agent_init(session);
     if (!agent) {
         if (errorOut) {
             *errorOut = tr("libssh2_agent_init failed");
@@ -569,7 +690,7 @@ bool Libssh2ChannelWorker::authAgent(QString *errorOut)
         return false;
     }
 
-    const QByteArray user = m_profile.username.toUtf8();
+    const QByteArray user = spec.username.toUtf8();
     libssh2_agent_publickey *prev = nullptr;
     libssh2_agent_publickey *cur = nullptr;
     bool ok = false;
@@ -638,6 +759,9 @@ bool Libssh2ChannelWorker::openShell(QString *errorOut)
         return false;
     }
     libssh2_session_set_blocking(m_session, 0);
+    if (m_jumpSession) {
+        libssh2_session_set_blocking(m_jumpSession, 0);
+    }
 
     delete m_readNotifier;
     m_readNotifier = new QSocketNotifier(static_cast<qintptr>(m_socket),
@@ -651,6 +775,7 @@ bool Libssh2ChannelWorker::openShell(QString *errorOut)
 
 void Libssh2ChannelWorker::teardown()
 {
+    teardownForwarding();
     if (m_readNotifier) {
         m_readNotifier->setEnabled(false);
         m_readNotifier->deleteLater();
@@ -666,6 +791,20 @@ void Libssh2ChannelWorker::teardown()
         libssh2_session_free(m_session);
         m_session = nullptr;
     }
+    if (m_jumpTunnel) {
+        libssh2_channel_close(m_jumpTunnel);
+        libssh2_channel_free(m_jumpTunnel);
+        m_jumpTunnel = nullptr;
+    }
+    if (m_jumpSession) {
+        libssh2_session_disconnect(m_jumpSession, "OpenShell closing");
+        libssh2_session_free(m_jumpSession);
+        m_jumpSession = nullptr;
+    }
+    delete m_sessionAbstract;
+    m_sessionAbstract = nullptr;
+    delete m_jumpSessionAbstract;
+    m_jumpSessionAbstract = nullptr;
     if (!isInvalidSocket(m_socket)) {
         openshell_close_socket(m_socket);
         m_socket = static_cast<OpenShellSocket>(-1);
@@ -688,14 +827,211 @@ void Libssh2ChannelWorker::schedulePump(int delayMs)
     QTimer::singleShot(delayMs, this, &Libssh2ChannelWorker::pump);
 }
 
-QString Libssh2ChannelWorker::lastSessionError() const
+bool Libssh2ChannelWorker::openJumpAndTunnel(QString *errorOut)
 {
-    if (!m_session) {
+    m_jumpSession = libssh2_session_init();
+    if (!m_jumpSession) {
+        if (errorOut) {
+            *errorOut = tr("libssh2_session_init (jump) failed");
+        }
+        return false;
+    }
+    m_jumpSessionAbstract = new SessionAbstract;
+    *libssh2_session_abstract(m_jumpSession) = m_jumpSessionAbstract;
+
+    if (!handshake(m_jumpSession, errorOut)) {
+        return false;
+    }
+
+    AuthSpec jumpSpec{m_profile.jumpUsername.isEmpty() ? m_profile.username
+                                                       : m_profile.jumpUsername,
+                      m_profile.jumpAuthType, m_profile.jumpPassword,
+                      m_profile.jumpPrivateKeyPath, m_profile.jumpKeyPassphrase};
+    if (!authenticate(m_jumpSession, jumpSpec, errorOut)) {
+        return false;
+    }
+
+    const QByteArray targetHost = m_profile.host.toUtf8();
+    const int targetPort = m_profile.port > 0 ? m_profile.port : 22;
+    m_jumpTunnel = libssh2_channel_direct_tcpip_ex(m_jumpSession,
+                                                   targetHost.constData(),
+                                                   targetPort,
+                                                   "127.0.0.1", 22);
+    if (!m_jumpTunnel) {
+        if (errorOut) {
+            *errorOut = tr("direct-tcpip via jump host failed: %1")
+                            .arg(lastSessionError(m_jumpSession));
+        }
+        return false;
+    }
+    return true;
+}
+
+void Libssh2ChannelWorker::installJumpCallbacks()
+{
+    if (!m_session || !m_sessionAbstract) {
+        return;
+    }
+    m_sessionAbstract->jumpTunnelSlot = &m_jumpTunnel;
+    libssh2_session_callback_set2(m_session, LIBSSH2_CALLBACK_SEND,
+                                  reinterpret_cast<libssh2_cb_generic *>(&jumpSendCallback));
+    libssh2_session_callback_set2(m_session, LIBSSH2_CALLBACK_RECV,
+                                  reinterpret_cast<libssh2_cb_generic *>(&jumpRecvCallback));
+}
+
+void Libssh2ChannelWorker::setupForwarding()
+{
+    for (const PortForward &spec : m_profile.forwards) {
+        if (spec.type != QStringLiteral("L") || !spec.isValid()) {
+            if (spec.type == QStringLiteral("R") || spec.type == QStringLiteral("D")) {
+                emit errorOccurred(tr("Port forward type '%1' is not yet implemented")
+                                       .arg(spec.type));
+            }
+            continue;
+        }
+        auto *server = new QTcpServer(this);
+        const QHostAddress addr = spec.bindHost.isEmpty()
+                                      ? QHostAddress(QHostAddress::LocalHost)
+                                      : QHostAddress(spec.bindHost);
+        if (!server->listen(addr, static_cast<quint16>(spec.bindPort))) {
+            emit errorOccurred(tr("Local forward %1:%2 listen failed: %3")
+                                   .arg(spec.bindHost,
+                                        QString::number(spec.bindPort),
+                                        server->errorString()));
+            delete server;
+            continue;
+        }
+        PortForward specCopy = spec;
+        connect(server, &QTcpServer::newConnection, this,
+                [this, specCopy, server]() { acceptForwardConnection(specCopy, server); });
+        m_forwardListeners.append({server, specCopy});
+    }
+}
+
+void Libssh2ChannelWorker::acceptForwardConnection(const PortForward &spec, QTcpServer *server)
+{
+    while (server->hasPendingConnections()) {
+        QTcpSocket *sock = server->nextPendingConnection();
+        if (!sock) break;
+        const QByteArray rhost = spec.remoteHost.toUtf8();
+        const QByteArray shost = sock->peerAddress().toString().toUtf8();
+        LIBSSH2_CHANNEL *channel = libssh2_channel_direct_tcpip_ex(
+            m_session,
+            rhost.constData(), spec.remotePort,
+            shost.isEmpty() ? "127.0.0.1" : shost.constData(),
+            sock->peerPort());
+        if (!channel) {
+            emit errorOccurred(tr("Local forward to %1:%2 failed: %3")
+                                   .arg(spec.remoteHost,
+                                        QString::number(spec.remotePort),
+                                        lastSessionError()));
+            sock->deleteLater();
+            continue;
+        }
+        m_forwardPairs.append({sock, channel});
+        connect(sock, &QTcpSocket::readyRead, this, [this]() { schedulePump(0); });
+        connect(sock, &QTcpSocket::disconnected, this, [this]() { schedulePump(0); });
+    }
+}
+
+void Libssh2ChannelWorker::pumpForwards()
+{
+    char buf[kReadChunk];
+    for (int i = m_forwardPairs.size() - 1; i >= 0; --i) {
+        ForwardPair &pair = m_forwardPairs[i];
+        if (!pair.channel || !pair.socket) {
+            closeForwardPair(pair);
+            m_forwardPairs.removeAt(i);
+            continue;
+        }
+
+        // socket -> channel
+        while (pair.socket->bytesAvailable() > 0) {
+            const QByteArray chunk = pair.socket->read(sizeof(buf));
+            if (chunk.isEmpty()) break;
+            qsizetype written = 0;
+            while (written < chunk.size()) {
+                const ssize_t n = libssh2_channel_write(pair.channel,
+                                                        chunk.constData() + written,
+                                                        static_cast<size_t>(chunk.size() - written));
+                if (n == LIBSSH2_ERROR_EAGAIN) {
+                    schedulePump(1);
+                    break;
+                }
+                if (n < 0) {
+                    closeForwardPair(pair);
+                    m_forwardPairs.removeAt(i);
+                    written = -1;
+                    break;
+                }
+                written += n;
+            }
+            if (written < 0) break;
+        }
+
+        if (i >= m_forwardPairs.size() || !m_forwardPairs[i].channel) continue;
+
+        // channel -> socket
+        for (;;) {
+            const ssize_t n = libssh2_channel_read(pair.channel, buf, sizeof(buf));
+            if (n == LIBSSH2_ERROR_EAGAIN) break;
+            if (n <= 0) {
+                // EOF or error → tear down this pair
+                closeForwardPair(pair);
+                m_forwardPairs.removeAt(i);
+                break;
+            }
+            pair.socket->write(buf, static_cast<int>(n));
+        }
+
+        if (i < m_forwardPairs.size()
+            && (m_forwardPairs[i].socket->state() == QAbstractSocket::UnconnectedState
+                || libssh2_channel_eof(m_forwardPairs[i].channel))) {
+            closeForwardPair(m_forwardPairs[i]);
+            m_forwardPairs.removeAt(i);
+        }
+    }
+}
+
+void Libssh2ChannelWorker::closeForwardPair(ForwardPair &pair)
+{
+    if (pair.channel) {
+        libssh2_channel_close(pair.channel);
+        libssh2_channel_free(pair.channel);
+        pair.channel = nullptr;
+    }
+    if (pair.socket) {
+        pair.socket->disconnectFromHost();
+        pair.socket->deleteLater();
+        pair.socket = nullptr;
+    }
+}
+
+void Libssh2ChannelWorker::teardownForwarding()
+{
+    for (ForwardPair &pair : m_forwardPairs) {
+        closeForwardPair(pair);
+    }
+    m_forwardPairs.clear();
+    for (ForwardListener &l : m_forwardListeners) {
+        if (l.server) {
+            l.server->close();
+            l.server->deleteLater();
+            l.server = nullptr;
+        }
+    }
+    m_forwardListeners.clear();
+}
+
+QString Libssh2ChannelWorker::lastSessionError(LIBSSH2_SESSION *session) const
+{
+    LIBSSH2_SESSION *target = session ? session : m_session;
+    if (!target) {
         return tr("(no session)");
     }
     char *msg = nullptr;
     int len = 0;
-    libssh2_session_last_error(m_session, &msg, &len, 0);
+    libssh2_session_last_error(target, &msg, &len, 0);
     if (msg && len > 0) {
         return QString::fromUtf8(msg, len);
     }

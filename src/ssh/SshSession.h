@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QString>
 #include <QThread>
+#include <QTimer>
 
 #include "ConnectionCatalog.h"
 
@@ -62,16 +63,23 @@ private:
     void setStatus(const QString &status, const QString &message = QString());
     void appendSessionNotice(const QString &text);
 
+    void scheduleReconnect();
+
     QString m_id;
     QString m_connectionId;
     QString m_title;
     QString m_status;
     QString m_lastMessage;
 
+    ConnectionProfile m_profile;
     VtScreen *m_screen = nullptr; // GUI 线程
     QThread m_thread;
     SshChannelWorker *m_worker = nullptr; // worker 线程
 
     int m_pendingCols = 0;
     int m_pendingRows = 0;
+
+    bool m_userRequestedStop = false;
+    int m_reconnectAttempt = 0;
+    QTimer m_reconnectTimer;
 };

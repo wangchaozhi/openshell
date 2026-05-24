@@ -133,3 +133,20 @@ set(OPENSHELL_TEST_SESSION_CONTROLLER_SOURCES
     src/terminal/VtScreen.cpp
     src/terminal/VtScreen.h
 )
+
+set(OPENSHELL_TEST_SFTP_TRANSFER_SOURCES
+    tests/test_sftp_transfer.cpp
+    src/ssh/SftpTransfer.cpp
+    src/ssh/SftpTransfer.h
+    src/ssh/SftpDirectoryLister.h
+    src/ConnectionCatalog.cpp
+    src/ConnectionCatalog.h
+)
+
+set(OPENSHELL_TEST_SFTP_CONNECTION_POOL_SOURCES
+    tests/test_sftp_connection_pool.cpp
+    src/ssh/SftpConnectionPool.cpp
+    src/ssh/SftpConnectionPool.h
+    src/ConnectionCatalog.cpp
+    src/ConnectionCatalog.h
+)

@@ -16,8 +16,11 @@ OpenShell 是 Qt 6 / QML / C++20 的跨平台 SSH / SFTP 终端工具，定位�
 - 远程文件打开 / 编辑回传：内置编辑器或外部编辑器保存后自动上传回原路径
 - 服务器监控：CPU / 内存 / 网络
 - 系统托盘常驻、关窗不退出
-- 多语言：zh_CN、ja_JP 完整；en 走源字符串兜底
-- 移动端（Android / iOS）：`qml/mobile/` 下另一套 UI
+- 跳板机 (ProxyJump)：通过自定义 libssh2 send/recv 回调走 direct-tcpip 通道
+- 端口转发：Local (-L) 已实现；Remote (-R) / Dynamic (-D) 显式 `not yet implemented`
+- 断线重连：按 `autoReconnect` / `reconnectMaxAttempts` / 指数退避（封顶 30s）
+- 多语言：zh_CN、ja_JP 完整；ko_KR、de_DE 空骨架（等 `lupdate` 填）；en 走源字符串兜底
+- 移动端（Android / iOS）：`qml/mobile/` 下另一套 UI；文件选择器走 `QFileDialog::getOpenFileContent` + `mobileFilePicked` 信号；iOS 凭据用 Sec API 真 Keychain，Android 当前是沙箱 QSettings 占位
 
 剩余目标态能力见下方“待办”。
 
@@ -82,12 +85,12 @@ QML（`qml/`）：
 struct ConnectionProfile {
     QString id;          // 自动生成的 UUID
     QString name;
-    QString protocol;    // ssh, sftp, telnet
+    QString protocol;    // ssh, sftp（telnet 已从 UI 移除）
     QString host;
     int     port = 22;
     QString username;
     QString authType;    // password, key, agent
-    QString password;        // 桌面端存进钥匙串，不落 JSON；移动端仍在沙箱内
+    QString password;        // 桌面端/iOS 走钥匙串，不落 JSON；Android 暂落沙箱 QSettings
     QString privateKeyPath;
     QString keyPassphrase;   // 同上
     QString group;
@@ -95,6 +98,18 @@ struct ConnectionProfile {
     int     lastUsedEpoch = 0;
     int     connectTimeoutSec = 10;
     int     keepaliveSec = 30;   // libssh2 keepalive 间隔，<=0 关闭
+
+    bool    autoReconnect = true;           // 非用户主动断开后自动重连
+    int     reconnectMaxAttempts = 5;
+    int     reconnectInitialDelayMs = 1000; // 指数退避，封顶 30s
+
+    // 跳板机；jumpHost 空字符串表示直连。jumpPassword/jumpKeyPassphrase
+    // 同样进钥匙串。
+    QString jumpHost; int jumpPort = 22;
+    QString jumpUsername; QString jumpAuthType;
+    QString jumpPassword; QString jumpPrivateKeyPath; QString jumpKeyPassphrase;
+
+    QVector<PortForward> forwards;          // 目前只消费 type == "L"
 };
 ```
 
@@ -103,12 +118,39 @@ struct ConnectionProfile {
 
 ## 凭据存储
 
-- 桌面端（`OPENSHELL_USE_KEYCHAIN`）：`password` / `keyPassphrase` 经 `CredentialStore`
-  存进系统钥匙串（QtKeychain），JSON 文件里不写这两个字段。
-- 升级兼容：旧 JSON 里残留的明文会在首次加载时被读出并迁移进钥匙串，同时把文件里的
-  明文字段抹掉（见 `ConnectionCatalog::loadFromFile`）。
-- 移动端不接 QtKeychain，凭据仍写在各自 App 私有沙箱内的 JSON。
+`CredentialStore` 是命名空间级 API（`save` / `load` / `remove`），按平台选实现：
+
+- 桌面（`src/CredentialStore.cpp`，`OPENSHELL_USE_KEYCHAIN`）：QtKeychain
+  写入系统钥匙串（macOS Keychain / Windows 凭据管理器 / Linux libsecret）。
+- iOS（`src/CredentialStoreIos.mm`）：直接调 Sec API
+  (`kSecClassGenericPassword` + `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`)。
+- Android（`src/CredentialStoreAndroid.cpp`，**占位实现**）：base64 写进
+  app-private QSettings。**Not encrypted at rest** —— 正经做法是接 AndroidX
+  Security 或手写 `AndroidKeyStore` AES-GCM 包装，文件里有 FIXME 说明，是独立后续工程。
+- 任何后端下，受保护字段：`password` / `keyPassphrase` / `jumpPassword` /
+  `jumpKeyPassphrase`，JSON 里不写。
+- 升级兼容：旧 JSON 里残留的明文会在首次加载时被读出并迁移进 keychain，同时把
+  文件里的明文字段抹掉（见 `ConnectionCatalog::loadFromFile`）。
 - QtKeychain 通过 FetchContent 引入（`0.14.3`）；Linux 构建需 `libsecret-1-dev`。
+
+## 跳板机与端口转发
+
+- 跳板机：`Libssh2ChannelWorker` 在配置了 `jumpHost` 时先连到跳板机做 handshake+auth，
+  开 `direct-tcpip` 通道到目标，再通过 `libssh2_session_callback_set2(SEND/RECV)`
+  让主 session 的 I/O 走这个通道。`SessionAbstract` 结构统一管理 session abstract
+  指针，避免 kbdint 回调和 jump 回调互相覆盖。
+- 端口转发：`forwards` 数组里每项 `type == "L"` 会在 worker 线程上启一个 `QTcpServer`，
+  每个 accept 出来的 socket 对应一个 direct-tcpip 通道，`pumpForwards()` 在 `pump()`
+  循环里双向倒字节。Remote / Dynamic 暂未实现，遇到会显式 `errorOccurred()`。
+
+## 断线重连
+
+- `SshSession` 维护 `m_userRequestedStop` + `m_reconnectAttempt` + 单 `QTimer`。
+- 收到 worker 的 `disconnected` 信号时：若不是用户主动停 + `autoReconnect` 开
+  + 重试次数未到 `reconnectMaxAttempts`，调度一次按 `reconnectInitialDelayMs <<
+  (attempt-1)` 退避（封顶 30s）的重连；否则把状态置为 `disconnected` 并允许线程退出。
+- 线程不在 `disconnected` 时自动 `quit()`：现在只在用户主动 stop 后才退线程，保证
+  worker 对象在重连之间存活、`m_thread` 可继续接 `start` slot。
 
 ## 开发约定
 
@@ -121,10 +163,22 @@ struct ConnectionProfile {
 
 ## 待办（按优先级）
 
-1. **继续扩充测试**：已有 `test_connection_catalog` / `test_vt_screen` /
-   `test_session_controller`；`SftpConnectionPool`、`SftpTransfer` 等仍未覆盖。
-2. **跳板机 / 端口转发 / 断线重连**：在 SSH 协议层累加。
-3. **加密 / 同步**：保存的 connections 文件可选 GPG / age 加密，方便 Git 同步。
+1. **连接文件加密**：保存的 connections JSON 可选 GPG / age 加密以利 Git 同步。
+   详见 [docs/connection-encryption-design.md](docs/connection-encryption-design.md)
+   —— 设计已写，实现未做（故意推迟，避免做出半生不熟的 crypto）。
+2. **Android 凭据加固**：当前 `CredentialStoreAndroid.cpp` 是 base64+sandbox 占位，
+   要替换为 `AndroidKeyStore` 包装的 AES-GCM。需要 QJniObject 调用 KeyGenerator /
+   KeyStore / Cipher。
+3. **移动端文件夹上传**：`chooseLocalFolder` 在移动端目前直接报“not yet supported”。
+   做完整 SAF / iOS security-scoped tree bookmark 走器才能恢复批量目录上传。
+4. **Remote / Dynamic 端口转发**：当前只实现了 `-L`。`-R` 需要
+   `libssh2_channel_forward_listen_ex` + 反向 accept；`-D` 需要 SOCKS5 解析。
+5. **继续扩充测试**：已有
+   `test_connection_catalog` / `test_vt_screen` / `test_session_controller` /
+   `test_sftp_transfer` / `test_sftp_connection_pool`。仍未覆盖：
+   `Libssh2ChannelWorker` 的 reconnect 退避计算、`SftpDirectoryLister`。
+6. **翻译填充**：`OpenShell_ko_KR.ts` / `OpenShell_de_DE.ts` 当前是空骨架，
+   等 `lupdate -ts ...` 填上源串后再人工翻译。
 
 > 大文件拆分已完成：`FileBrowser.qml` 拆出 `LocalPane` / `RemotePane`；
 > `TerminalScreenItem.cpp` 拆成核心+绘制 / `*Input.cpp` / `*Selection.cpp`。
@@ -146,12 +200,19 @@ struct ConnectionProfile {
 src/           AppController(+6 个分文件), ConnectionCatalog, SessionController,
                SettingsStore, TranslationManager, TrayController,
                SystemMonitorController
+src/           CredentialStore.cpp (桌面 QtKeychain),
+               CredentialStoreIos.mm, CredentialStoreAndroid.cpp
 src/terminal/  VtScreen, TerminalScreenItem
 src/ssh/       SshSession, SshChannelWorker, Libssh2ChannelWorker,
                SftpConnectionPool, SftpDirectoryLister, SftpTransfer
-qml/           MainWindow, Sidebar, ConnectionEditor, ConnectionManagerView,
-               SessionTabs, TerminalView, FileBrowser, SystemInfoView,
-               Themed*, mobile/, filebrowser/
-tests/         test_connection_catalog, test_session_controller
+qml/           MainWindow, Sidebar, ConnectionEditor (含 jump host + 转发字段),
+               ConnectionManagerView, SessionTabs, TerminalView, FileBrowser,
+               SystemInfoView, Themed*, mobile/, filebrowser/
+translations/  OpenShell_zh_CN.ts, OpenShell_ja_JP.ts,
+               OpenShell_ko_KR.ts (空骨架), OpenShell_de_DE.ts (空骨架)
+tests/         test_connection_catalog, test_vt_screen, test_session_controller,
+               test_sftp_transfer, test_sftp_connection_pool
                （QTest，OPENSHELL_BUILD_TESTS=ON 启用）
+docs/          architecture.md, mobile-adaptation-plan.md,
+               connection-encryption-design.md
 ```

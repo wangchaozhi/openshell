@@ -3,6 +3,10 @@
 #include "SshChannelWorker.h"
 #include "../terminal/VtScreen.h"
 
+namespace {
+constexpr int kReconnectDelayCapMs = 30 * 1000;
+}
+
 SshSession::SshSession(const QString &id,
                        const ConnectionProfile &profile,
                        SshChannelWorker *worker,
@@ -14,6 +18,7 @@ SshSession::SshSession(const QString &id,
                   ? QStringLiteral("%1@%2").arg(profile.username, profile.host)
                   : profile.name)
     , m_status(QStringLiteral("disconnected"))
+    , m_profile(profile)
     , m_screen(new VtScreen(this))
     , m_worker(worker)
 {
@@ -24,7 +29,8 @@ SshSession::SshSession(const QString &id,
     // worker -> session 一律 queued，跨线程安全。
     connect(m_worker, &SshChannelWorker::connected, this, &SshSession::handleConnected);
     connect(m_worker, &SshChannelWorker::disconnected, this, &SshSession::handleDisconnected);
-    connect(m_worker, &SshChannelWorker::disconnected, &m_thread, &QThread::quit);
+    // 注意：不再把 disconnected 直接挂到 m_thread.quit。线程要继续活着
+    // 才能在重连时复用同一个 worker。线程只在用户主动停止时退出。
     connect(m_worker, &SshChannelWorker::output, this, &SshSession::handleOutput);
     connect(m_worker, &SshChannelWorker::errorOccurred, this, &SshSession::handleError);
     connect(&m_thread, &QThread::finished, this, &SshSession::workerThreadFinished);
@@ -39,11 +45,23 @@ SshSession::SshSession(const QString &id,
     // libvterm 要发给远端的字节（键盘/鼠标响应等）走这里送回 worker
     connect(m_screen, &VtScreen::outputReady, this, &SshSession::handleScreenOutputReady);
 
+    m_reconnectTimer.setSingleShot(true);
+    connect(&m_reconnectTimer, &QTimer::timeout, this, [this]() {
+        if (m_userRequestedStop || !m_worker) {
+            return;
+        }
+        appendSessionNotice(tr("Reconnecting… (attempt %1)").arg(m_reconnectAttempt));
+        setStatus(QStringLiteral("connecting"));
+        QMetaObject::invokeMethod(m_worker, "start", Qt::QueuedConnection);
+    });
+
     m_thread.start();
 }
 
 SshSession::~SshSession()
 {
+    m_reconnectTimer.stop();
+    m_userRequestedStop = true;
     if (m_worker) {
         QMetaObject::invokeMethod(m_worker, "stop", Qt::QueuedConnection);
     }
@@ -76,7 +94,11 @@ void SshSession::start()
 
 void SshSession::requestStop()
 {
+    m_userRequestedStop = true;
+    m_reconnectTimer.stop();
     QMetaObject::invokeMethod(m_worker, "stop", Qt::QueuedConnection);
+    // 线程的 quit 由 handleDisconnected 在收到 worker 的 disconnected 后触发；
+    // 这样 teardown 能在 worker 线程里跑完再退线程，避免悬挂资源。
 }
 
 void SshSession::sendInput(const QByteArray &data)
@@ -104,6 +126,7 @@ void SshSession::clearScreen()
 
 void SshSession::handleConnected()
 {
+    m_reconnectAttempt = 0;
     setStatus(QStringLiteral("connected"));
 }
 
@@ -112,7 +135,20 @@ void SshSession::handleDisconnected(const QString &reason)
     if (m_status != QStringLiteral("disconnected")) {
         appendSessionNotice(tr("Connection disconnected"));
     }
+
+    if (!m_userRequestedStop && m_profile.autoReconnect
+        && m_profile.reconnectMaxAttempts > 0
+        && m_reconnectAttempt < m_profile.reconnectMaxAttempts) {
+        scheduleReconnect();
+        setStatus(QStringLiteral("reconnecting"), reason);
+        return;
+    }
+
     setStatus(QStringLiteral("disconnected"), reason);
+
+    if (m_userRequestedStop) {
+        m_thread.quit();
+    }
 }
 
 void SshSession::handleOutput(const QByteArray &chunk)
@@ -156,4 +192,17 @@ void SshSession::appendSessionNotice(const QString &text)
     }
     const QString line = QStringLiteral("\r\n%1\r\n").arg(text);
     m_screen->feed(line.toUtf8());
+}
+
+void SshSession::scheduleReconnect()
+{
+    ++m_reconnectAttempt;
+    const int base = m_profile.reconnectInitialDelayMs > 0
+                         ? m_profile.reconnectInitialDelayMs
+                         : 1000;
+    qint64 delay = static_cast<qint64>(base) << (m_reconnectAttempt - 1);
+    if (delay > kReconnectDelayCapMs) {
+        delay = kReconnectDelayCapMs;
+    }
+    m_reconnectTimer.start(static_cast<int>(delay));
 }

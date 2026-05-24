@@ -261,6 +261,8 @@ qt_add_translations(OpenShell
     TS_FILES
         translations/OpenShell_zh_CN.ts
         translations/OpenShell_ja_JP.ts
+        translations/OpenShell_ko_KR.ts
+        translations/OpenShell_de_DE.ts
     RESOURCE_PREFIX
         /i18n
 )
@@ -286,6 +288,21 @@ target_link_libraries(OpenShell
 if(NOT ANDROID AND NOT IOS)
     target_link_libraries(OpenShell PRIVATE Qt6::Widgets ${OPENSHELL_KEYCHAIN_TARGET})
     target_include_directories(OpenShell PRIVATE ${OPENSHELL_KEYCHAIN_INCLUDE_DIRS})
+    target_compile_definitions(OpenShell PRIVATE OPENSHELL_USE_KEYCHAIN=1)
+endif()
+
+# Platform-specific CredentialStore impl. Desktop uses QtKeychain via
+# src/CredentialStore.cpp (already in OPENSHELL_CORE_SOURCES). Mobile gets a
+# native-backed impl swapped in here; OPENSHELL_USE_KEYCHAIN is defined so the
+# ConnectionCatalog uses the secret-store code path on mobile too.
+if(IOS)
+    target_sources(OpenShell PRIVATE src/CredentialStoreIos.mm)
+    target_compile_definitions(OpenShell PRIVATE OPENSHELL_USE_KEYCHAIN=1)
+    set_source_files_properties(src/CredentialStoreIos.mm PROPERTIES
+        COMPILE_FLAGS "-fobjc-arc")
+    target_link_libraries(OpenShell PRIVATE "-framework Security" "-framework Foundation")
+elseif(ANDROID)
+    target_sources(OpenShell PRIVATE src/CredentialStoreAndroid.cpp)
     target_compile_definitions(OpenShell PRIVATE OPENSHELL_USE_KEYCHAIN=1)
 endif()
 
@@ -347,4 +364,27 @@ if(OPENSHELL_BUILD_TESTS)
     )
 
     add_test(NAME session_controller COMMAND test_session_controller)
+
+    qt_add_executable(test_sftp_transfer ${OPENSHELL_TEST_SFTP_TRANSFER_SOURCES})
+    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${OPENSHELL_TEST_SFTP_TRANSFER_SOURCES})
+    target_include_directories(test_sftp_transfer PRIVATE src)
+    target_link_libraries(test_sftp_transfer
+        PRIVATE
+            Qt6::Core
+            Qt6::Test
+            Libssh2::libssh2
+    )
+    add_test(NAME sftp_transfer COMMAND test_sftp_transfer)
+
+    qt_add_executable(test_sftp_connection_pool ${OPENSHELL_TEST_SFTP_CONNECTION_POOL_SOURCES})
+    source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${OPENSHELL_TEST_SFTP_CONNECTION_POOL_SOURCES})
+    target_include_directories(test_sftp_connection_pool PRIVATE src)
+    target_link_libraries(test_sftp_connection_pool
+        PRIVATE
+            Qt6::Core
+            Qt6::Network
+            Qt6::Test
+            Libssh2::libssh2
+    )
+    add_test(NAME sftp_connection_pool COMMAND test_sftp_connection_pool)
 endif()

@@ -6,11 +6,29 @@
 #include <QVariantMap>
 #include <QVector>
 
+struct PortForward
+{
+    QString type = QStringLiteral("L"); // L / R / D；目前只实现了 L
+    QString bindHost = QStringLiteral("127.0.0.1");
+    int     bindPort = 0;
+    QString remoteHost;
+    int     remotePort = 0;
+
+    bool isValid() const
+    {
+        if (bindPort <= 0 || bindPort > 65535) return false;
+        if (type == QStringLiteral("L")) {
+            return !remoteHost.isEmpty() && remotePort > 0 && remotePort <= 65535;
+        }
+        return false; // R / D 暂未实现
+    }
+};
+
 struct ConnectionProfile
 {
     QString id;
     QString name;
-    QString protocol = QStringLiteral("ssh"); // ssh, sftp, telnet
+    QString protocol = QStringLiteral("ssh"); // ssh, sftp (telnet not supported)
     QString host;
     int port = 22;
     QString username;
@@ -23,6 +41,24 @@ struct ConnectionProfile
     int lastUsedEpoch = 0;
     int connectTimeoutSec = 10;
     int keepaliveSec = 30;  // libssh2_keepalive_config 间隔，<=0 关闭
+
+    // 断线自动重连：发生非用户主动断开后，按指数退避重试。
+    bool autoReconnect = true;
+    int reconnectMaxAttempts = 5;       // <=0 视为关闭重连
+    int reconnectInitialDelayMs = 1000; // 第 N 次延迟 = initial << (N-1)，封顶 30s
+
+    // 跳板机 (ProxyJump)：通过另一台 SSH 主机 direct-tcpip 转发到目标。
+    // 留空走直连。
+    QString jumpHost;
+    int     jumpPort = 22;
+    QString jumpUsername;
+    QString jumpAuthType = QStringLiteral("password"); // password / key / agent
+    QString jumpPassword;
+    QString jumpPrivateKeyPath;
+    QString jumpKeyPassphrase;
+
+    // 端口转发列表，目前 Libssh2ChannelWorker 仅消费 type == "L" 的条目。
+    QVector<PortForward> forwards;
 
     QVariantMap toVariantMap() const;
     static ConnectionProfile fromVariantMap(const QVariantMap &map);

@@ -18,8 +18,12 @@ OpenShell 是一个基于 Qt 6 / QML / C++20 的跨平台 SSH / SFTP 终端工�
 - 远程目录同步：可将远程文件栏自动同步到终端 prompt 所在目录。
 - 远程文件打开：双击远程文件可用系统默认应用、指定文本编辑器或内置编辑器打开。
 - 编辑回传：外部编辑器保存后自动上传回远程；内置编辑器保存时上传回远程。
+- 跳板机（ProxyJump）：通过自定义 libssh2 send/recv 回调走 `direct-tcpip` 通道连接目标。
+- 本地端口转发（`-L`）：在本地绑定端口、经会话隧道转发到远程目标。Remote（`-R`）/ Dynamic（`-D`）尚未实现，触发时会给出明确报错。
+- 断线自动重连：每个连接可配置开关，按指数退避（封顶 30 秒）。
+- 凭据安全：密码 / 私钥口令进系统钥匙串（桌面经 QtKeychain 对应 macOS Keychain / Windows 凭据管理器 / Linux libsecret；iOS 用原生 Sec API）。旧 JSON 残留的明文会在首次加载时迁移进钥匙串。
 - 系统托盘：支持隐藏/显示窗口、快速打开连接、切换语言、退出。
-- 多语言：英文、简体中文、日文。英文是源语言、无需翻译文件；中文与日文以编译后的 `.qm` 资源内置。
+- 多语言：英文、简体中文、日文以编译后的 `.qm` 资源内置；韩文、德文为空骨架等待翻译；英文走源串兜底。
 
 ## 环境要求
 
@@ -91,12 +95,19 @@ ctest --test-dir build
 │   └── AccentCard.qml
 ├── translations/
 │   ├── OpenShell_zh_CN.ts
-│   └── OpenShell_ja_JP.ts
+│   ├── OpenShell_ja_JP.ts
+│   ├── OpenShell_ko_KR.ts        # 空骨架
+│   └── OpenShell_de_DE.ts        # 空骨架
 ├── tests/
 │   ├── test_connection_catalog.cpp
-│   └── test_session_controller.cpp
+│   ├── test_vt_screen.cpp
+│   ├── test_session_controller.cpp
+│   ├── test_sftp_transfer.cpp
+│   └── test_sftp_connection_pool.cpp
 └── docs/
-    └── architecture.md
+    ├── architecture.md
+    ├── mobile-adaptation-plan.md
+    └── connection-encryption-design.md
 ```
 
 ## 数据存储
@@ -107,7 +118,9 @@ ctest --test-dir build
 QStandardPaths::AppDataLocation/connections/<id>.json
 ```
 
-目前密码和私钥口令仍可能以明文形式保存在本地配置中，后续应接入 QtKeychain 或系统 Credential Store。
+密码和私钥口令（含跳板机凭据）保存在操作系统的钥匙串里——桌面端经 QtKeychain 走 macOS Keychain / Windows 凭据管理器 / Linux libsecret，iOS 直接调原生 Sec API。JSON 文件里不再写这些字段，旧版本残留的明文会在首次加载时迁移进钥匙串。Android 当前是 base64 写入 app 沙箱 `QSettings` 的占位实现，沙箱保护但 **未在静止状态下加密**，后续会换成 AndroidKeyStore + AES-GCM，见 [AGENTS.md](AGENTS.md)。
+
+整个 JSON 文件的可选加密（方便 Git 同步）尚未实现，设计草稿见 [docs/connection-encryption-design.md](docs/connection-encryption-design.md)。
 
 远程文件“打开/编辑”会先下载到系统临时目录：
 
@@ -141,11 +154,14 @@ QStandardPaths::AppDataLocation/connections/<id>.json
 
 ## 后续计划
 
-- 凭据加密：接入 QtKeychain 或系统 Credential Store。
+- 连接文件加密：可选 GPG / age 包装 JSON 以便 Git 同步（设计见 `docs/connection-encryption-design.md`）。
+- Android 凭据加固：用 `AndroidKeyStore` 包的 AES-GCM 替换当前沙箱占位实现。
+- 移动端目录上传：补全 SAF / iOS security-scoped tree 行走器（文件选择器已通过 `pickMobileFileAsync` 接好）。
+- Remote (`-R`) 与 Dynamic (`-D`) 端口转发（Local `-L` 已实现）。
 - 更完整的终端能力：滚屏历史、搜索、更多 VT 序列兼容、复制格式细节。
 - SFTP 增强：传输队列、断点续传、冲突处理、批量操作。
-- SSH 增强：跳板机、端口转发、断线重连、Agent 更完整支持。
 - 服务器监控：通过 SSH exec 采集 CPU、内存、磁盘、网络状态并展示 dashboard。
+- 翻译：补齐 `OpenShell_ko_KR.ts` / `OpenShell_de_DE.ts`（目前是空骨架）。
 - 打包发布：完善 Windows/macOS/Linux release 流程。
 
 更多设计说明见 [docs/architecture.md](docs/architecture.md) 和 [AGENTS.md](AGENTS.md)。

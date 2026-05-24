@@ -19,6 +19,9 @@ ConnectionProfile makeProfile(const QString &name = QStringLiteral("Echo"))
     p.port = 22;
     p.username = QStringLiteral("tester");
     p.authType = QStringLiteral("password");
+    // Fixture tests assert the disconnect → status transition; let the test
+    // see the terminal state rather than entering the reconnect backoff loop.
+    p.autoReconnect = false;
     return p;
 }
 

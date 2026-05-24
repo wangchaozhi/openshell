@@ -6,6 +6,8 @@
 #include "SshChannelWorker.h"
 
 class QSocketNotifier;
+class QTcpServer;
+class QTcpSocket;
 
 #ifdef _WIN32
 using OpenShellSocket = quintptr;   // SOCKET 是无符号整型
@@ -17,6 +19,9 @@ struct _LIBSSH2_SESSION;
 struct _LIBSSH2_CHANNEL;
 typedef struct _LIBSSH2_SESSION LIBSSH2_SESSION;
 typedef struct _LIBSSH2_CHANNEL LIBSSH2_CHANNEL;
+
+// 前向声明给成员用；实现细节藏在 .cpp 的 anonymous namespace 里。
+struct SessionAbstract;
 
 // 真正的 SSH 后端：在 SshSession 创建的 worker QThread 上跑非阻塞 libssh2
 // 循环。所有公开 slot 都被 queued connection 触发，所以可以放心访问内部状态。
@@ -46,22 +51,55 @@ private slots:
     void pump();
 
 private:
-    bool openSocket(QString *errorOut);
-    bool handshake(QString *errorOut);
-    bool authenticate(QString *errorOut);
+    struct AuthSpec {
+        QString username;
+        QString authType;
+        QString password;
+        QString privateKeyPath;
+        QString keyPassphrase;
+    };
+
+    bool openSocket(const QString &host, int port, QString *errorOut);
+    bool handshake(LIBSSH2_SESSION *session, QString *errorOut);
+    bool authenticate(LIBSSH2_SESSION *session, const AuthSpec &spec, QString *errorOut);
     bool openShell(QString *errorOut);
-    bool authPassword(QString *errorOut);
-    bool authKeyboardInteractive(QString *errorOut);
-    bool authKey(QString *errorOut);
-    bool authAgent(QString *errorOut);
+    bool authPassword(LIBSSH2_SESSION *session, const AuthSpec &spec, QString *errorOut);
+    bool authKeyboardInteractive(LIBSSH2_SESSION *session, const AuthSpec &spec, QString *errorOut);
+    bool authKey(LIBSSH2_SESSION *session, const AuthSpec &spec, QString *errorOut);
+    bool authAgent(LIBSSH2_SESSION *session, const AuthSpec &spec, QString *errorOut);
+
+    bool openJumpAndTunnel(QString *errorOut);
+    void installJumpCallbacks();
     void teardown();
     void schedulePump(int delayMs = 0);
-    QString lastSessionError() const;
+    QString lastSessionError(LIBSSH2_SESSION *session = nullptr) const;
 
     OpenShellSocket m_socket = static_cast<OpenShellSocket>(-1);
     LIBSSH2_SESSION *m_session = nullptr;
     LIBSSH2_CHANNEL *m_channel = nullptr;
+    LIBSSH2_SESSION *m_jumpSession = nullptr;  // 跳板机的 SSH session
+    LIBSSH2_CHANNEL *m_jumpTunnel = nullptr;   // direct-tcpip tunnel: jump -> 目标
+    SessionAbstract *m_sessionAbstract = nullptr;     // 主 session 的 abstract 数据
+    SessionAbstract *m_jumpSessionAbstract = nullptr; // 跳板机 session 的 abstract 数据
     QSocketNotifier *m_readNotifier = nullptr;
+
+    // Local 端口转发：QTcpServer 接客户端连接，每个连接对应一个 direct-tcpip 通道。
+    struct ForwardListener {
+        QTcpServer *server = nullptr;
+        PortForward spec;
+    };
+    struct ForwardPair {
+        QTcpSocket *socket = nullptr;
+        LIBSSH2_CHANNEL *channel = nullptr;
+    };
+    QList<ForwardListener> m_forwardListeners;
+    QList<ForwardPair> m_forwardPairs;
+
+    void setupForwarding();
+    void acceptForwardConnection(const PortForward &spec, QTcpServer *server);
+    void pumpForwards();
+    void closeForwardPair(ForwardPair &pair);
+    void teardownForwarding();
 
     QByteArray m_pendingInput;
     int m_pendingCols = 0;

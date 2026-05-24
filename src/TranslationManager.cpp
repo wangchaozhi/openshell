@@ -43,10 +43,14 @@ QString TranslationManager::localeNameForLanguage(const QString &language) const
 {
     if (language == QStringLiteral("zh_CN")) return language;
     if (language == QStringLiteral("ja_JP")) return language;
+    if (language == QStringLiteral("ko_KR")) return language;
+    if (language == QStringLiteral("de_DE")) return language;
     if (language == QStringLiteral("en")) return language;
 
     const QString systemLocale = QLocale::system().name();
     if (systemLocale.startsWith(QStringLiteral("zh"))) return QStringLiteral("zh_CN");
     if (systemLocale.startsWith(QStringLiteral("ja"))) return QStringLiteral("ja_JP");
+    if (systemLocale.startsWith(QStringLiteral("ko"))) return QStringLiteral("ko_KR");
+    if (systemLocale.startsWith(QStringLiteral("de"))) return QStringLiteral("de_DE");
     return QStringLiteral("en");
 }

@@ -79,6 +79,10 @@ public:
     Q_INVOKABLE QString chooseLocalFile();
     Q_INVOKABLE QString chooseLocalFolder();
     Q_INVOKABLE QString chooseDownloadFolder();
+    // Mobile-friendly async file picker. Emits mobileFilePicked() with a
+    // sandboxed copy of the chosen file (Android/iOS), or with the picked
+    // path on desktop. Returns immediately.
+    Q_INVOKABLE void pickMobileFileAsync();
     Q_INVOKABLE bool openLocalFolderForPath(const QString &path) const;
     Q_INVOKABLE QVariantList transferHistory() const;
     Q_INVOKABLE void saveTransferHistory(const QVariantList &history) const;
@@ -167,6 +171,9 @@ signals:
                                     const QString &connectionId,
                                     const QVariantMap &snapshot,
                                     const QString &error);
+    // Emitted by pickMobileFileAsync. `path` is empty + `error` populated on
+    // cancel/failure.
+    void mobileFilePicked(const QString &path, const QString &error);
 
 private:
     struct RemoteEditWatch

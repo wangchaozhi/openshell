@@ -10,6 +10,11 @@ QString AppController::openSession(const QString &connectionId)
         return QString();
     }
 
+    if (profile.protocol.compare(QStringLiteral("telnet"), Qt::CaseInsensitive) == 0) {
+        setLastError(tr("Telnet is not supported; please change the protocol to SSH."));
+        return QString();
+    }
+
     QString error;
     const QString sessionId = m_sessions->open(profile, &error);
     if (sessionId.isEmpty()) {

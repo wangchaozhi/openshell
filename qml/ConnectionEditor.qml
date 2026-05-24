@@ -22,9 +22,51 @@ Dialog {
     signal saveFailed(string message)
 
     title: editingId.length === 0 ? qsTr("New Connection") : qsTr("Edit Connection")
-    width: 480
-    height: 520
+    width: 520
+    height: 640
     padding: 0
+
+    // Serialise the forwards list (from C++) into the editor's textarea format.
+    function _forwardsToText(arr) {
+        if (!arr || !arr.length) return ""
+        const lines = []
+        for (let i = 0; i < arr.length; ++i) {
+            const f = arr[i]
+            const bind = (f.bindHost || "127.0.0.1") + ":" + (f.bindPort || 0)
+            const remote = (f.remoteHost || "") + ":" + (f.remotePort || 0)
+            lines.push(bind + " -> " + remote)
+        }
+        return lines.join("\n")
+    }
+
+    // Parse the textarea into a list of forwards. Ignores blank lines / comments.
+    function _parseForwards(text) {
+        const result = []
+        if (!text) return result
+        const lines = text.split(/\r?\n/)
+        for (let i = 0; i < lines.length; ++i) {
+            let line = lines[i].trim()
+            if (!line || line.charAt(0) === "#") continue
+            const parts = line.split("->")
+            if (parts.length !== 2) continue
+            const left = parts[0].trim().split(":")
+            const right = parts[1].trim().split(":")
+            if (left.length < 2 || right.length < 2) continue
+            const bindPort = parseInt(left[left.length - 1], 10)
+            const remotePort = parseInt(right[right.length - 1], 10)
+            const bindHost = left.slice(0, left.length - 1).join(":") || "127.0.0.1"
+            const remoteHost = right.slice(0, right.length - 1).join(":")
+            if (!bindPort || !remotePort || !remoteHost) continue
+            result.push({
+                "type": "L",
+                "bindHost": bindHost,
+                "bindPort": bindPort,
+                "remoteHost": remoteHost,
+                "remotePort": remotePort
+            })
+        }
+        return result
+    }
 
     function openForNew() {
         editingId = ""
@@ -38,6 +80,14 @@ Dialog {
         authBox.currentIndex = 0
         groupField.text = ""
         notesField.text = ""
+        autoReconnectCheck.checked = true
+        jumpHostField.text = ""
+        jumpPortField.text = "22"
+        jumpUserField.text = ""
+        jumpPasswordField.text = ""
+        jumpKeyPathField.text = ""
+        jumpAuthBox.currentIndex = 0
+        forwardsField.text = ""
         validationMessage = ""
         validationShown = false
         open()
@@ -54,10 +104,18 @@ Dialog {
                 userField.text = p.username || ""
                 passwordField.text = p.password || ""
                 keyPathField.text = p.privateKeyPath || ""
-                protocolBox.currentIndex = Math.max(0, ["ssh", "sftp", "telnet"].indexOf(p.protocol || "ssh"))
+                protocolBox.currentIndex = Math.max(0, ["ssh", "sftp"].indexOf(p.protocol || "ssh"))
                 authBox.currentIndex = Math.max(0, ["password", "key", "agent"].indexOf(p.authType || "password"))
                 groupField.text = p.group || ""
                 notesField.text = p.notes || ""
+                autoReconnectCheck.checked = (p.autoReconnect !== false)
+                jumpHostField.text = p.jumpHost || ""
+                jumpPortField.text = String(p.jumpPort || 22)
+                jumpUserField.text = p.jumpUsername || ""
+                jumpPasswordField.text = p.jumpPassword || ""
+                jumpKeyPathField.text = p.jumpPrivateKeyPath || ""
+                jumpAuthBox.currentIndex = Math.max(0, ["password", "key", "agent"].indexOf(p.jumpAuthType || "password"))
+                forwardsField.text = _forwardsToText(p.forwards)
                 validationMessage = ""
                 validationShown = false
                 open()
@@ -89,7 +147,15 @@ Dialog {
             "password": passwordField.text,
             "privateKeyPath": keyPathField.text,
             "group": groupField.text.trim(),
-            "notes": notesField.text
+            "notes": notesField.text,
+            "autoReconnect": autoReconnectCheck.checked,
+            "jumpHost": jumpHostField.text.trim(),
+            "jumpPort": Math.max(1, Math.min(65535, Number(jumpPortField.text) || 22)),
+            "jumpUsername": jumpUserField.text.trim(),
+            "jumpAuthType": jumpAuthBox.currentText,
+            "jumpPassword": jumpPasswordField.text,
+            "jumpPrivateKeyPath": jumpKeyPathField.text,
+            "forwards": _parseForwards(forwardsField.text)
         }
         if (appController.saveConnectionProfile(payload)) {
             root.saved()
@@ -210,7 +276,7 @@ Dialog {
                 classic: root.classic
                 menuTheme: theme
                 Layout.fillWidth: true
-                model: ["ssh", "sftp", "telnet"]
+                model: ["ssh", "sftp"]
             }
 
             Label { text: qsTr("Host"); color: theme.textMuted; font.pixelSize: 12 }
@@ -291,6 +357,104 @@ Dialog {
                     classic: root.classic
                     width: notesScroll.availableWidth
                     height: Math.max(notesScroll.availableHeight, implicitHeight)
+                }
+            }
+
+            Label {
+                text: qsTr("Auto Reconnect")
+                color: theme.textMuted
+                font.pixelSize: 12
+            }
+            CheckBox {
+                id: autoReconnectCheck
+                checked: true
+                text: qsTr("Reconnect with exponential backoff on disconnect")
+            }
+
+            Label {
+                Layout.columnSpan: 2
+                text: qsTr("Jump Host (ProxyJump) — leave blank for direct connect")
+                color: theme.textMuted
+                font.pixelSize: 12
+                Layout.topMargin: 6
+            }
+
+            Label { text: qsTr("Jump Host"); color: theme.textMuted; font.pixelSize: 12 }
+            ThemedTextField {
+                id: jumpHostField
+                classic: root.classic
+                Layout.fillWidth: true
+                placeholderText: qsTr("Hostname or IP of bastion")
+            }
+
+            Label { text: qsTr("Jump Port"); color: theme.textMuted; font.pixelSize: 12 }
+            ThemedTextField {
+                id: jumpPortField
+                classic: root.classic
+                Layout.preferredWidth: 88
+                horizontalAlignment: TextInput.AlignHCenter
+                inputMethodHints: Qt.ImhDigitsOnly
+                validator: IntValidator { bottom: 1; top: 65535 }
+                text: "22"
+            }
+
+            Label { text: qsTr("Jump Username"); color: theme.textMuted; font.pixelSize: 12 }
+            ThemedTextField { id: jumpUserField; classic: root.classic; Layout.fillWidth: true }
+
+            Label { text: qsTr("Jump Auth"); color: theme.textMuted; font.pixelSize: 12 }
+            ThemedComboBox {
+                id: jumpAuthBox
+                classic: root.classic
+                menuTheme: theme
+                Layout.fillWidth: true
+                model: ["password", "key", "agent"]
+            }
+
+            Label { text: qsTr("Jump Password"); color: theme.textMuted; font.pixelSize: 12 }
+            ThemedTextField {
+                id: jumpPasswordField
+                classic: root.classic
+                Layout.fillWidth: true
+                echoMode: TextInput.Password
+                enabled: jumpAuthBox.currentText === "password"
+                opacity: enabled ? 1.0 : 0.4
+            }
+
+            Label { text: qsTr("Jump Private Key"); color: theme.textMuted; font.pixelSize: 12 }
+            ThemedTextField {
+                id: jumpKeyPathField
+                classic: root.classic
+                Layout.fillWidth: true
+                placeholderText: qsTr("Absolute path")
+                enabled: jumpAuthBox.currentText === "key"
+                opacity: enabled ? 1.0 : 0.4
+            }
+
+            Label {
+                Layout.columnSpan: 2
+                text: qsTr("Local Port Forwards — one per line: 127.0.0.1:8080 -> example.com:80")
+                color: theme.textMuted
+                font.pixelSize: 12
+                Layout.topMargin: 6
+            }
+            Label {
+                text: qsTr("Forwards")
+                color: theme.textMuted
+                font.pixelSize: 12
+                Layout.alignment: Qt.AlignTop
+            }
+            ScrollView {
+                id: forwardsScroll
+                Layout.fillWidth: true
+                Layout.preferredHeight: 80
+                clip: true
+                contentWidth: availableWidth
+                ScrollBar.vertical.policy: ScrollBar.AsNeeded
+                ThemedTextArea {
+                    id: forwardsField
+                    classic: root.classic
+                    width: forwardsScroll.availableWidth
+                    height: Math.max(forwardsScroll.availableHeight, implicitHeight)
                 }
             }
         }

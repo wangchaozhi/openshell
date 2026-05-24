@@ -31,7 +31,7 @@ Rectangle {
     function openForEdit(profile) {
         editingId = profile.id || ""
         nameField.text = profile.name || ""
-        protocolBox.currentIndex = Math.max(0, ["ssh", "sftp", "telnet"].indexOf(profile.protocol || "ssh"))
+        protocolBox.currentIndex = Math.max(0, ["ssh", "sftp"].indexOf(profile.protocol || "ssh"))
         hostField.text = profile.host || ""
         portField.text = String(profile.port || 22)
         userField.text = profile.username || ""
@@ -149,7 +149,7 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.leftMargin: 16
                     Layout.rightMargin: 16
-                    model: ["ssh", "sftp", "telnet"]
+                    model: ["ssh", "sftp"]
                 }
 
                 Label { Layout.leftMargin: 16; text: qsTr("Host"); color: "#93c5fd"; font.pixelSize: 12 }
