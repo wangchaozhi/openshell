@@ -37,7 +37,7 @@ OpenShell は Qt 6 / QML / C++20 で構築されたクロスプラットフォ�
 ### Windows 推奨スクリプト
 
 ```bat
-run-vs-debug.bat
+scripts\run-vs-debug.bat
 ```
 
 CMake または Qt のパスを指定する場合：
@@ -45,14 +45,14 @@ CMake または Qt のパスを指定する場合：
 ```bat
 set "CMAKE_EXE=E:\Qt\Tools\CMake_64\bin\cmake.exe"
 set "QT_PREFIX=E:\Qt\6.11.1\msvc2022_64"
-run-vs-debug.bat
+scripts\run-vs-debug.bat
 ```
 
 Qt ランタイムのデプロイ：
 
 ```bat
-deploy-vs-debug.bat
-deploy-vs-release.bat
+scripts\deploy-vs-debug.bat
+scripts\deploy-vs-release.bat
 ```
 
 ### CMake

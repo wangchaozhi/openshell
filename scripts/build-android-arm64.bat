@@ -1,8 +1,7 @@
 @echo off
 setlocal
 
-set "ROOT_DIR=%~dp0"
-set "ROOT_DIR=%ROOT_DIR:~0,-1%"
+for %%I in ("%~dp0..") do set "ROOT_DIR=%%~fI"
 set "BUILD_DIR=%ROOT_DIR%\build-android-arm64"
 set "APK_PATH=%BUILD_DIR%\android-build\OpenShell.apk"
 
@@ -14,7 +13,7 @@ if not defined CMAKE_EXE if exist "E:\Qt\Tools\CMake_64\bin\cmake.exe" set "CMAK
 if not defined NINJA_DIR if exist "E:\Qt\Tools\Ninja\ninja.exe" set "NINJA_DIR=E:\Qt\Tools\Ninja"
 
 if not exist "%BUILD_DIR%\build.ninja" (
-    call "%ROOT_DIR%\configure-android-arm64.bat"
+    call "%ROOT_DIR%\scripts\configure-android-arm64.bat"
     if errorlevel 1 exit /b %errorlevel%
 )
 

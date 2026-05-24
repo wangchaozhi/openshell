@@ -8,7 +8,7 @@
 # 可覆盖：QT_IOS_ROOT / QT_HOST_ROOT / BUILD_TYPE / BUILD_DIR / NINJA_EXE
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${BUILD_DIR:-$ROOT_DIR/build-ios}"
 BUILD_TYPE="${BUILD_TYPE:-Debug}"
 APP_NAME="OpenShell"

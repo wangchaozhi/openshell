@@ -29,8 +29,8 @@ OpenShell 是 Qt 6 / QML / C++20 的跨平台 SSH / SFTP 终端工具，定位�
 Windows 本地：
 
 ```bat
-run-vs-debug.bat
-deploy-vs-debug.bat
+scripts\run-vs-debug.bat
+scripts\deploy-vs-debug.bat
 ```
 
 CMake 直接调：
@@ -48,7 +48,7 @@ cmake --build build
 ctest --test-dir build
 ```
 
-macOS / Android / iOS 见 `configure-mac.sh`、`build-android.sh`、`build-ios.sh`。
+macOS / Android / iOS 见 `scripts/configure-mac.sh`、`scripts/build-android.sh`、`scripts/build-ios.sh`。所有平台脚本统一在 `scripts/` 下，根目录保持干净；脚本里 `ROOT_DIR` 用 `$(dirname "${BASH_SOURCE[0]}")/..` / `%~dp0..` 自动回到仓库根。
 
 ## 模块职责
 

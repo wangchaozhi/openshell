@@ -5,7 +5,7 @@
 # ANDROID_PLATFORM。
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ANDROID_ABI="${ANDROID_ABI:-arm64-v8a}"
 ANDROID_PLATFORM="${ANDROID_PLATFORM:-android-35}"
 BUILD_DIR="${BUILD_DIR:-$ROOT_DIR/build-android-${ANDROID_ABI}}"

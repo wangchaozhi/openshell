@@ -3,7 +3,7 @@
 # 默认对 build-mac (Debug) 的 .app 进行处理，可通过 BUILD_DIR 覆盖。
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${BUILD_DIR:-$ROOT_DIR/build-mac}"
 APP_BUNDLE="$BUILD_DIR/bin/OpenShell.app"
 MAKE_DMG="${MAKE_DMG:-0}"

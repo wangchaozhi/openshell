@@ -37,7 +37,7 @@ The project is no longer only a UI skeleton. It already includes real SSH sessio
 ### Recommended Windows Scripts
 
 ```bat
-run-vs-debug.bat
+scripts\run-vs-debug.bat
 ```
 
 Override CMake or Qt paths when needed:
@@ -45,14 +45,14 @@ Override CMake or Qt paths when needed:
 ```bat
 set "CMAKE_EXE=E:\Qt\Tools\CMake_64\bin\cmake.exe"
 set "QT_PREFIX=E:\Qt\6.11.1\msvc2022_64"
-run-vs-debug.bat
+scripts\run-vs-debug.bat
 ```
 
 Deploy Qt runtime files:
 
 ```bat
-deploy-vs-debug.bat
-deploy-vs-release.bat
+scripts\deploy-vs-debug.bat
+scripts\deploy-vs-release.bat
 ```
 
 ### CMake

@@ -1,8 +1,7 @@
 @echo off
 setlocal
 
-set "ROOT_DIR=%~dp0"
-set "ROOT_DIR=%ROOT_DIR:~0,-1%"
+for %%I in ("%~dp0..") do set "ROOT_DIR=%%~fI"
 set "APK_PATH=%ROOT_DIR%\build-android-arm64\android-build\OpenShell.apk"
 
 if not defined ANDROID_SDK_ROOT if exist "E:\android\sdk\platform-tools\adb.exe" set "ANDROID_SDK_ROOT=E:\android\sdk"

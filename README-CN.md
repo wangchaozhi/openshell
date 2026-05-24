@@ -37,7 +37,7 @@ OpenShell 是一个基于 Qt 6 / QML / C++20 的跨平台 SSH / SFTP 终端工�
 ### Windows 推荐脚本
 
 ```bat
-run-vs-debug.bat
+scripts\run-vs-debug.bat
 ```
 
 如需指定 CMake 或 Qt 路径：
@@ -45,14 +45,14 @@ run-vs-debug.bat
 ```bat
 set "CMAKE_EXE=E:\Qt\Tools\CMake_64\bin\cmake.exe"
 set "QT_PREFIX=E:\Qt\6.11.1\msvc2022_64"
-run-vs-debug.bat
+scripts\run-vs-debug.bat
 ```
 
 部署 Qt 运行时：
 
 ```bat
-deploy-vs-debug.bat
-deploy-vs-release.bat
+scripts\deploy-vs-debug.bat
+scripts\deploy-vs-release.bat
 ```
 
 ### CMake

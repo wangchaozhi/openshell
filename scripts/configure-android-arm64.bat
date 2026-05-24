@@ -1,8 +1,7 @@
 @echo off
 setlocal
 
-set "ROOT_DIR=%~dp0"
-set "ROOT_DIR=%ROOT_DIR:~0,-1%"
+for %%I in ("%~dp0..") do set "ROOT_DIR=%%~fI"
 set "BUILD_DIR=%ROOT_DIR%\build-android-arm64"
 
 if exist "D:\Program Files\Java\jdk-21.0.1\bin\java.exe" set "JAVA_HOME=D:\Program Files\Java\jdk-21.0.1"

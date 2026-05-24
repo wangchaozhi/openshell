@@ -357,13 +357,13 @@ $env:PATH="$env:JAVA_HOME\bin;E:\Qt\Tools\CMake_64\bin;E:\Qt\Tools\Ninja;$env:PA
 E:\Qt\Tools\CMake_64\bin\cmake.exe --build build-android-arm64 --config Debug
 ```
 
-项目根目录已提供 Android arm64 脚本：
+`scripts/` 下已提供 Android arm64 脚本：
 
 ```bat
-configure-android-arm64.bat
-build-android-arm64.bat
-install-android-arm64.bat
-run-android-arm64.bat
+scripts\configure-android-arm64.bat
+scripts\build-android-arm64.bat
+scripts\install-android-arm64.bat
+scripts\run-android-arm64.bat
 ```
 
 脚本会优先使用 `D:\Program Files\Java\jdk-21.0.1`，再兜底到 `D:\Program Files\Java\jdk-17.0.11`，并默认使用 `E:\Qt\6.11.1\android_arm64_v8a`、`E:\android\sdk`、NDK `27.0.12077973`。
@@ -371,13 +371,13 @@ run-android-arm64.bat
 常用方式：
 
 ```bat
-build-android-arm64.bat
+scripts\build-android-arm64.bat
 ```
 
 有真机或模拟器连接时：
 
 ```bat
-run-android-arm64.bat
+scripts\run-android-arm64.bat
 ```
 
 ## iOS CI 策略

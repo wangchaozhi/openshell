@@ -3,7 +3,7 @@
 # AVD_NAME 指定时若没有运行中的设备，会自动 boot 一个模拟器再装。
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ANDROID_ABI="${ANDROID_ABI:-arm64-v8a}"
 BUILD_DIR="${BUILD_DIR:-$ROOT_DIR/build-android-${ANDROID_ABI}}"
 APP_NAME="OpenShell"
@@ -23,7 +23,7 @@ if [[ ! -x "$ADB" ]]; then
     exit 1
 fi
 
-BUILD_DIR="$BUILD_DIR" ANDROID_ABI="$ANDROID_ABI" "$ROOT_DIR/build-android.sh"
+BUILD_DIR="$BUILD_DIR" ANDROID_ABI="$ANDROID_ABI" "$ROOT_DIR/scripts/build-android.sh"
 
 booted="$($ADB devices | awk 'NR>1 && $2=="device" {print $1; exit}')"
 if [[ -z "$booted" && -n "$AVD_NAME" ]]; then

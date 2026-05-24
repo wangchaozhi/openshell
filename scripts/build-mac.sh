@@ -2,11 +2,11 @@
 # OpenShell macOS build: 若 build-mac 未配置则先调用 configure-mac.sh，然后 ninja 编译。
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${BUILD_DIR:-$ROOT_DIR/build-mac}"
 
 if [[ ! -f "$BUILD_DIR/build.ninja" ]]; then
-    BUILD_DIR="$BUILD_DIR" "$ROOT_DIR/configure-mac.sh"
+    BUILD_DIR="$BUILD_DIR" "$ROOT_DIR/scripts/configure-mac.sh"
 fi
 
 if [[ -z "${CMAKE_EXE:-}" ]]; then

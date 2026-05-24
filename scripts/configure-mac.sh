@@ -3,7 +3,7 @@
 # 关键变量可通过环境变量覆盖：QT_PREFIX / CMAKE_EXE / NINJA_EXE / BUILD_TYPE。
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${BUILD_DIR:-$ROOT_DIR/build-mac}"
 BUILD_TYPE="${BUILD_TYPE:-Debug}"
 
