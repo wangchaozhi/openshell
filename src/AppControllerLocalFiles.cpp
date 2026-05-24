@@ -1,8 +1,10 @@
 #include "AppController.h"
 
 #include <QClipboard>
+#include <QDateTime>
 #include <QDesktopServices>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QJsonArray>
@@ -10,9 +12,10 @@
 #include <QSettings>
 #include <QUrl>
 
+#if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
 #include <QFileDialog>
+#endif
 #include <QStandardPaths>
-#include <QPointer>
 
 namespace {
 constexpr auto kTransferHistory = "transfers/history";
@@ -76,10 +79,10 @@ QString AppController::localPathFromUrl(const QString &url) const
 QString AppController::chooseLocalFile()
 {
 #if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
-    // Sync path-returning API is incompatible with SAF / UIDocumentPicker which
-    // hand back content streams asynchronously. Mobile code paths must use
-    // pickMobileFileAsync() + the mobileFilePicked signal instead.
-    setLastError(tr("Use pickMobileFileAsync on mobile platforms"));
+    // Mobile uses QtQuick.Dialogs.FileDialog directly from QML
+    // (see qml/mobile/MobileFilesPage.qml). The returned URL is then
+    // staged via stageUrlForUpload() before being handed to SFTP.
+    setLastError(tr("Use the QML FileDialog + stageUrlForUpload on mobile"));
     return {};
 #else
     return QFileDialog::getOpenFileName(nullptr, tr("Select file to upload"), QDir::homePath());
@@ -112,48 +115,64 @@ QString AppController::chooseDownloadFolder()
 #endif
 }
 
-void AppController::pickMobileFileAsync()
+QString AppController::stageUrlForUpload(const QString &url)
 {
-#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
-    QPointer<AppController> self(this);
-    QFileDialog::getOpenFileContent(
-        QStringLiteral("*"),
-        [self](const QString &fileName, const QByteArray &content) {
-            if (!self) {
-                return;
-            }
-            if (fileName.isEmpty() || content.isEmpty()) {
-                emit self->mobileFilePicked({}, tr("File picker cancelled or empty selection"));
-                return;
-            }
-            const QString sandbox =
-                QStandardPaths::writableLocation(QStandardPaths::TempLocation);
-            QDir().mkpath(sandbox);
-            const QString destPath = QDir(sandbox).filePath(QFileInfo(fileName).fileName());
-            QFile out(destPath);
-            if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-                emit self->mobileFilePicked({}, tr("Cannot stage picked file to %1").arg(destPath));
-                return;
-            }
-            if (out.write(content) != content.size()) {
-                out.close();
-                emit self->mobileFilePicked({}, tr("Short write while staging %1").arg(destPath));
-                return;
-            }
-            out.close();
-            emit self->mobileFilePicked(destPath, QString());
-        });
-#else
-    // Desktop fallback: synchronous picker, emit immediately so QML can use the
-    // same signal-based flow as mobile.
-    const QString path = QFileDialog::getOpenFileName(nullptr, tr("Select file to upload"),
-                                                      QDir::homePath());
-    if (path.isEmpty()) {
-        emit mobileFilePicked({}, tr("File picker cancelled"));
-    } else {
-        emit mobileFilePicked(path, QString());
+    const QUrl parsed(url);
+
+    // file:// → just unwrap. SftpTransfer / QDir can already handle that path.
+    if (parsed.isLocalFile()) {
+        setLastError(QString());
+        return parsed.toLocalFile();
     }
-#endif
+
+    // content:// (Android SAF), assets-library:// (legacy iOS), etc.
+    // QFile on Android can open content:// URIs directly; we read them out
+    // and copy into the app's temp sandbox so the rest of the upload pipeline
+    // (QFileInfo / QFile by path) keeps working unchanged.
+    QFile src(url);
+    if (!src.open(QIODevice::ReadOnly)) {
+        setLastError(tr("Cannot read picked content URL: %1").arg(url));
+        return {};
+    }
+
+    QString fileName = parsed.fileName();
+    if (fileName.isEmpty()) {
+        // content:// URIs often have no useful filename; fall back to query
+        // string or a uuid stub.
+        fileName = QStringLiteral("upload-%1.bin").arg(
+            QString::number(QDateTime::currentMSecsSinceEpoch(), 16));
+    }
+
+    const QString sandbox = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+    QDir().mkpath(sandbox);
+    const QString destPath = QDir(sandbox).filePath(fileName);
+
+    QFile dst(destPath);
+    if (!dst.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        src.close();
+        setLastError(tr("Cannot stage picked file to %1").arg(destPath));
+        return {};
+    }
+
+    constexpr qint64 kChunk = 64 * 1024;
+    QByteArray buf;
+    while (!src.atEnd()) {
+        buf = src.read(kChunk);
+        if (buf.isEmpty()) {
+            break;
+        }
+        if (dst.write(buf) != buf.size()) {
+            src.close();
+            dst.close();
+            QFile::remove(destPath);
+            setLastError(tr("Short write while staging %1").arg(destPath));
+            return {};
+        }
+    }
+    src.close();
+    dst.close();
+    setLastError(QString());
+    return destPath;
 }
 
 bool AppController::openLocalFolderForPath(const QString &path) const

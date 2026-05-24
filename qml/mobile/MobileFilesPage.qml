@@ -539,9 +539,14 @@ Rectangle {
         title: qsTr("Pick a file to upload")
         fileMode: FileDialog.OpenFile
         onAccepted: {
-            const local = appController.localPathFromUrl(selectedFile.toString())
+            // Android SAF returns content:// URIs that QFile can read but
+            // QFileInfo / QDir cannot walk — stage them into the app sandbox
+            // first so the existing upload pipeline keeps working.
+            const local = appController.stageUrlForUpload(selectedFile.toString())
             if (!local || local.length === 0) {
-                root.errorMessage = qsTr("Unable to resolve picked file path")
+                root.errorMessage = appController.lastError.length > 0
+                    ? appController.lastError
+                    : qsTr("Unable to stage picked file")
                 return
             }
             root.pendingOp = "upload"
