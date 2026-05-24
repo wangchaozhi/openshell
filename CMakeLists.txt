@@ -12,9 +12,11 @@ find_package(Qt6 REQUIRED COMPONENTS
     Concurrent
     LinguistTools
 )
-if(NOT ANDROID AND NOT IOS)
-    find_package(Qt6 REQUIRED COMPONENTS Widgets)
-endif()
+# Widgets is required on all platforms: QFileDialog::getOpenFileContent (used by
+# the mobile file picker) lives in QtWidgets even though it shows the native
+# Android/iOS picker rather than a QWidget dialog. On desktop we additionally
+# use QApplication / QFileDialog / system tray bits from QtWidgets.
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
 qt_standard_project_setup(REQUIRES 6.6)
 qt_policy(SET QTP0004 NEW)
@@ -282,11 +284,12 @@ target_link_libraries(OpenShell
         Qt6::QuickControls2
         Qt6::Network
         Qt6::Concurrent
-        Libssh2::libssh2
+        Qt6::Widgets
         ${OPENSHELL_VTERM_TARGET}
+        Libssh2::libssh2
 )
 if(NOT ANDROID AND NOT IOS)
-    target_link_libraries(OpenShell PRIVATE Qt6::Widgets ${OPENSHELL_KEYCHAIN_TARGET})
+    target_link_libraries(OpenShell PRIVATE ${OPENSHELL_KEYCHAIN_TARGET})
     target_include_directories(OpenShell PRIVATE ${OPENSHELL_KEYCHAIN_INCLUDE_DIRS})
     target_compile_definitions(OpenShell PRIVATE OPENSHELL_USE_KEYCHAIN=1)
 endif()
