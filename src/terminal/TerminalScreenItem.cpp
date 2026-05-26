@@ -182,9 +182,6 @@ void TerminalScreenItem::requestFocus()
 {
     forceActiveFocus(Qt::OtherFocusReason);
     updateInputMethod(Qt::ImEnabled | Qt::ImHints | Qt::ImCursorRectangle);
-#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
-    showSoftKeyboard();
-#endif
 }
 
 void TerminalScreenItem::scrollByLines(int delta)
@@ -210,13 +207,6 @@ void TerminalScreenItem::focusInEvent(QFocusEvent *event)
     m_cursorOn = true;
     updateCursorTimer();
     updateInputMethod(Qt::ImEnabled | Qt::ImHints | Qt::ImCursorRectangle);
-#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
-    // 移动端：拿到焦点就主动调起软键盘。覆盖切到 Terminal 页时（QML 调
-    // requestFocus）这条路径，那次没有 mouse press 事件兜底。
-    if (auto *im = QGuiApplication::inputMethod()) {
-        im->show();
-    }
-#endif
     update();
 }
 

@@ -1345,6 +1345,11 @@
             <translation>セッションなし</translation>
         </message>
         <message>
+            <location filename="../qml/mobile/MobileTerminalPage.qml" line="306" />
+            <source>Text</source>
+            <translation>テキスト</translation>
+        </message>
+        <message>
             <location filename="../qml/mobile/MobileTerminalPage.qml" line="355" />
             <source>Paste</source>
             <translation>貼り付け</translation>

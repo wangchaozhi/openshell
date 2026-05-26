@@ -1345,6 +1345,11 @@
             <translation>Keine Sitzung</translation>
         </message>
         <message>
+            <location filename="../qml/mobile/MobileTerminalPage.qml" line="306" />
+            <source>Text</source>
+            <translation>Text</translation>
+        </message>
+        <message>
             <location filename="../qml/mobile/MobileTerminalPage.qml" line="355" />
             <source>Paste</source>
             <translation>Einfügen</translation>

@@ -1345,6 +1345,11 @@
             <translation>无会话</translation>
         </message>
         <message>
+            <location filename="../qml/mobile/MobileTerminalPage.qml" line="306" />
+            <source>Text</source>
+            <translation>文本</translation>
+        </message>
+        <message>
             <location filename="../qml/mobile/MobileTerminalPage.qml" line="355" />
             <source>Paste</source>
             <translation>粘贴</translation>

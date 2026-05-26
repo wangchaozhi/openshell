@@ -1345,6 +1345,11 @@
             <translation>세션 없음</translation>
         </message>
         <message>
+            <location filename="../qml/mobile/MobileTerminalPage.qml" line="306" />
+            <source>Text</source>
+            <translation>텍스트</translation>
+        </message>
+        <message>
             <location filename="../qml/mobile/MobileTerminalPage.qml" line="355" />
             <source>Paste</source>
             <translation>붙여넣기</translation>

@@ -27,11 +27,15 @@ qint64 monotonicMs()
 
 void TerminalScreenItem::showSoftKeyboard()
 {
+#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+    return;
+#else
     forceActiveFocus(Qt::OtherFocusReason);
     updateInputMethod(Qt::ImEnabled | Qt::ImHints | Qt::ImCursorRectangle);
     if (auto *im = QGuiApplication::inputMethod()) {
         im->show();
     }
+#endif
 }
 
 void TerminalScreenItem::inputMethodEvent(QInputMethodEvent *event)
@@ -56,7 +60,11 @@ QVariant TerminalScreenItem::inputMethodQuery(Qt::InputMethodQuery query) const
 {
     switch (query) {
     case Qt::ImEnabled:
+#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
+        return false;
+#else
         return true;
+#endif
     case Qt::ImHints:
         // 终端里不能让输入法自动大写、联想纠错或学习输入内容；否则命令、
         // 密码、路径都会被 IME 自作主张改写。
@@ -107,12 +115,6 @@ void TerminalScreenItem::keyPressEvent(QKeyEvent *event)
 void TerminalScreenItem::mousePressEvent(QMouseEvent *event)
 {
     forceActiveFocus(Qt::MouseFocusReason);
-#if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
-    // 移动端：点 terminal 主动调起软键盘，否则光设 focus 也不弹。
-    if (auto *im = QGuiApplication::inputMethod()) {
-        im->show();
-    }
-#endif
     if (event->button() == Qt::LeftButton && m_screen) {
         const QPoint cell = cellAtPosition(event->position());
         const qint64 now = monotonicMs();

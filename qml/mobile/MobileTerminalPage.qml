@@ -62,9 +62,6 @@ Rectangle {
         if (next !== terminal.screen) {
             terminal.screen = next
         }
-        if (root.pageActive && terminal.screen !== null) {
-            activateKeyboard()
-        }
     }
 
     function activateKeyboard() {
@@ -75,12 +72,18 @@ Rectangle {
         keyboardProxy.activate()
     }
 
+    function deactivateKeyboard() {
+        keyboardRequested = false
+        keyboardProxy.focus = false
+        terminal.forceActiveFocus()
+        Qt.inputMethod.hide()
+    }
+
     function sendText(text) {
         if (sessionId.length === 0 || text.length === 0) {
             return
         }
         appController.sendSessionInput(sessionId, applyPendingModifiers(text))
-        activateKeyboard()
     }
 
     function sendRaw(text) {
@@ -90,7 +93,6 @@ Rectangle {
         ctrlModifier = false
         altModifier = false
         appController.sendSessionInput(sessionId, text)
-        activateKeyboard()
     }
 
     function sendBackspace() {
@@ -137,12 +139,10 @@ Rectangle {
 
     function toggleCtrl() {
         ctrlModifier = !ctrlModifier
-        activateKeyboard()
     }
 
     function toggleAlt() {
         altModifier = !altModifier
-        activateKeyboard()
     }
 
     function toggleKeyboard() {
@@ -152,8 +152,7 @@ Rectangle {
         if (keyboardRequested && keyboardProxy.activeFocus) {
             ctrlModifier = false
             altModifier = false
-            keyboardRequested = false
-            Qt.inputMethod.hide()
+            deactivateKeyboard()
             return
         }
         activateKeyboard()
@@ -171,8 +170,7 @@ Rectangle {
         } else {
             ctrlModifier = false
             altModifier = false
-            keyboardRequested = false
-            Qt.inputMethod.hide()
+            deactivateKeyboard()
         }
     }
 
@@ -180,7 +178,7 @@ Rectangle {
         target: Qt.inputMethod
         function onVisibleChanged() {
             if (!Qt.inputMethod.visible) {
-                root.keyboardRequested = false
+                root.deactivateKeyboard()
             } else if (root.pageActive && root.sessionId.length > 0) {
                 root.keyboardRequested = true
             }
@@ -310,6 +308,13 @@ Rectangle {
                     spacing: 5
 
                     SpecialKeyButton {
+                        text: qsTr("Text")
+                        active: root.keyboardVisible
+                        enabled: root.sessionId.length > 0
+                        onClicked: root.toggleKeyboard()
+                    }
+
+                    SpecialKeyButton {
                         text: "Enter"
                         enabled: root.sessionId.length > 0
                         onClicked: root.sendRaw("\r")
@@ -397,6 +402,8 @@ Rectangle {
                 readonly property string sentinel: " "
                 anchors.fill: terminal
                 activeFocusOnPress: true
+                enabled: root.keyboardRequested
+                visible: root.keyboardRequested
                 color: "transparent"
                 selectedTextColor: "transparent"
                 selectionColor: "transparent"
@@ -471,9 +478,8 @@ Rectangle {
             }
         }
 
-        // 之前底部还有一行 "Command 输入框 + Send"，移动端直接点 terminal
-        // 就能弹软键盘逐字符发到 SSH，那一行的"前置编辑再回车整段发"心智
-        // 在 vim / nano / 交互式 prompt 下走不通，砍掉留给 terminal 更多
-        // 垂直空间。特殊键还在上面那条工具栏里（Esc / Tab / Ctrl+C / Paste）。
+        // 之前底部还有一行 "Command 输入框 + Send"。移动端终端需要逐字符
+        // 直通 SSH，长文本才显式打开系统输入法，所以这里把空间留给终端
+        // 和专用按键栏。
     }
 }
