@@ -262,7 +262,7 @@ jobs:
           X-AppImage-Version=${{ needs.prepare.outputs.tag }}
           EOF
 
-          cat > "AppDir/AppRun" <<'EOF'
+          cat > "tools/OpenShell.AppRun" <<'EOF'
           #!/usr/bin/env bash
           set -euo pipefail
 
@@ -298,7 +298,7 @@ jobs:
 
           exec "${appdir}/usr/bin/OpenShell" "$@"
           EOF
-          chmod +x "AppDir/AppRun"
+          chmod +x "tools/OpenShell.AppRun"
 
           wget -q -O tools/linuxdeploy-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           wget -q -O tools/linuxdeploy-plugin-qt-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
@@ -316,7 +316,7 @@ jobs:
             --executable "AppDir/usr/bin/${APP_NAME}" \
             --desktop-file "AppDir/usr/share/applications/${APP_NAME}.desktop" \
             --icon-file "AppDir/usr/share/icons/hicolor/scalable/apps/OpenShell.svg" \
-            --custom-apprun "AppDir/AppRun" \
+            --custom-apprun "tools/OpenShell.AppRun" \
             --plugin qt \
             --output appimage
 
