@@ -253,6 +253,80 @@ if(OPENSHELL_ENABLE_ECHO_BACKEND)
     target_compile_definitions(OpenShell PRIVATE OPENSHELL_ENABLE_ECHO_BACKEND=1)
 endif()
 
+set(OPENSHELL_PLATFORM_ICON_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/platform")
+set(OPENSHELL_WINDOWS_ICON "${OPENSHELL_PLATFORM_ICON_DIR}/windows/OpenShell.ico")
+set(OPENSHELL_MACOS_ICON "${OPENSHELL_PLATFORM_ICON_DIR}/macos/OpenShell.icns")
+set(OPENSHELL_ANDROID_PACKAGE_DIR "${OPENSHELL_PLATFORM_ICON_DIR}/android")
+set(OPENSHELL_IOS_ICON_DIR "${OPENSHELL_PLATFORM_ICON_DIR}/ios")
+
+if(WIN32 AND EXISTS "${OPENSHELL_WINDOWS_ICON}")
+    set(OPENSHELL_WINDOWS_RC "${CMAKE_CURRENT_BINARY_DIR}/OpenShell.rc")
+    file(WRITE "${OPENSHELL_WINDOWS_RC}" "IDI_ICON1 ICON \"${OPENSHELL_WINDOWS_ICON}\"\n")
+    target_sources(OpenShell PRIVATE "${OPENSHELL_WINDOWS_RC}")
+endif()
+
+if(APPLE AND NOT IOS AND EXISTS "${OPENSHELL_MACOS_ICON}")
+    target_sources(OpenShell PRIVATE "${OPENSHELL_MACOS_ICON}")
+    set_source_files_properties("${OPENSHELL_MACOS_ICON}" PROPERTIES
+        MACOSX_PACKAGE_LOCATION Resources)
+    set_target_properties(OpenShell PROPERTIES
+        MACOSX_BUNDLE_ICON_FILE OpenShell.icns)
+endif()
+
+if(ANDROID AND EXISTS "${OPENSHELL_ANDROID_PACKAGE_DIR}/AndroidManifest.xml")
+    set_target_properties(OpenShell PROPERTIES
+        QT_ANDROID_PACKAGE_SOURCE_DIR "${OPENSHELL_ANDROID_PACKAGE_DIR}")
+endif()
+
+if(IOS AND EXISTS "${OPENSHELL_IOS_ICON_DIR}")
+    file(GLOB OPENSHELL_IOS_ICONS CONFIGURE_DEPENDS
+        "${OPENSHELL_IOS_ICON_DIR}/*.png")
+    if(OPENSHELL_IOS_ICONS)
+        target_sources(OpenShell PRIVATE ${OPENSHELL_IOS_ICONS})
+        set_source_files_properties(${OPENSHELL_IOS_ICONS} PROPERTIES
+            MACOSX_PACKAGE_LOCATION Resources)
+        set(OPENSHELL_IOS_ICON_PLIST_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/SetOpenShellIosIcons.cmake")
+        file(WRITE "${OPENSHELL_IOS_ICON_PLIST_SCRIPT}" [=[
+if(NOT DEFINED PLIST)
+    message(FATAL_ERROR "PLIST is required")
+endif()
+execute_process(COMMAND /usr/libexec/PlistBuddy -c "Delete :CFBundleIconFile" "${PLIST}" ERROR_QUIET)
+execute_process(COMMAND /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon60x60@2x.png" "${PLIST}")
+execute_process(COMMAND /usr/libexec/PlistBuddy -c "Delete :CFBundleIconFiles" "${PLIST}" ERROR_QUIET)
+execute_process(COMMAND /usr/libexec/PlistBuddy -c "Add :CFBundleIconFiles array" "${PLIST}" RESULT_VARIABLE _result)
+if(NOT _result EQUAL 0)
+    message(FATAL_ERROR "Failed to add CFBundleIconFiles to ${PLIST}")
+endif()
+set(_icons
+    AppIcon20x20@2x.png
+    AppIcon20x20@3x.png
+    AppIcon29x29@2x.png
+    AppIcon29x29@3x.png
+    AppIcon40x40@2x.png
+    AppIcon40x40@3x.png
+    AppIcon60x60@2x.png
+    AppIcon60x60@3x.png
+    AppIcon76x76.png
+    AppIcon76x76@2x.png
+    AppIcon83.5x83.5@2x.png
+)
+set(_index 0)
+foreach(_icon IN LISTS _icons)
+    execute_process(
+        COMMAND /usr/libexec/PlistBuddy -c "Add :CFBundleIconFiles:${_index} string ${_icon}" "${PLIST}"
+        RESULT_VARIABLE _result)
+    if(NOT _result EQUAL 0)
+        message(FATAL_ERROR "Failed to add ${_icon} to ${PLIST}")
+    endif()
+    math(EXPR _index "${_index} + 1")
+endforeach()
+]=])
+        add_custom_command(TARGET OpenShell POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -DPLIST=$<TARGET_BUNDLE_DIR:OpenShell>/Info.plist -P "${OPENSHELL_IOS_ICON_PLIST_SCRIPT}"
+            VERBATIM)
+    endif()
+endif()
+
 qt_add_qml_module(OpenShell
     URI OpenShell
     QML_FILES

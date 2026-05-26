@@ -119,6 +119,10 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Generate platform icons
+        shell: bash
+        run: python scripts/generate-platform-icons.py
+
       - name: Cache Qt
         id: cache-qt
         uses: actions/cache@v4
@@ -212,6 +216,7 @@ jobs:
           dmg_root="package/${{ matrix.asset_name }}"
           mkdir -p "${dmg_root}"
           cp -R "${app_path}" "${dmg_root}/"
+          ln -s /Applications "${dmg_root}/Applications"
           cp README.md "${dmg_root}/"
           cp -R docs "${dmg_root}/"
           cp -R assets "${dmg_root}/"
@@ -238,6 +243,7 @@ jobs:
           cp "${exe_path}" "AppDir/usr/bin/${APP_NAME}"
           cp -R assets "AppDir/usr/bin/assets"
           cp assets/icons/openshell.svg "AppDir/usr/share/icons/hicolor/scalable/apps/OpenShell.svg"
+          cp assets/icons/openshell.svg "AppDir/OpenShell.svg"
           cp README.md "AppDir/usr/share/doc/${APP_NAME}/"
           cp -R docs "AppDir/usr/share/doc/${APP_NAME}/"
 
@@ -248,9 +254,51 @@ jobs:
           Comment=Cross-platform SSH/SFTP client
           Exec=OpenShell
           Icon=OpenShell
-          Categories=Network;
+          Categories=Network;RemoteAccess;
           Terminal=false
+          StartupNotify=true
+          StartupWMClass=OpenShell
+          X-AppImage-Name=OpenShell
+          X-AppImage-Version=${{ needs.prepare.outputs.tag }}
           EOF
+
+          cat > "AppDir/AppRun" <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          appdir="${APPDIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+
+          if [ -n "${APPIMAGE:-}" ] && [ -d "${HOME:-}" ]; then
+            desktop_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+            icon_dir="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/scalable/apps"
+            mkdir -p "${desktop_dir}" "${icon_dir}"
+            cp "${appdir}/usr/share/icons/hicolor/scalable/apps/OpenShell.svg" "${icon_dir}/OpenShell.svg"
+            desktop_exec="${APPIMAGE//\\/\\\\}"
+            desktop_exec="${desktop_exec//\"/\\\"}"
+            cat > "${desktop_dir}/OpenShell.desktop" <<DESKTOP
+          [Desktop Entry]
+          Type=Application
+          Name=OpenShell
+          Comment=Cross-platform SSH/SFTP client
+          Exec="${desktop_exec}"
+          Icon=OpenShell
+          Categories=Network;RemoteAccess;
+          Terminal=false
+          StartupNotify=true
+          StartupWMClass=OpenShell
+          DESKTOP
+            chmod +x "${desktop_dir}/OpenShell.desktop"
+            if command -v update-desktop-database >/dev/null 2>&1; then
+              update-desktop-database "${desktop_dir}" >/dev/null 2>&1 || true
+            fi
+            if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+              gtk-update-icon-cache -q "${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor" >/dev/null 2>&1 || true
+            fi
+          fi
+
+          exec "${appdir}/usr/bin/OpenShell" "$@"
+          EOF
+          chmod +x "AppDir/AppRun"
 
           wget -q -O tools/linuxdeploy-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           wget -q -O tools/linuxdeploy-plugin-qt-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
@@ -268,6 +316,7 @@ jobs:
             --executable "AppDir/usr/bin/${APP_NAME}" \
             --desktop-file "AppDir/usr/share/applications/${APP_NAME}.desktop" \
             --icon-file "AppDir/usr/share/icons/hicolor/scalable/apps/OpenShell.svg" \
+            --custom-apprun "AppDir/AppRun" \
             --plugin qt \
             --output appimage
 
@@ -311,6 +360,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Generate platform icons
+        shell: bash
+        run: python scripts/generate-platform-icons.py
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -491,6 +544,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Generate platform icons
+        shell: bash
+        run: python scripts/generate-platform-icons.py
 
       - name: Cache Qt iOS
         id: cache-qt-ios
