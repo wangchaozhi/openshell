@@ -34,7 +34,14 @@ AppController::AppController(QObject *parent)
         connect(m_tray, &TrayController::hideRequested, this, &AppController::hideWindow);
         connect(m_tray, &TrayController::languageChanged, this, &AppController::setLanguage);
         connect(m_tray, &TrayController::connectionTriggered, this,
-                [this](const QString &connectionId) { openSession(connectionId); });
+                [this](const QString &connectionId) {
+                    const QString sessionId = openSession(connectionId);
+                    if (sessionId.isEmpty()) {
+                        return;
+                    }
+                    showWindow();
+                    emit sessionActivationRequested(sessionId);
+                });
         connect(m_tray, &TrayController::quitRequested, this, &AppController::quit);
     }
 #endif

@@ -144,6 +144,7 @@ signals:
     void showRequested();
     void hideRequested();
     void sessionsChanged();
+    void sessionActivationRequested(const QString &sessionId);
     void sessionScreenUpdated(const QString &sessionId);
     void sessionStatusChanged(const QString &sessionId, const QString &status, const QString &message);
     void remoteDirectoryEntriesReady(const QString &requestId,

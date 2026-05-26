@@ -388,6 +388,17 @@ ApplicationWindow {
             window.raise()
             window.requestActivate()
         }
+        function onSessionActivationRequested(sessionId) {
+            window.refreshSessions()
+            if (sessionId && sessionId.length > 0) {
+                window.activeSessionId = sessionId
+                window.activeView = "terminal"
+                window.fileBrowserVisible = false
+                if (!window.activeConnectionIsTelnet) {
+                    delayedFileBrowserLoad.restart()
+                }
+            }
+        }
         function onHideRequested() {
             if (appController.minimizeToTray) {
                 window.hide()
