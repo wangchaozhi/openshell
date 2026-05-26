@@ -1,6 +1,10 @@
 #include <QtTest>
 #include <QCoreApplication>
+#include <QHostAddress>
+#include <QPointer>
 #include <QSignalSpy>
+#include <QTcpServer>
+#include <QTcpSocket>
 
 #include "ConnectionCatalog.h"
 #include "SessionController.h"
@@ -91,6 +95,19 @@ bool waitForBuffer(SessionController &controller, const QString &id,
     return controller.sessionBuffer(id).contains(needle);
 }
 
+bool waitForBytes(const QByteArray &buffer, const QByteArray &needle, int timeoutMs = 2000)
+{
+    QElapsedTimer t;
+    t.start();
+    while (t.elapsed() < timeoutMs) {
+        if (buffer.contains(needle)) {
+            return true;
+        }
+        QTest::qWait(20);
+    }
+    return buffer.contains(needle);
+}
+
 } // namespace
 
 class TestSessionController : public QObject
@@ -104,6 +121,9 @@ private slots:
     void closeReleasesSession();
     void closeDuringConnectReturnsImmediately();
     void exitCommandTransitionsToDisconnected();
+    void telnetProtocolUsesTcpWorker();
+    void telnetAutoLoginRespondsToPrompts();
+    void telnetAutoLoginCanBeDisabled();
     void clearScreenKeepsPromptLine();
     void redrawingDoesNotGrowBufferUnbounded();
 };
@@ -224,6 +244,193 @@ void TestSessionController::exitCommandTransitionsToDisconnected()
     QVERIFY(sawDisconnected);
     QVERIFY2(waitForBuffer(controller, id, QStringLiteral("Connection disconnected")),
              qPrintable(QStringLiteral("buffer was: %1").arg(controller.sessionBuffer(id))));
+}
+
+void TestSessionController::telnetProtocolUsesTcpWorker()
+{
+    QTcpServer server;
+    QVERIFY(server.listen(QHostAddress::LocalHost, 0));
+
+    QPointer<QTcpSocket> peer;
+    QByteArray receivedFromClient;
+    connect(&server, &QTcpServer::newConnection, &server, [&]() {
+        peer = server.nextPendingConnection();
+        peer->setParent(&server);
+        connect(peer, &QTcpSocket::readyRead, &server, [&]() {
+            receivedFromClient.append(peer->readAll());
+        });
+        QByteArray greeting;
+        greeting.append(static_cast<char>(255)); // IAC
+        greeting.append(static_cast<char>(253)); // DO
+        greeting.append(static_cast<char>(24));  // TERMINAL-TYPE
+        greeting.append(static_cast<char>(255)); // IAC
+        greeting.append(static_cast<char>(253)); // DO
+        greeting.append(static_cast<char>(31));  // NAWS
+        greeting.append(static_cast<char>(255)); // IAC
+        greeting.append(static_cast<char>(251)); // WILL
+        greeting.append(static_cast<char>(1));   // ECHO
+        greeting.append(QByteArrayLiteral("login: "));
+        peer->write(greeting);
+        peer->flush();
+    });
+
+    ConnectionProfile profile = makeProfile(QStringLiteral("Telnet"));
+    profile.protocol = QStringLiteral("telnet");
+    profile.host = server.serverAddress().toString();
+    profile.port = server.serverPort();
+    profile.username.clear();
+    profile.telnetTerminalType = QStringLiteral("vt100");
+
+    SessionController controller;
+    QString error;
+    const QString id = controller.open(profile, &error);
+    QVERIFY2(!id.isEmpty(), qPrintable(error));
+
+    QVERIFY2(waitForBuffer(controller, id, QStringLiteral("login:")),
+             qPrintable(QStringLiteral("buffer was: %1").arg(controller.sessionBuffer(id))));
+    QVERIFY(!controller.sessionBuffer(id).contains(QChar(255)));
+
+    const QByteArray willTerminalType = QByteArray()
+                                            + static_cast<char>(255)
+                                            + static_cast<char>(251)
+                                            + static_cast<char>(24);
+    const QByteArray willNaws = QByteArray()
+                                + static_cast<char>(255)
+                                + static_cast<char>(251)
+                                + static_cast<char>(31);
+    QVERIFY(waitForBytes(receivedFromClient, willTerminalType));
+    QVERIFY(waitForBytes(receivedFromClient, willNaws));
+
+    receivedFromClient.clear();
+    QVERIFY(peer);
+    QByteArray ttypeRequest;
+    ttypeRequest.append(static_cast<char>(255)); // IAC
+    ttypeRequest.append(static_cast<char>(250)); // SB
+    ttypeRequest.append(static_cast<char>(24));  // TERMINAL-TYPE
+    ttypeRequest.append(static_cast<char>(1));   // SEND
+    ttypeRequest.append(static_cast<char>(255)); // IAC
+    ttypeRequest.append(static_cast<char>(240)); // SE
+    peer->write(ttypeRequest);
+    peer->flush();
+
+    const QByteArray ttypeReply = QByteArray()
+                                  + static_cast<char>(255)
+                                  + static_cast<char>(250)
+                                  + static_cast<char>(24)
+                                  + static_cast<char>(0)
+                                  + QByteArrayLiteral("vt100")
+                                  + static_cast<char>(255)
+                                  + static_cast<char>(240);
+    QVERIFY(waitForBytes(receivedFromClient, ttypeReply));
+
+    receivedFromClient.clear();
+    controller.requestResize(id, 132, 43);
+    const QByteArray nawsReply = QByteArray()
+                                 + static_cast<char>(255)
+                                 + static_cast<char>(250)
+                                 + static_cast<char>(31)
+                                 + static_cast<char>(0)
+                                 + static_cast<char>(132)
+                                 + static_cast<char>(0)
+                                 + static_cast<char>(43)
+                                 + static_cast<char>(255)
+                                 + static_cast<char>(240);
+    QVERIFY(waitForBytes(receivedFromClient, nawsReply));
+
+    receivedFromClient.clear();
+    controller.sendInput(id, QByteArray(1, static_cast<char>(255)));
+    const QByteArray escapedIac = QByteArray()
+                                  + static_cast<char>(255)
+                                  + static_cast<char>(255);
+    QVERIFY(waitForBytes(receivedFromClient, escapedIac));
+
+    controller.close(id);
+    QTest::qWait(100);
+}
+
+void TestSessionController::telnetAutoLoginRespondsToPrompts()
+{
+    QTcpServer server;
+    QVERIFY(server.listen(QHostAddress::LocalHost, 0));
+
+    QPointer<QTcpSocket> peer;
+    QByteArray receivedFromClient;
+    connect(&server, &QTcpServer::newConnection, &server, [&]() {
+        peer = server.nextPendingConnection();
+        peer->setParent(&server);
+        connect(peer, &QTcpSocket::readyRead, &server, [&]() {
+            receivedFromClient.append(peer->readAll());
+        });
+        peer->write(QByteArrayLiteral("login: "));
+        peer->flush();
+    });
+
+    ConnectionProfile profile = makeProfile(QStringLiteral("Telnet Login"));
+    profile.protocol = QStringLiteral("telnet");
+    profile.host = server.serverAddress().toString();
+    profile.port = server.serverPort();
+    profile.username = QStringLiteral("alice");
+    profile.password = QStringLiteral("secret");
+
+    SessionController controller;
+    QString error;
+    const QString id = controller.open(profile, &error);
+    QVERIFY2(!id.isEmpty(), qPrintable(error));
+
+    QVERIFY(waitForBytes(receivedFromClient, QByteArrayLiteral("alice\r\n")));
+
+    receivedFromClient.clear();
+    QVERIFY(peer);
+    peer->write(QByteArrayLiteral("Password: "));
+    peer->flush();
+    QVERIFY(waitForBytes(receivedFromClient, QByteArrayLiteral("secret\r\n")));
+
+    receivedFromClient.clear();
+    peer->write(QByteArrayLiteral("Password: "));
+    peer->flush();
+    QTest::qWait(100);
+    QVERIFY(receivedFromClient.isEmpty());
+
+    controller.close(id);
+    QTest::qWait(100);
+}
+
+void TestSessionController::telnetAutoLoginCanBeDisabled()
+{
+    QTcpServer server;
+    QVERIFY(server.listen(QHostAddress::LocalHost, 0));
+
+    QPointer<QTcpSocket> peer;
+    QByteArray receivedFromClient;
+    connect(&server, &QTcpServer::newConnection, &server, [&]() {
+        peer = server.nextPendingConnection();
+        peer->setParent(&server);
+        connect(peer, &QTcpSocket::readyRead, &server, [&]() {
+            receivedFromClient.append(peer->readAll());
+        });
+        peer->write(QByteArrayLiteral("Username: "));
+        peer->flush();
+    });
+
+    ConnectionProfile profile = makeProfile(QStringLiteral("Telnet Manual Login"));
+    profile.protocol = QStringLiteral("telnet");
+    profile.host = server.serverAddress().toString();
+    profile.port = server.serverPort();
+    profile.username = QStringLiteral("alice");
+    profile.password = QStringLiteral("secret");
+    profile.telnetAutoLogin = false;
+
+    SessionController controller;
+    QString error;
+    const QString id = controller.open(profile, &error);
+    QVERIFY2(!id.isEmpty(), qPrintable(error));
+
+    QVERIFY(waitForBuffer(controller, id, QStringLiteral("Username:")));
+    QTest::qWait(150);
+    QVERIFY(receivedFromClient.isEmpty());
+
+    controller.close(id);
+    QTest::qWait(100);
 }
 
 void TestSessionController::clearScreenKeepsPromptLine()

@@ -139,6 +139,36 @@
       <translation>プロトコル</translation>
     </message>
     <message>
+      <location filename="../qml/ConnectionEditor.qml" line="291" />
+      <source>Telnet sends data in plaintext. Use it only on trusted networks.</source>
+      <translation>Telnet はデータを平文で送信します。信頼できるネットワークでのみ使用してください。</translation>
+    </message>
+    <message>
+      <location filename="../qml/ConnectionEditor.qml" line="348" />
+      <source>Optional auto-login password</source>
+      <translation>任意の自動ログイン用パスワード</translation>
+    </message>
+    <message>
+      <location filename="../qml/ConnectionEditor.qml" line="385" />
+      <source>Telnet Options</source>
+      <translation>Telnet オプション</translation>
+    </message>
+    <message>
+      <location filename="../qml/ConnectionEditor.qml" line="395" />
+      <source>Auto Login</source>
+      <translation>自動ログイン</translation>
+    </message>
+    <message>
+      <location filename="../qml/ConnectionEditor.qml" line="406" />
+      <source>Send username/password when login prompts are detected</source>
+      <translation>ログインプロンプトを検出したらユーザー名/パスワードを送信</translation>
+    </message>
+    <message>
+      <location filename="../qml/ConnectionEditor.qml" line="412" />
+      <source>Terminal Type</source>
+      <translation>端末タイプ</translation>
+    </message>
+    <message>
       <location filename="../qml/ConnectionEditor.qml" line="210" />
       <source>Host</source>
       <translation>ホスト</translation>
@@ -990,6 +1020,13 @@
       <source>Connection saved</source>
       <translation>接続を保存しました</translation>
     </message>
+    <message>
+      <location filename="../qml/MainWindow.qml" line="317" />
+      <location filename="../qml/MainWindow.qml" line="384" />
+      <location filename="../qml/MainWindow.qml" line="455" />
+      <source>System monitoring is only available for SSH connections</source>
+      <translation>システム監視は SSH 接続でのみ利用できます</translation>
+    </message>
   </context>
   <context>
     <name>MobileConnectionEditorPage</name>
@@ -1032,6 +1069,31 @@
       <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="146" />
       <source>Protocol</source>
       <translation>プロトコル</translation>
+    </message>
+    <message>
+      <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="165" />
+      <source>Telnet sends data in plaintext. Use it only on trusted networks.</source>
+      <translation>Telnet はデータを平文で送信します。信頼できるネットワークでのみ使用してください。</translation>
+    </message>
+    <message>
+      <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="221" />
+      <source>Optional auto-login password</source>
+      <translation>任意の自動ログイン用パスワード</translation>
+    </message>
+    <message>
+      <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="237" />
+      <source>Telnet Options</source>
+      <translation>Telnet オプション</translation>
+    </message>
+    <message>
+      <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="249" />
+      <source>Auto login</source>
+      <translation>自動ログイン</translation>
+    </message>
+    <message>
+      <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="256" />
+      <source>Terminal Type</source>
+      <translation>端末タイプ</translation>
     </message>
     <message>
       <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="155" />
@@ -1392,6 +1454,11 @@
       <location filename="../qml/mobile/MobileWindow.qml" line="228" />
       <source>Files</source>
       <translation>ファイル</translation>
+    </message>
+    <message>
+      <location filename="../qml/mobile/MobileWindow.qml" line="280" />
+      <source>This page is only available for SSH connections</source>
+      <translation>このページは SSH 接続でのみ利用できます</translation>
     </message>
     <message>
       <source>Refresh</source>
@@ -2097,6 +2164,27 @@
       <location filename="../qml/filebrowser/TransferTaskList.qml" line="90" />
       <source>%1%</source>
       <translation>%1%</translation>
+    </message>
+  </context>
+  <context>
+    <name>TelnetChannelWorker</name>
+    <message>
+      <location filename="../src/ssh/TelnetChannelWorker.cpp" line="75" />
+      <location filename="../src/ssh/TelnetChannelWorker.cpp" line="80" />
+      <location filename="../src/ssh/TelnetChannelWorker.cpp" line="85" />
+      <location filename="../src/ssh/TelnetChannelWorker.cpp" line="132" />
+      <source>Disconnected</source>
+      <translation>切断済み</translation>
+    </message>
+    <message>
+      <location filename="../src/ssh/TelnetChannelWorker.cpp" line="132" />
+      <source>Telnet connection closed</source>
+      <translation>Telnet 接続が閉じられました</translation>
+    </message>
+    <message>
+      <location filename="../src/ssh/TelnetChannelWorker.cpp" line="147" />
+      <source>connect() to %1:%2 timed out after %3 seconds</source>
+      <translation>%1:%2 への接続が %3 秒でタイムアウトしました</translation>
     </message>
   </context>
   <context>

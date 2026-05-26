@@ -229,7 +229,7 @@ Rectangle {
             ThemedComboBox {
                 id: filterBox
                 Layout.preferredWidth: 90
-                model: [qsTr("All"), "SSH", "SFTP"]
+                model: [qsTr("All"), "SSH", "SFTP", "TELNET"]
             }
 
             Item { Layout.fillWidth: true }

@@ -51,6 +51,15 @@ ApplicationWindow {
         }
         return ({})
     }
+    readonly property string activeConnectionProtocol: {
+        const cid = activeSession.connectionId
+        if (!cid) return ""
+        for (let i = 0; i < connections.length; ++i) {
+            if (connections[i].id === cid) return (connections[i].protocol || "ssh").toLowerCase()
+        }
+        return ""
+    }
+    readonly property bool activeConnectionIsTelnet: activeConnectionProtocol === "telnet"
 
     function refreshConnections() {
         connections = appController.reloadConnectionProfiles()
@@ -132,10 +141,15 @@ ApplicationWindow {
         id: monitorTimer
         interval: 5000
         repeat: true
-        running: !!(window.activeSession && window.activeSession.connectionId)
+        running: !!(window.activeSession
+                    && window.activeSession.connectionId
+                    && !window.activeConnectionIsTelnet)
         triggeredOnStart: true
         onTriggered: {
-            if (window.activeSession && window.activeSession.connectionId && !window.monitorRequestInFlight) {
+            if (window.activeSession
+                    && window.activeSession.connectionId
+                    && !window.activeConnectionIsTelnet
+                    && !window.monitorRequestInFlight) {
                 window.monitorRequestInFlight = true
                 window.monitorRequestId = appController.requestSystemMonitorSnapshot(window.activeSession.connectionId)
             }
@@ -234,7 +248,10 @@ ApplicationWindow {
                         required property var modelData
 
                         readonly property bool tabEnabled: modelData.key === "connections"
-                                                          || window.activeSessionId.length > 0
+                                                          || (window.activeSessionId.length > 0
+                                                              && !(window.activeConnectionIsTelnet
+                                                                   && (modelData.key === "system"
+                                                                       || modelData.key === "files")))
                         readonly property bool tabActive: window.activePage === modelData.key
 
                         Layout.fillWidth: true
@@ -267,8 +284,15 @@ ApplicationWindow {
                         MouseArea {
                             id: tabMouse
                             anchors.fill: parent
-                            enabled: parent.tabEnabled
-                            onClicked: window.activePage = parent.modelData.key
+                            onClicked: {
+                                if (parent.tabEnabled) {
+                                    window.activePage = parent.modelData.key
+                                } else if (window.activeConnectionIsTelnet
+                                           && (parent.modelData.key === "system"
+                                               || parent.modelData.key === "files")) {
+                                    window.statusMessage = qsTr("This page is only available for SSH connections")
+                                }
+                            }
                         }
                     }
                 }

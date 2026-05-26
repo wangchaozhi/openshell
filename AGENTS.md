@@ -4,11 +4,12 @@
 
 ## 项目概览
 
-OpenShell 是 Qt 6 / QML / C++20 的跨平台 SSH / SFTP 终端工具，定位类似 FinalShell。
+OpenShell 是 Qt 6 / QML / C++20 的跨平台 SSH / SFTP / Telnet 终端工具，定位类似 FinalShell。
 
 当前状态：**已是可用的客户端**，不再是骨架。已实现：
 
 - 真实 SSH 会话（libssh2 后端），多 Tab、resize、Ctrl+C 中断
+- Telnet 终端会话（明文 TCP，基础 IAC 协商、TTYPE、NAWS；可按 `login:` / `Username:` / `Password:` 提示自动填充用户名/密码；仅终端，不支持 SFTP/监控/跳板机/转发）
 - 终端渲染：libvterm 屏幕模型经自研 `QQuickPaintedItem` 渲染（光标、颜色、文本属性）
 - 终端选区与复制：拖选、全选、双击选词、三击选行、Shift 扩展、选中即复制
 - SFTP 双栏文件浏览：本地/远程浏览、排序、上传、下载、删除、重命名、新建、chmod
@@ -59,13 +60,14 @@ C++（`src/`）：
 - `ConnectionCatalog`：维护 `ConnectionProfile` 列表，读写 `<AppData>/OpenShell/connections/<id>.json`（`QSaveFile` 原子写入）。
 - `CredentialStore`（仅桌面端）：把 `password` / `keyPassphrase` 存进系统钥匙串，
   JSON 文件不再落明文。详见“凭据存储”一节。
-- `SessionController`：活动会话列表，真正的 SSH 流在 worker thread 上跑，信号回传 `sessionOutput`。
+- `SessionController`：活动会话列表，按协议创建 SSH/Telnet worker，worker thread 信号回传 `sessionOutput`。
 - `SettingsStore`：`QSettings` 封装（语言、窗口几何、最小化到托盘等）。
 - `TranslationManager`：运行时切换语言（system / en / zh_CN / ja_JP）。
 - `TrayController`：系统托盘菜单。
 - `SystemMonitorController`：服务器 CPU / 内存 / 网络监控。
 - `terminal/VtScreen`：libvterm 屏幕模型封装；`terminal/TerminalScreenItem`：QML 渲染项。
 - `ssh/`：`SshSession`、`SshChannelWorker` / `Libssh2ChannelWorker`（PTY 通道）、
+  `TelnetChannelWorker`（基础 Telnet 通道）、
   `SftpConnectionPool`、`SftpDirectoryLister`、`SftpTransfer`。
 
 QML（`qml/`）：
@@ -85,7 +87,7 @@ QML（`qml/`）：
 struct ConnectionProfile {
     QString id;          // 自动生成的 UUID
     QString name;
-    QString protocol;    // ssh, sftp（telnet 已从 UI 移除）
+    QString protocol;    // ssh, sftp, telnet
     QString host;
     int     port = 22;
     QString username;
@@ -102,6 +104,9 @@ struct ConnectionProfile {
     bool    autoReconnect = true;           // 非用户主动断开后自动重连
     int     reconnectMaxAttempts = 5;
     int     reconnectInitialDelayMs = 1000; // 指数退避，封顶 30s
+
+    bool    telnetAutoLogin = true;         // Telnet: 检测 login/password 提示后自动发送
+    QString telnetTerminalType = "xterm-256color"; // Telnet TTYPE 响应
 
     // 跳板机；jumpHost 空字符串表示直连。jumpPassword/jumpKeyPassphrase
     // 同样进钥匙串。
@@ -173,11 +178,14 @@ struct ConnectionProfile {
    做完整 SAF / iOS security-scoped tree bookmark 走器才能恢复批量目录上传。
 4. **Remote / Dynamic 端口转发**：当前只实现了 `-L`。`-R` 需要
    `libssh2_channel_forward_listen_ex` + 反向 accept；`-D` 需要 SOCKS5 解析。
-5. **继续扩充测试**：已有
+5. **Telnet 增强**：当前是基础终端通道，已支持自动登录开关和自定义 TTYPE。后续可做
+   per-profile 编码（GBK/Latin-1 等）、CRLF 模式、LINEMODE/CHARSET/NEW-ENVIRON
+   等更多协商，以及更可配置的登录提示匹配规则。
+6. **继续扩充测试**：已有
    `test_connection_catalog` / `test_vt_screen` / `test_session_controller` /
    `test_sftp_transfer` / `test_sftp_connection_pool`。仍未覆盖：
    `Libssh2ChannelWorker` 的 reconnect 退避计算、`SftpDirectoryLister`。
-6. **翻译填充**：`OpenShell_ko_KR.ts` / `OpenShell_de_DE.ts` 当前是空骨架，
+7. **翻译填充**：`OpenShell_ko_KR.ts` / `OpenShell_de_DE.ts` 当前是空骨架，
    等 `lupdate -ts ...` 填上源串后再人工翻译。
 
 > 大文件拆分已完成：`FileBrowser.qml` 拆出 `LocalPane` / `RemotePane`；
@@ -204,6 +212,7 @@ src/           CredentialStore.cpp (桌面 QtKeychain),
                CredentialStoreIos.mm, CredentialStoreAndroid.cpp
 src/terminal/  VtScreen, TerminalScreenItem
 src/ssh/       SshSession, SshChannelWorker, Libssh2ChannelWorker,
+               TelnetChannelWorker,
                SftpConnectionPool, SftpDirectoryLister, SftpTransfer
 qml/           MainWindow, Sidebar, ConnectionEditor (含 jump host + 转发字段),
                ConnectionManagerView, SessionTabs, TerminalView, FileBrowser,

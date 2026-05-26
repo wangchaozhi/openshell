@@ -28,7 +28,7 @@ struct ConnectionProfile
 {
     QString id;
     QString name;
-    QString protocol = QStringLiteral("ssh"); // ssh, sftp (telnet not supported)
+    QString protocol = QStringLiteral("ssh"); // ssh, sftp, telnet
     QString host;
     int port = 22;
     QString username;
@@ -46,6 +46,10 @@ struct ConnectionProfile
     bool autoReconnect = true;
     int reconnectMaxAttempts = 5;       // <=0 视为关闭重连
     int reconnectInitialDelayMs = 1000; // 第 N 次延迟 = initial << (N-1)，封顶 30s
+
+    // Telnet 专属设置。Telnet 仍然只走明文终端通道。
+    bool telnetAutoLogin = true;
+    QString telnetTerminalType = QStringLiteral("xterm-256color");
 
     // 跳板机 (ProxyJump)：通过另一台 SSH 主机 direct-tcpip 转发到目标。
     // 留空走直连。

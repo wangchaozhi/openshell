@@ -24,6 +24,8 @@ set(OPENSHELL_APP_SOURCES
     src/ssh/SshSession.cpp
     src/ssh/SshSession.h
     src/ssh/SshWorkerFactory.h
+    src/ssh/TelnetChannelWorker.cpp
+    src/ssh/TelnetChannelWorker.h
     src/ssh/SftpDirectoryLister.cpp
     src/ssh/SftpDirectoryLister.h
     src/ssh/SftpConnectionPool.cpp
@@ -128,6 +130,8 @@ set(OPENSHELL_TEST_SESSION_CONTROLLER_SOURCES
     src/ssh/SshChannelWorker.h
     src/ssh/Libssh2ChannelWorker.cpp
     src/ssh/Libssh2ChannelWorker.h
+    src/ssh/TelnetChannelWorker.cpp
+    src/ssh/TelnetChannelWorker.h
     src/ssh/SshSession.cpp
     src/ssh/SshSession.h
     src/terminal/VtScreen.cpp

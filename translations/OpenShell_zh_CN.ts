@@ -147,6 +147,36 @@
       <translation>协议</translation>
     </message>
     <message>
+      <location filename="../qml/ConnectionEditor.qml" line="291" />
+      <source>Telnet sends data in plaintext. Use it only on trusted networks.</source>
+      <translation>Telnet 会以明文发送数据。请只在可信网络中使用。</translation>
+    </message>
+    <message>
+      <location filename="../qml/ConnectionEditor.qml" line="348" />
+      <source>Optional auto-login password</source>
+      <translation>可选自动登录密码</translation>
+    </message>
+    <message>
+      <location filename="../qml/ConnectionEditor.qml" line="385" />
+      <source>Telnet Options</source>
+      <translation>Telnet 选项</translation>
+    </message>
+    <message>
+      <location filename="../qml/ConnectionEditor.qml" line="395" />
+      <source>Auto Login</source>
+      <translation>自动登录</translation>
+    </message>
+    <message>
+      <location filename="../qml/ConnectionEditor.qml" line="406" />
+      <source>Send username/password when login prompts are detected</source>
+      <translation>检测到登录提示时发送用户名/密码</translation>
+    </message>
+    <message>
+      <location filename="../qml/ConnectionEditor.qml" line="412" />
+      <source>Terminal Type</source>
+      <translation>终端类型</translation>
+    </message>
+    <message>
       <location filename="../qml/ConnectionEditor.qml" line="210" />
       <source>Host</source>
       <translation>主机</translation>
@@ -1010,6 +1040,13 @@
       <source>Connection saved</source>
       <translation>连接已保存</translation>
     </message>
+    <message>
+      <location filename="../qml/MainWindow.qml" line="317" />
+      <location filename="../qml/MainWindow.qml" line="384" />
+      <location filename="../qml/MainWindow.qml" line="455" />
+      <source>System monitoring is only available for SSH connections</source>
+      <translation>系统监控仅适用于 SSH 连接</translation>
+    </message>
   </context>
   <context>
     <name>MobileConnectionEditorPage</name>
@@ -1052,6 +1089,31 @@
       <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="146" />
       <source>Protocol</source>
       <translation>协议</translation>
+    </message>
+    <message>
+      <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="165" />
+      <source>Telnet sends data in plaintext. Use it only on trusted networks.</source>
+      <translation>Telnet 会以明文发送数据。请只在可信网络中使用。</translation>
+    </message>
+    <message>
+      <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="221" />
+      <source>Optional auto-login password</source>
+      <translation>可选自动登录密码</translation>
+    </message>
+    <message>
+      <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="237" />
+      <source>Telnet Options</source>
+      <translation>Telnet 选项</translation>
+    </message>
+    <message>
+      <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="249" />
+      <source>Auto login</source>
+      <translation>自动登录</translation>
+    </message>
+    <message>
+      <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="256" />
+      <source>Terminal Type</source>
+      <translation>终端类型</translation>
     </message>
     <message>
       <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="155" />
@@ -1424,6 +1486,11 @@
       <location filename="../qml/mobile/MobileWindow.qml" line="228" />
       <source>Files</source>
       <translation>文件</translation>
+    </message>
+    <message>
+      <location filename="../qml/mobile/MobileWindow.qml" line="280" />
+      <source>This page is only available for SSH connections</source>
+      <translation>此页面仅适用于 SSH 连接</translation>
     </message>
     <message>
       <source>Mobile shell</source>
@@ -2201,6 +2268,27 @@
       <location filename="../qml/filebrowser/TransferTaskList.qml" line="90" />
       <source>%1%</source>
       <translation>%1%</translation>
+    </message>
+  </context>
+  <context>
+    <name>TelnetChannelWorker</name>
+    <message>
+      <location filename="../src/ssh/TelnetChannelWorker.cpp" line="75" />
+      <location filename="../src/ssh/TelnetChannelWorker.cpp" line="80" />
+      <location filename="../src/ssh/TelnetChannelWorker.cpp" line="85" />
+      <location filename="../src/ssh/TelnetChannelWorker.cpp" line="132" />
+      <source>Disconnected</source>
+      <translation>已断开连接</translation>
+    </message>
+    <message>
+      <location filename="../src/ssh/TelnetChannelWorker.cpp" line="132" />
+      <source>Telnet connection closed</source>
+      <translation>Telnet 连接已关闭</translation>
+    </message>
+    <message>
+      <location filename="../src/ssh/TelnetChannelWorker.cpp" line="147" />
+      <source>connect() to %1:%2 timed out after %3 seconds</source>
+      <translation>连接到 %1:%2 超时（%3 秒）</translation>
     </message>
   </context>
   <context>

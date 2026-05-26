@@ -12,6 +12,8 @@ Dialog {
     property bool validationShown: false
 
     readonly property bool classic: theme.classic
+    readonly property var protocols: ["ssh", "sftp", "telnet"]
+    readonly property bool isTelnet: protocolBox.currentText === "telnet"
 
     ThemePalette {
         id: theme
@@ -81,6 +83,8 @@ Dialog {
         groupField.text = ""
         notesField.text = ""
         autoReconnectCheck.checked = true
+        telnetAutoLoginCheck.checked = true
+        telnetTerminalTypeField.text = "xterm-256color"
         jumpHostField.text = ""
         jumpPortField.text = "22"
         jumpUserField.text = ""
@@ -104,11 +108,13 @@ Dialog {
                 userField.text = p.username || ""
                 passwordField.text = p.password || ""
                 keyPathField.text = p.privateKeyPath || ""
-                protocolBox.currentIndex = Math.max(0, ["ssh", "sftp"].indexOf(p.protocol || "ssh"))
+                protocolBox.currentIndex = Math.max(0, root.protocols.indexOf(p.protocol || "ssh"))
                 authBox.currentIndex = Math.max(0, ["password", "key", "agent"].indexOf(p.authType || "password"))
                 groupField.text = p.group || ""
                 notesField.text = p.notes || ""
                 autoReconnectCheck.checked = (p.autoReconnect !== false)
+                telnetAutoLoginCheck.checked = (p.telnetAutoLogin !== false)
+                telnetTerminalTypeField.text = p.telnetTerminalType || "xterm-256color"
                 jumpHostField.text = p.jumpHost || ""
                 jumpPortField.text = String(p.jumpPort || 22)
                 jumpUserField.text = p.jumpUsername || ""
@@ -143,19 +149,21 @@ Dialog {
             "host": hostField.text.trim(),
             "port": Math.max(1, Math.min(65535, Number(portField.text) || 22)),
             "username": userField.text.trim(),
-            "authType": authBox.currentText,
+            "authType": root.isTelnet ? "password" : authBox.currentText,
             "password": passwordField.text,
-            "privateKeyPath": keyPathField.text,
+            "privateKeyPath": root.isTelnet ? "" : keyPathField.text,
             "group": groupField.text.trim(),
             "notes": notesField.text,
             "autoReconnect": autoReconnectCheck.checked,
-            "jumpHost": jumpHostField.text.trim(),
+            "telnetAutoLogin": telnetAutoLoginCheck.checked,
+            "telnetTerminalType": telnetTerminalTypeField.text.trim() || "xterm-256color",
+            "jumpHost": root.isTelnet ? "" : jumpHostField.text.trim(),
             "jumpPort": Math.max(1, Math.min(65535, Number(jumpPortField.text) || 22)),
-            "jumpUsername": jumpUserField.text.trim(),
-            "jumpAuthType": jumpAuthBox.currentText,
-            "jumpPassword": jumpPasswordField.text,
-            "jumpPrivateKeyPath": jumpKeyPathField.text,
-            "forwards": _parseForwards(forwardsField.text)
+            "jumpUsername": root.isTelnet ? "" : jumpUserField.text.trim(),
+            "jumpAuthType": root.isTelnet ? "" : jumpAuthBox.currentText,
+            "jumpPassword": root.isTelnet ? "" : jumpPasswordField.text,
+            "jumpPrivateKeyPath": root.isTelnet ? "" : jumpKeyPathField.text,
+            "forwards": root.isTelnet ? [] : _parseForwards(forwardsField.text)
         }
         if (appController.saveConnectionProfile(payload)) {
             root.saved()
@@ -276,7 +284,24 @@ Dialog {
                 classic: root.classic
                 menuTheme: theme
                 Layout.fillWidth: true
-                model: ["ssh", "sftp"]
+                model: root.protocols
+                onActivated: {
+                    if (currentText === "telnet" && portField.text === "22") {
+                        portField.text = "23"
+                    } else if (currentText !== "telnet" && portField.text === "23") {
+                        portField.text = "22"
+                    }
+                }
+            }
+
+            Label {
+                Layout.columnSpan: 2
+                Layout.fillWidth: true
+                visible: root.isTelnet
+                text: qsTr("Telnet sends data in plaintext. Use it only on trusted networks.")
+                color: theme.warning
+                font.pixelSize: 12
+                wrapMode: Text.WordWrap
             }
 
             Label { text: qsTr("Host"); color: theme.textMuted; font.pixelSize: 12 }
@@ -313,6 +338,8 @@ Dialog {
                 menuTheme: theme
                 Layout.fillWidth: true
                 model: ["password", "key", "agent"]
+                enabled: !root.isTelnet
+                opacity: enabled ? 1.0 : 0.4
             }
 
             Label { text: qsTr("Password"); color: theme.textMuted; font.pixelSize: 12 }
@@ -321,8 +348,9 @@ Dialog {
                 classic: root.classic
                 Layout.fillWidth: true
                 echoMode: TextInput.Password
-                enabled: authBox.currentText === "password"
+                enabled: root.isTelnet || authBox.currentText === "password"
                 opacity: enabled ? 1.0 : 0.4
+                placeholderText: root.isTelnet ? qsTr("Optional auto-login password") : ""
             }
 
             Label { text: qsTr("Private Key"); color: theme.textMuted; font.pixelSize: 12 }
@@ -331,7 +359,7 @@ Dialog {
                 classic: root.classic
                 Layout.fillWidth: true
                 placeholderText: qsTr("Absolute path to .pem / .ppk")
-                enabled: authBox.currentText === "key"
+                enabled: !root.isTelnet && authBox.currentText === "key"
                 opacity: enabled ? 1.0 : 0.4
             }
 
@@ -373,6 +401,42 @@ Dialog {
 
             Label {
                 Layout.columnSpan: 2
+                visible: root.isTelnet
+                text: qsTr("Telnet Options")
+                color: theme.textMuted
+                font.pixelSize: 12
+                Layout.topMargin: 6
+            }
+
+            Label {
+                visible: root.isTelnet
+                text: qsTr("Auto Login")
+                color: theme.textMuted
+                font.pixelSize: 12
+            }
+            CheckBox {
+                id: telnetAutoLoginCheck
+                visible: root.isTelnet
+                checked: true
+                text: qsTr("Send username/password when login prompts are detected")
+            }
+
+            Label {
+                visible: root.isTelnet
+                text: qsTr("Terminal Type")
+                color: theme.textMuted
+                font.pixelSize: 12
+            }
+            ThemedTextField {
+                id: telnetTerminalTypeField
+                visible: root.isTelnet
+                classic: root.classic
+                Layout.fillWidth: true
+                text: "xterm-256color"
+            }
+
+            Label {
+                Layout.columnSpan: 2
                 text: qsTr("Jump Host (ProxyJump) — leave blank for direct connect")
                 color: theme.textMuted
                 font.pixelSize: 12
@@ -385,6 +449,8 @@ Dialog {
                 classic: root.classic
                 Layout.fillWidth: true
                 placeholderText: qsTr("Hostname or IP of bastion")
+                enabled: !root.isTelnet
+                opacity: enabled ? 1.0 : 0.4
             }
 
             Label { text: qsTr("Jump Port"); color: theme.textMuted; font.pixelSize: 12 }
@@ -396,10 +462,18 @@ Dialog {
                 inputMethodHints: Qt.ImhDigitsOnly
                 validator: IntValidator { bottom: 1; top: 65535 }
                 text: "22"
+                enabled: !root.isTelnet
+                opacity: enabled ? 1.0 : 0.4
             }
 
             Label { text: qsTr("Jump Username"); color: theme.textMuted; font.pixelSize: 12 }
-            ThemedTextField { id: jumpUserField; classic: root.classic; Layout.fillWidth: true }
+            ThemedTextField {
+                id: jumpUserField
+                classic: root.classic
+                Layout.fillWidth: true
+                enabled: !root.isTelnet
+                opacity: enabled ? 1.0 : 0.4
+            }
 
             Label { text: qsTr("Jump Auth"); color: theme.textMuted; font.pixelSize: 12 }
             ThemedComboBox {
@@ -408,6 +482,8 @@ Dialog {
                 menuTheme: theme
                 Layout.fillWidth: true
                 model: ["password", "key", "agent"]
+                enabled: !root.isTelnet
+                opacity: enabled ? 1.0 : 0.4
             }
 
             Label { text: qsTr("Jump Password"); color: theme.textMuted; font.pixelSize: 12 }
@@ -416,7 +492,7 @@ Dialog {
                 classic: root.classic
                 Layout.fillWidth: true
                 echoMode: TextInput.Password
-                enabled: jumpAuthBox.currentText === "password"
+                enabled: !root.isTelnet && jumpAuthBox.currentText === "password"
                 opacity: enabled ? 1.0 : 0.4
             }
 
@@ -426,7 +502,7 @@ Dialog {
                 classic: root.classic
                 Layout.fillWidth: true
                 placeholderText: qsTr("Absolute path")
-                enabled: jumpAuthBox.currentText === "key"
+                enabled: !root.isTelnet && jumpAuthBox.currentText === "key"
                 opacity: enabled ? 1.0 : 0.4
             }
 
@@ -455,6 +531,8 @@ Dialog {
                     classic: root.classic
                     width: forwardsScroll.availableWidth
                     height: Math.max(forwardsScroll.availableHeight, implicitHeight)
+                    enabled: !root.isTelnet
+                    opacity: enabled ? 1.0 : 0.4
                 }
             }
         }

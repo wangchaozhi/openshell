@@ -7,6 +7,8 @@ Rectangle {
 
     property string editingId: ""
     property string errorMessage: ""
+    readonly property var protocols: ["ssh", "sftp", "telnet"]
+    readonly property bool isTelnet: protocolBox.currentText === "telnet"
 
     signal saved()
     signal canceled()
@@ -23,6 +25,8 @@ Rectangle {
         authBox.currentIndex = 0
         passwordField.text = ""
         keyPathField.text = ""
+        telnetAutoLoginCheck.checked = true
+        telnetTerminalTypeField.text = "xterm-256color"
         groupField.text = ""
         notesField.text = ""
         errorMessage = ""
@@ -31,13 +35,15 @@ Rectangle {
     function openForEdit(profile) {
         editingId = profile.id || ""
         nameField.text = profile.name || ""
-        protocolBox.currentIndex = Math.max(0, ["ssh", "sftp"].indexOf(profile.protocol || "ssh"))
+        protocolBox.currentIndex = Math.max(0, root.protocols.indexOf(profile.protocol || "ssh"))
         hostField.text = profile.host || ""
         portField.text = String(profile.port || 22)
         userField.text = profile.username || ""
         authBox.currentIndex = Math.max(0, ["password", "key", "agent"].indexOf(profile.authType || "password"))
         passwordField.text = profile.password || ""
         keyPathField.text = profile.privateKeyPath || ""
+        telnetAutoLoginCheck.checked = (profile.telnetAutoLogin !== false)
+        telnetTerminalTypeField.text = profile.telnetTerminalType || "xterm-256color"
         groupField.text = profile.group || ""
         notesField.text = profile.notes || ""
         errorMessage = ""
@@ -63,9 +69,11 @@ Rectangle {
             "host": hostField.text.trim(),
             "port": Math.max(1, Math.min(65535, Number(portField.text) || 22)),
             "username": userField.text.trim(),
-            "authType": authBox.currentText,
+            "authType": root.isTelnet ? "password" : authBox.currentText,
             "password": passwordField.text,
-            "privateKeyPath": keyPathField.text,
+            "privateKeyPath": root.isTelnet ? "" : keyPathField.text,
+            "telnetAutoLogin": telnetAutoLoginCheck.checked,
+            "telnetTerminalType": telnetTerminalTypeField.text.trim() || "xterm-256color",
             "group": groupField.text.trim(),
             "notes": notesField.text
         }
@@ -149,7 +157,25 @@ Rectangle {
                     Layout.fillWidth: true
                     Layout.leftMargin: 16
                     Layout.rightMargin: 16
-                    model: ["ssh", "sftp"]
+                    model: root.protocols
+                    onActivated: {
+                        if (currentText === "telnet" && portField.text === "22") {
+                            portField.text = "23"
+                        } else if (currentText !== "telnet" && portField.text === "23") {
+                            portField.text = "22"
+                        }
+                    }
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 16
+                    Layout.rightMargin: 16
+                    visible: root.isTelnet
+                    text: qsTr("Telnet sends data in plaintext. Use it only on trusted networks.")
+                    color: "#fbbf24"
+                    font.pixelSize: 12
+                    wrapMode: Text.WordWrap
                 }
 
                 Label { Layout.leftMargin: 16; text: qsTr("Host"); color: "#93c5fd"; font.pixelSize: 12 }
@@ -182,6 +208,8 @@ Rectangle {
                     Layout.leftMargin: 16
                     Layout.rightMargin: 16
                     model: ["password", "key", "agent"]
+                    enabled: !root.isTelnet
+                    opacity: enabled ? 1.0 : 0.45
                 }
 
                 Label { Layout.leftMargin: 16; text: qsTr("Password"); color: "#93c5fd"; font.pixelSize: 12 }
@@ -191,8 +219,9 @@ Rectangle {
                     Layout.leftMargin: 16
                     Layout.rightMargin: 16
                     echoMode: TextInput.Password
-                    enabled: authBox.currentText === "password"
+                    enabled: root.isTelnet || authBox.currentText === "password"
                     opacity: enabled ? 1.0 : 0.45
+                    placeholderText: root.isTelnet ? qsTr("Optional auto-login password") : ""
                 }
 
                 Label { Layout.leftMargin: 16; text: qsTr("Private Key"); color: "#93c5fd"; font.pixelSize: 12 }
@@ -202,8 +231,42 @@ Rectangle {
                     Layout.leftMargin: 16
                     Layout.rightMargin: 16
                     placeholderText: qsTr("Absolute path to .pem / .ppk")
-                    enabled: authBox.currentText === "key"
+                    enabled: !root.isTelnet && authBox.currentText === "key"
                     opacity: enabled ? 1.0 : 0.45
+                }
+
+                Label {
+                    Layout.leftMargin: 16
+                    visible: root.isTelnet
+                    text: qsTr("Telnet Options")
+                    color: "#93c5fd"
+                    font.pixelSize: 12
+                }
+
+                CheckBox {
+                    id: telnetAutoLoginCheck
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 16
+                    Layout.rightMargin: 16
+                    visible: root.isTelnet
+                    checked: true
+                    text: qsTr("Auto login")
+                }
+
+                Label {
+                    Layout.leftMargin: 16
+                    visible: root.isTelnet
+                    text: qsTr("Terminal Type")
+                    color: "#93c5fd"
+                    font.pixelSize: 12
+                }
+                TextField {
+                    id: telnetTerminalTypeField
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 16
+                    Layout.rightMargin: 16
+                    visible: root.isTelnet
+                    text: "xterm-256color"
                 }
 
                 Label { Layout.leftMargin: 16; text: qsTr("Group"); color: "#93c5fd"; font.pixelSize: 12 }

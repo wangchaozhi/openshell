@@ -2,9 +2,9 @@
 
 English | [简体中文](README-CN.md) | [日本語](README-JP.md)
 
-OpenShell is a cross-platform SSH / SFTP terminal client built with Qt 6, QML, and C++20. It aims for a workflow similar to FinalShell: connection management on the left, multi-tab terminals in the main area, and a local/remote file browser below.
+OpenShell is a cross-platform SSH / SFTP / Telnet terminal client built with Qt 6, QML, and C++20. It aims for a workflow similar to FinalShell: connection management on the left, multi-tab terminals in the main area, and a local/remote file browser below.
 
-The project is no longer only a UI skeleton. It already includes real SSH sessions, terminal rendering, SFTP browsing and transfer operations, remote file open/edit/upload-back workflows, a system tray, and basic localization.
+The project is no longer only a UI skeleton. It already includes real SSH sessions, Telnet terminal sessions, terminal rendering, SFTP browsing and transfer operations, remote file open/edit/upload-back workflows, a system tray, and basic localization.
 
 ![OpenShell screenshot](assets/screenshots/Snipaste_2026-05-18_16-21-31.png)
 
@@ -12,6 +12,7 @@ The project is no longer only a UI skeleton. It already includes real SSH sessio
 
 - Connection profiles: name, protocol, host, port, username, password/private key/agent auth, group, and notes.
 - SSH terminal sessions: real libssh2-backed connections, multi-tab sessions, resize handling, and Ctrl+C interrupt support.
+- Telnet terminal sessions: plaintext TCP with basic IAC negotiation, configurable terminal type, window-size reporting, and optional auto-login for common `login:` / `Username:` / `Password:` prompts. Telnet is terminal-only; SFTP, monitoring, jump hosts, and forwarding require SSH.
 - Terminal rendering: libvterm screen model rendered through a custom `QQuickPaintedItem`, with cursor, clear screen, basic colors, and text attributes.
 - Terminal selection and copy: drag selection, select all, double-click word selection, triple-click line selection, Shift-extend selection, and copy-on-selection.
 - SFTP dual-pane file browser: local/remote directory browsing, sorting, upload, download, delete, rename, create file/folder, and chmod.
@@ -79,11 +80,11 @@ ctest --test-dir build
 ├── src/
 │   ├── AppController.*          # Application facade for QML, sessions, SFTP, settings, and tray
 │   ├── ConnectionCatalog.*      # Connection profile persistence
-│   ├── SessionController.*      # Active SSH session management
+│   ├── SessionController.*      # Active SSH/Telnet session management
 │   ├── SettingsStore.*          # QSettings wrapper
 │   ├── TranslationManager.*     # Runtime language switching
 │   ├── TrayController.*         # System tray integration
-│   ├── ssh/                     # libssh2 SSH/SFTP workers and remote file operations
+│   ├── ssh/                     # SSH/Telnet workers plus SFTP remote file operations
 │   └── terminal/                # libvterm screen model and QML-painted terminal widget
 ├── qml/
 │   ├── MainWindow.qml
@@ -132,7 +133,7 @@ When upload-back is enabled, OpenShell watches the temporary file and uploads ch
 
 ## Common Operations
 
-- Double-click a connection in the sidebar to open an SSH session.
+- Double-click a connection in the sidebar to open an SSH or Telnet session.
 - Right-click the terminal for Copy, Paste, Select All, Send Ctrl+C, and Clear Screen.
 - Drag-select terminal text to copy on mouse release.
 - Double-click or triple-click terminal text to select a word or line and copy immediately.
@@ -154,6 +155,7 @@ OpenShell is built in spare time. If it saves you time, a coffee would be apprec
 - Mobile folder upload via SAF / iOS security-scoped tree bookmarks (file picker already wired through `pickMobileFileAsync`).
 - Remote (`-R`) and dynamic (`-D`) port forwarding (local `-L` is done).
 - Terminal improvements: scrollback history, search, broader VT compatibility, and copy formatting refinements.
+- Telnet improvements: per-profile encoding, CRLF mode, broader option negotiation, and configurable login prompt matching.
 - SFTP improvements: transfer queue, resume support, conflict handling, and batch operations.
 - Server monitoring: collect CPU, memory, disk, and network stats through SSH exec and render a dashboard.
 - Translations: populate `OpenShell_ko_KR.ts` / `OpenShell_de_DE.ts` (currently empty skeletons).

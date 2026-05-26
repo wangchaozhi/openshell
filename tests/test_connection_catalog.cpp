@@ -2,6 +2,7 @@
 #include <QCoreApplication>
 #include <QStandardPaths>
 #include <QTemporaryDir>
+#include <QUuid>
 
 #include "ConnectionCatalog.h"
 
@@ -67,13 +68,16 @@ void TestConnectionCatalog::upsertRoundTripsAllFields()
 {
     ConnectionCatalog catalog;
     ConnectionProfile p;
-    p.name = QStringLiteral("Round Trip");
+    p.name = QStringLiteral("Round Trip %1")
+                 .arg(QUuid::createUuid().toString(QUuid::WithoutBraces));
     p.host = QStringLiteral("rt.example");
     p.port = 2222;
     p.username = QStringLiteral("admin");
     p.protocol = QStringLiteral("sftp");
     p.authType = QStringLiteral("key");
     p.privateKeyPath = QStringLiteral("/keys/id_rsa");
+    p.telnetAutoLogin = false;
+    p.telnetTerminalType = QStringLiteral("vt100");
     p.group = QStringLiteral("Production");
     p.notes = QStringLiteral("Datacenter A");
 
@@ -83,13 +87,15 @@ void TestConnectionCatalog::upsertRoundTripsAllFields()
     catalog.reload();
     bool found = false;
     for (const ConnectionProfile &profile : catalog.profiles()) {
-        if (profile.name == QStringLiteral("Round Trip")) {
+        if (profile.name == p.name) {
             QCOMPARE(profile.host, QStringLiteral("rt.example"));
             QCOMPARE(profile.port, 2222);
             QCOMPARE(profile.username, QStringLiteral("admin"));
             QCOMPARE(profile.protocol, QStringLiteral("sftp"));
             QCOMPARE(profile.authType, QStringLiteral("key"));
             QCOMPARE(profile.privateKeyPath, QStringLiteral("/keys/id_rsa"));
+            QCOMPARE(profile.telnetAutoLogin, false);
+            QCOMPARE(profile.telnetTerminalType, QStringLiteral("vt100"));
             QCOMPARE(profile.group, QStringLiteral("Production"));
             QCOMPARE(profile.notes, QStringLiteral("Datacenter A"));
             found = true;

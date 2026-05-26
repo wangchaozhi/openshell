@@ -2,9 +2,9 @@
 
 [English](README.md) | 简体中文 | [日本語](README-JP.md)
 
-OpenShell 是一个基于 Qt 6 / QML / C++20 的跨平台 SSH / SFTP 终端工具，目标体验类似 FinalShell：左侧连接管理，中间多标签终端，下方本地/远程双栏文件管理。
+OpenShell 是一个基于 Qt 6 / QML / C++20 的跨平台 SSH / SFTP / Telnet 终端工具，目标体验类似 FinalShell：左侧连接管理，中间多标签终端，下方本地/远程双栏文件管理。
 
-当前项目已经具备可用骨架和部分真实能力：SSH 登录、终端渲染、SFTP 浏览与传输、远程文件打开/编辑回传、系统托盘和基础多语言。
+当前项目已经具备可用骨架和部分真实能力：SSH 登录、Telnet 终端、终端渲染、SFTP 浏览与传输、远程文件打开/编辑回传、系统托盘和基础多语言。
 
 ![OpenShell 截图](assets/screenshots/Snipaste_2026-05-18_16-21-03.png)
 
@@ -12,6 +12,7 @@ OpenShell 是一个基于 Qt 6 / QML / C++20 的跨平台 SSH / SFTP 终端工�
 
 - 连接 Profile 管理：名称、协议、主机、端口、用户名、密码/私钥/Agent、分组和备注。
 - SSH 终端会话：基于 libssh2 的真实连接，支持多标签、窗口 resize、Ctrl+C 中断。
+- Telnet 终端会话：明文 TCP，支持基础 IAC 协商、可配置终端类型、窗口尺寸上报，并可按常见 `login:` / `Username:` / `Password:` 提示自动填充用户名/密码。Telnet 仅用于终端；SFTP、监控、跳板机和端口转发需要 SSH。
 - 终端渲染：自研 libvterm + `QQuickPaintedItem` 渲染，支持清屏、光标、基础颜色和文本属性。
 - 终端选择复制：拖选复制、全选、双击选词、三击选行、Shift 扩展选择、选中即复制。
 - SFTP 双栏文件管理：本地/远程目录浏览，排序，上传、下载、删除、重命名、新建文件/文件夹、权限修改。
@@ -79,11 +80,11 @@ ctest --test-dir build
 ├── src/
 │   ├── AppController.*          # 应用中枢，连接 QML、会话、SFTP、设置、托盘
 │   ├── ConnectionCatalog.*      # 连接 Profile 读写
-│   ├── SessionController.*      # 活动 SSH 会话管理
+│   ├── SessionController.*      # 活动 SSH/Telnet 会话管理
 │   ├── SettingsStore.*          # QSettings 封装
 │   ├── TranslationManager.*     # 语言切换
 │   ├── TrayController.*         # 系统托盘
-│   ├── ssh/                     # libssh2 SSH/SFTP worker 与目录操作
+│   ├── ssh/                     # SSH/Telnet worker 与 SFTP 远程文件操作
 │   └── terminal/                # libvterm 屏幕模型与 QML 绘制控件
 ├── qml/
 │   ├── MainWindow.qml
@@ -132,7 +133,7 @@ QStandardPaths::AppDataLocation/connections/<id>.json
 
 ## 常用操作
 
-- 双击左侧连接：打开 SSH 会话。
+- 双击左侧连接：打开 SSH 或 Telnet 会话。
 - 终端右键：复制、粘贴、全选、发送 Ctrl+C、清屏。
 - 终端拖选：松开后自动复制。
 - 终端双击/三击：选词/选行并自动复制。
@@ -159,6 +160,7 @@ QStandardPaths::AppDataLocation/connections/<id>.json
 - 移动端目录上传：补全 SAF / iOS security-scoped tree 行走器（文件选择器已通过 `pickMobileFileAsync` 接好）。
 - Remote (`-R`) 与 Dynamic (`-D`) 端口转发（Local `-L` 已实现）。
 - 更完整的终端能力：滚屏历史、搜索、更多 VT 序列兼容、复制格式细节。
+- Telnet 增强：连接级编码、CRLF 模式、更多选项协商、可配置登录提示匹配规则。
 - SFTP 增强：传输队列、断点续传、冲突处理、批量操作。
 - 服务器监控：通过 SSH exec 采集 CPU、内存、磁盘、网络状态并展示 dashboard。
 - 翻译：补齐 `OpenShell_ko_KR.ts` / `OpenShell_de_DE.ts`（目前是空骨架）。

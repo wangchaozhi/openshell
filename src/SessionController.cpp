@@ -2,6 +2,7 @@
 
 #include "ssh/Libssh2ChannelWorker.h"
 #include "ssh/SshSession.h"
+#include "ssh/TelnetChannelWorker.h"
 #include "terminal/VtScreen.h"
 
 #include <QUuid>
@@ -10,6 +11,9 @@
 SessionController::SessionController(QObject *parent)
     : QObject(parent)
     , m_workerFactory([](const ConnectionProfile &profile) -> SshChannelWorker * {
+          if (profile.protocol.compare(QStringLiteral("telnet"), Qt::CaseInsensitive) == 0) {
+              return new TelnetChannelWorker(profile);
+          }
           return new Libssh2ChannelWorker(profile);
       })
 {

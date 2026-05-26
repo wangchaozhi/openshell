@@ -55,6 +55,15 @@ ApplicationWindow {
         }
         return ""
     }
+    readonly property string activeConnectionProtocol: {
+        const cid = activeSession.connectionId
+        if (!cid) return ""
+        for (let i = 0; i < connections.length; ++i) {
+            if (connections[i].id === cid) return (connections[i].protocol || "ssh").toLowerCase()
+        }
+        return ""
+    }
+    readonly property bool activeConnectionIsTelnet: activeConnectionProtocol === "telnet"
 
     function refreshConnections() {
         connections = appController.reloadConnectionProfiles()
@@ -96,7 +105,9 @@ ApplicationWindow {
             activeSessionId = newId
             activeView = "terminal"
             fileBrowserVisible = false
-            delayedFileBrowserLoad.restart()
+            if (!activeConnectionIsTelnet) {
+                delayedFileBrowserLoad.restart()
+            }
         } else if (appController.lastError && appController.lastError.length > 0) {
             statusMessage = appController.lastError
         }
@@ -315,7 +326,9 @@ ApplicationWindow {
                 sftpMessage: window.sftpMessage
                 connectionHost: window.activeConnectionHost
                 onSystemInfoRequested: {
-                    if (window.activeSessionId.length > 0) {
+                    if (window.activeConnectionIsTelnet) {
+                        window.statusMessage = qsTr("System monitoring is only available for SSH connections")
+                    } else if (window.activeSessionId.length > 0) {
                         window.activeView = "system"
                         window.systemInfoTabVisible = true
                     }
@@ -413,7 +426,9 @@ ApplicationWindow {
                                           translation)
             }
             onSystemInfoRequested: {
-                if (window.activeSessionId.length > 0) {
+                if (window.activeConnectionIsTelnet) {
+                    window.statusMessage = qsTr("System monitoring is only available for SSH connections")
+                } else if (window.activeSessionId.length > 0) {
                     window.activeView = "system"
                     window.systemInfoTabVisible = true
                 }
@@ -436,14 +451,22 @@ ApplicationWindow {
                     window.activeSessionId = id
                     window.activeView = "terminal"
                     window.fileBrowserVisible = false
-                    delayedFileBrowserLoad.restart()
+                    if (!window.activeConnectionIsTelnet) {
+                        delayedFileBrowserLoad.restart()
+                    }
                 }
                 onConnectionManagerActivated: window.activeView = "connections"
                 onSessionClosed: (id) => appController.closeSession(id)
                 onSessionDisconnected: (id) => appController.closeSession(id)
                 onSessionReconnectRequested: (id, connectionId) => window.reconnectSession(id, connectionId)
                 onSessionDetached: (id) => window.detachSession(id)
-                onSystemInfoActivated: window.activeView = "system"
+                onSystemInfoActivated: {
+                    if (window.activeConnectionIsTelnet) {
+                        window.statusMessage = qsTr("System monitoring is only available for SSH connections")
+                    } else {
+                        window.activeView = "system"
+                    }
+                }
                 onSystemInfoClosed: {
                     window.systemInfoTabVisible = false
                     if (window.activeView === "system")
@@ -495,7 +518,10 @@ ApplicationWindow {
                         SplitView.preferredHeight: window.fileBrowserPanesDetached ? 0 : 220
                         SplitView.minimumHeight: window.fileBrowserPanesDetached ? 0 : 120
                         visible: !window.fileBrowserPanesDetached
-                        active: window.fileBrowserVisible && window.activeView === "terminal" && window.activeSessionId.length > 0
+                        active: window.fileBrowserVisible
+                                && window.activeView === "terminal"
+                                && window.activeSessionId.length > 0
+                                && !window.activeConnectionIsTelnet
                         sourceComponent: FileBrowser {
                             session: window.activeSession
                             uiTheme: window.uiTheme
@@ -587,10 +613,16 @@ ApplicationWindow {
         id: monitorTimer
         interval: 5000
         repeat: true
-        running: !!(window.activeSession && window.activeSession.connectionId && window.activeSession.status === "connected")
+        running: !!(window.activeSession
+                    && window.activeSession.connectionId
+                    && window.activeSession.status === "connected"
+                    && !window.activeConnectionIsTelnet)
         triggeredOnStart: true
         onTriggered: {
-            if (window.activeSession && window.activeSession.connectionId && !window.monitorRequestInFlight) {
+            if (window.activeSession
+                    && window.activeSession.connectionId
+                    && !window.activeConnectionIsTelnet
+                    && !window.monitorRequestInFlight) {
                 window.monitorRequestInFlight = true
                 window.monitorRequestId = appController.requestSystemMonitorSnapshot(window.activeSession.connectionId)
             }
@@ -608,7 +640,9 @@ ApplicationWindow {
         fileBrowserPanesDetached = false
         systemInfoTabVisible = false
         if (activeView === "system") activeView = "terminal"
-        delayedFileBrowserLoad.restart()
+        if (!activeConnectionIsTelnet) {
+            delayedFileBrowserLoad.restart()
+        }
         monitorTimer.restart()
     }
 
@@ -616,7 +650,9 @@ ApplicationWindow {
         id: delayedFileBrowserLoad
         interval: 80
         repeat: false
-        onTriggered: window.fileBrowserVisible = window.activeView === "terminal" && window.activeSessionId.length > 0
+        onTriggered: window.fileBrowserVisible = window.activeView === "terminal"
+                                             && window.activeSessionId.length > 0
+                                             && !window.activeConnectionIsTelnet
     }
 
     Connections {

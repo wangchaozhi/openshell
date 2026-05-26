@@ -35,6 +35,8 @@ QVariantMap ConnectionProfile::toVariantMap() const
     map.insert(QStringLiteral("autoReconnect"), autoReconnect);
     map.insert(QStringLiteral("reconnectMaxAttempts"), reconnectMaxAttempts);
     map.insert(QStringLiteral("reconnectInitialDelayMs"), reconnectInitialDelayMs);
+    map.insert(QStringLiteral("telnetAutoLogin"), telnetAutoLogin);
+    map.insert(QStringLiteral("telnetTerminalType"), telnetTerminalType);
     map.insert(QStringLiteral("jumpHost"), jumpHost);
     map.insert(QStringLiteral("jumpPort"), jumpPort);
     map.insert(QStringLiteral("jumpUsername"), jumpUsername);
@@ -79,6 +81,9 @@ ConnectionProfile ConnectionProfile::fromVariantMap(const QVariantMap &map)
     p.autoReconnect = map.value(QStringLiteral("autoReconnect"), true).toBool();
     p.reconnectMaxAttempts = map.value(QStringLiteral("reconnectMaxAttempts"), 5).toInt();
     p.reconnectInitialDelayMs = map.value(QStringLiteral("reconnectInitialDelayMs"), 1000).toInt();
+    p.telnetAutoLogin = map.value(QStringLiteral("telnetAutoLogin"), true).toBool();
+    p.telnetTerminalType = map.value(QStringLiteral("telnetTerminalType"),
+                                     QStringLiteral("xterm-256color")).toString();
     p.jumpHost = map.value(QStringLiteral("jumpHost")).toString();
     p.jumpPort = map.value(QStringLiteral("jumpPort"), 22).toInt();
     p.jumpUsername = map.value(QStringLiteral("jumpUsername")).toString();
