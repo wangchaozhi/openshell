@@ -97,8 +97,8 @@ ctest --test-dir build
 ├── translations/
 │   ├── OpenShell_zh_CN.ts
 │   ├── OpenShell_ja_JP.ts
-│   ├── OpenShell_ko_KR.ts        # 空骨格
-│   └── OpenShell_de_DE.ts        # 空骨格
+│   ├── OpenShell_ko_KR.ts
+│   └── OpenShell_de_DE.ts
 ├── tests/
 │   ├── test_connection_catalog.cpp
 │   ├── test_vt_screen.cpp
@@ -158,7 +158,7 @@ OpenShell は余暇に開発されています。役に立った場合は、コ�
 - SFTP 強化：転送キュー、レジューム対応、競合処理、バッチ操作。
 - Telnet 強化：接続ごとの文字エンコーディング、CRLF モード、より広いオプション交渉、設定可能なログインプロンプト照合ルール。
 - サーバー監視：SSH exec 経由で CPU・メモリ・ディスク・ネットワーク統計を収集してダッシュボードに表示。
-- 翻訳：`OpenShell_ko_KR.ts` / `OpenShell_de_DE.ts` の充足（現在は空骨格）。
+- 翻訳：用語の見直しとローカライズ文言の継続的な改善。
 - パッケージング：Windows/macOS/Linux のリリースワークフローの整備。
 
 詳細なアーキテクチャについては [docs/architecture.md](docs/architecture.md) および [AGENTS.md](AGENTS.md) を参照してください。

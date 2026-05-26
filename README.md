@@ -24,7 +24,7 @@ The project is no longer only a UI skeleton. It already includes real SSH sessio
 - Auto reconnect: configurable per profile, with exponential backoff capped at 30 s.
 - Credentials: passwords / passphrases stored in the OS keychain (macOS Keychain / Windows Credential Manager / libsecret on Linux via QtKeychain; iOS via Sec API). Plaintext fields in legacy JSON are migrated on first load.
 - System tray: show/hide window, quick-open connections, language switching, and quit.
-- Localization: English, Simplified Chinese, and Japanese ship as compiled `.qm` resources. Korean and German are present as empty skeletons awaiting translation. English is the source language and uses no translation file.
+- Localization: English, Simplified Chinese, Japanese, Korean, and German ship as compiled `.qm` resources. English is the source language and uses no translation file.
 
 ## Requirements
 
@@ -97,8 +97,8 @@ ctest --test-dir build
 ├── translations/
 │   ├── OpenShell_zh_CN.ts
 │   ├── OpenShell_ja_JP.ts
-│   ├── OpenShell_ko_KR.ts        # empty skeleton
-│   └── OpenShell_de_DE.ts        # empty skeleton
+│   ├── OpenShell_ko_KR.ts
+│   └── OpenShell_de_DE.ts
 ├── tests/
 │   ├── test_connection_catalog.cpp
 │   ├── test_vt_screen.cpp
@@ -158,7 +158,7 @@ OpenShell is built in spare time. If it saves you time, a coffee would be apprec
 - Telnet improvements: per-profile encoding, CRLF mode, broader option negotiation, and configurable login prompt matching.
 - SFTP improvements: transfer queue, resume support, conflict handling, and batch operations.
 - Server monitoring: collect CPU, memory, disk, and network stats through SSH exec and render a dashboard.
-- Translations: populate `OpenShell_ko_KR.ts` / `OpenShell_de_DE.ts` (currently empty skeletons).
+- Translations: continue reviewing terminology and polishing localized copy.
 - Packaging: improve Windows/macOS/Linux release workflows.
 
 See [docs/architecture.md](docs/architecture.md) and [AGENTS.md](AGENTS.md) for more project notes.

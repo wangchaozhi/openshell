@@ -26,6 +26,8 @@ void TrayController::setLanguage(const QString &language)
     if (language == QStringLiteral("en")) target = m_englishLanguageAction;
     else if (language == QStringLiteral("zh_CN")) target = m_chineseLanguageAction;
     else if (language == QStringLiteral("ja_JP")) target = m_japaneseLanguageAction;
+    else if (language == QStringLiteral("ko_KR")) target = m_koreanLanguageAction;
+    else if (language == QStringLiteral("de_DE")) target = m_germanLanguageAction;
 
     if (target) {
         const QSignalBlocker blocker(m_languageActionGroup);
@@ -112,6 +114,16 @@ void TrayController::createMenu()
     m_japaneseLanguageAction->setData(QStringLiteral("ja_JP"));
     m_languageActionGroup->addAction(m_japaneseLanguageAction);
 
+    m_koreanLanguageAction = m_languageMenu->addAction(QString());
+    m_koreanLanguageAction->setCheckable(true);
+    m_koreanLanguageAction->setData(QStringLiteral("ko_KR"));
+    m_languageActionGroup->addAction(m_koreanLanguageAction);
+
+    m_germanLanguageAction = m_languageMenu->addAction(QString());
+    m_germanLanguageAction->setCheckable(true);
+    m_germanLanguageAction->setData(QStringLiteral("de_DE"));
+    m_languageActionGroup->addAction(m_germanLanguageAction);
+
     connect(m_languageActionGroup, &QActionGroup::triggered, this, [this](QAction *action) {
         emit languageChanged(action->data().toString());
     });
@@ -155,6 +167,8 @@ void TrayController::retranslate()
     m_englishLanguageAction->setText(tr("English"));
     m_chineseLanguageAction->setText(tr("Simplified Chinese"));
     m_japaneseLanguageAction->setText(tr("Japanese"));
+    m_koreanLanguageAction->setText(tr("Korean"));
+    m_germanLanguageAction->setText(tr("German"));
     m_quitAction->setText(tr("Quit"));
     m_trayIcon->setToolTip(tr("OpenShell"));
     updateConnectionsMenuText();

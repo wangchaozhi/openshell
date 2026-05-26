@@ -24,7 +24,7 @@ OpenShell 是一个基于 Qt 6 / QML / C++20 的跨平台 SSH / SFTP / Telnet �
 - 断线自动重连：每个连接可配置开关，按指数退避（封顶 30 秒）。
 - 凭据安全：密码 / 私钥口令进系统钥匙串（桌面经 QtKeychain 对应 macOS Keychain / Windows 凭据管理器 / Linux libsecret；iOS 用原生 Sec API）。旧 JSON 残留的明文会在首次加载时迁移进钥匙串。
 - 系统托盘：支持隐藏/显示窗口、快速打开连接、切换语言、退出。
-- 多语言：英文、简体中文、日文以编译后的 `.qm` 资源内置；韩文、德文为空骨架等待翻译；英文走源串兜底。
+- 多语言：英文、简体中文、日文、韩文、德文以编译后的 `.qm` 资源内置；英文走源串兜底。
 
 ## 环境要求
 
@@ -97,8 +97,8 @@ ctest --test-dir build
 ├── translations/
 │   ├── OpenShell_zh_CN.ts
 │   ├── OpenShell_ja_JP.ts
-│   ├── OpenShell_ko_KR.ts        # 空骨架
-│   └── OpenShell_de_DE.ts        # 空骨架
+│   ├── OpenShell_ko_KR.ts
+│   └── OpenShell_de_DE.ts
 ├── tests/
 │   ├── test_connection_catalog.cpp
 │   ├── test_vt_screen.cpp
@@ -163,7 +163,7 @@ QStandardPaths::AppDataLocation/connections/<id>.json
 - Telnet 增强：连接级编码、CRLF 模式、更多选项协商、可配置登录提示匹配规则。
 - SFTP 增强：传输队列、断点续传、冲突处理、批量操作。
 - 服务器监控：通过 SSH exec 采集 CPU、内存、磁盘、网络状态并展示 dashboard。
-- 翻译：补齐 `OpenShell_ko_KR.ts` / `OpenShell_de_DE.ts`（目前是空骨架）。
+- 翻译：继续校对术语和润色本地化文案。
 - 打包发布：完善 Windows/macOS/Linux release 流程。
 
 更多设计说明见 [docs/architecture.md](docs/architecture.md) 和 [AGENTS.md](AGENTS.md)。

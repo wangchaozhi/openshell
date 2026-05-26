@@ -20,7 +20,7 @@ OpenShell 是 Qt 6 / QML / C++20 的跨平台 SSH / SFTP / Telnet 终端工具�
 - 跳板机 (ProxyJump)：通过自定义 libssh2 send/recv 回调走 direct-tcpip 通道
 - 端口转发：Local (-L) 已实现；Remote (-R) / Dynamic (-D) 显式 `not yet implemented`
 - 断线重连：按 `autoReconnect` / `reconnectMaxAttempts` / 指数退避（封顶 30s）
-- 多语言：zh_CN、ja_JP 完整；ko_KR、de_DE 空骨架（等 `lupdate` 填）；en 走源字符串兜底
+- 多语言：zh_CN、ja_JP、ko_KR、de_DE 完整；en 走源字符串兜底
 - 移动端（Android / iOS）：`qml/mobile/` 下另一套 UI；文件选择器走 `QFileDialog::getOpenFileContent` + `mobileFilePicked` 信号；iOS 凭据用 Sec API 真 Keychain，Android 当前是沙箱 QSettings 占位
 
 剩余目标态能力见下方“待办”。
@@ -185,8 +185,7 @@ struct ConnectionProfile {
    `test_connection_catalog` / `test_vt_screen` / `test_session_controller` /
    `test_sftp_transfer` / `test_sftp_connection_pool`。仍未覆盖：
    `Libssh2ChannelWorker` 的 reconnect 退避计算、`SftpDirectoryLister`。
-7. **翻译填充**：`OpenShell_ko_KR.ts` / `OpenShell_de_DE.ts` 当前是空骨架，
-   等 `lupdate -ts ...` 填上源串后再人工翻译。
+7. **翻译校对**：继续校对 zh_CN / ja_JP / ko_KR / de_DE 的术语一致性和语气。
 
 > 大文件拆分已完成：`FileBrowser.qml` 拆出 `LocalPane` / `RemotePane`；
 > `TerminalScreenItem.cpp` 拆成核心+绘制 / `*Input.cpp` / `*Selection.cpp`。
@@ -218,7 +217,7 @@ qml/           MainWindow, Sidebar, ConnectionEditor (含 jump host + 转发字�
                ConnectionManagerView, SessionTabs, TerminalView, FileBrowser,
                SystemInfoView, Themed*, mobile/, filebrowser/
 translations/  OpenShell_zh_CN.ts, OpenShell_ja_JP.ts,
-               OpenShell_ko_KR.ts (空骨架), OpenShell_de_DE.ts (空骨架)
+               OpenShell_ko_KR.ts, OpenShell_de_DE.ts
 tests/         test_connection_catalog, test_vt_screen, test_session_controller,
                test_sftp_transfer, test_sftp_connection_pool
                （QTest，OPENSHELL_BUILD_TESTS=ON 启用）
