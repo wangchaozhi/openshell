@@ -141,9 +141,11 @@ ApplicationWindow {
         id: monitorTimer
         interval: 5000
         repeat: true
+        // 只在系统页前台时轮询，切到 terminal/files/connections 时停掉。
         running: !!(window.activeSession
                     && window.activeSession.connectionId
-                    && !window.activeConnectionIsTelnet)
+                    && !window.activeConnectionIsTelnet
+                    && window.activePage === "system")
         triggeredOnStart: true
         onTriggered: {
             if (window.activeSession

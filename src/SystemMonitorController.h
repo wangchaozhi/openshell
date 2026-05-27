@@ -40,4 +40,8 @@ private:
     QVariantMap normalizeSnapshot(const QString &connectionId, const QVariantMap &snapshot);
 
     QHash<QString, CpuTicks> m_lastCpuTicksByConnection;
+    // 静态机器信息按 connectionId 缓存（os/kernel/hostname/cpu 型号/cpuDetails
+    // 等开机不会变的字段）。第一次抓快照时用 full 命令，之后只跑动态部分，
+    // 静态字段直接从这里 merge 回去。
+    QHash<QString, QVariantMap> m_staticInfoByConnection;
 };

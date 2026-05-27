@@ -623,10 +623,13 @@ ApplicationWindow {
         id: monitorTimer
         interval: 5000
         repeat: true
+        // 只在用户实际看着系统信息页时才轮询；切到 terminal/connections/files
+        // 或最小化到 tray 时停掉，省一次 SSH exec + awk 解析。
         running: !!(window.activeSession
                     && window.activeSession.connectionId
                     && window.activeSession.status === "connected"
-                    && !window.activeConnectionIsTelnet)
+                    && !window.activeConnectionIsTelnet
+                    && window.activeView === "system")
         triggeredOnStart: true
         onTriggered: {
             if (window.activeSession

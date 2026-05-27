@@ -11,7 +11,10 @@
 #include <QtConcurrent>
 
 namespace {
-QString monitorCommand()
+// 全量命令：第一次取快照用，包含开机不变的静态信息（os/kernel/hostname/
+// cpuinfo/cpuDetails）+ 所有动态字段。返回结果会被拆出静态部分缓存到
+// SystemMonitorController::m_staticInfoByConnection。
+QString fullMonitorCommand()
 {
     return QStringLiteral(R"SH(
 sh -c '
@@ -38,6 +41,75 @@ echo "__PS__"
 ps -eo pid,comm,pcpu,pmem,rss --sort=-pcpu 2>/dev/null | head -n 8
 '
 )SH");
+}
+
+// 动态命令：跳过 os-release / uname / hostname / 完整 cpuinfo 这些不会变的，
+// 只跑 uptime + /proc/stat + /proc/meminfo + 网卡 + df + ps。在主机上少跑
+// 几个 awk、少读两次 /proc/cpuinfo；网络上每次少 ~1KB。
+QString dynamicMonitorCommand()
+{
+    return QStringLiteral(R"SH(
+sh -c '
+echo "__INFO__"
+echo "uptime=$(uptime -p 2>/dev/null || uptime)"
+echo "__CPUINFO__"
+awk "/^cpu / {usr=\$2; nice=\$3; sys=\$4; idle=\$5; iowait=\$6; irq=\$7; softirq=\$8; steal=\$9; total=usr+nice+sys+idle+iowait+irq+softirq+steal; printf \"stat=%s %s %s %s %s %s %s %s %s\n\", usr,nice,sys,idle,iowait,irq,softirq,steal,total}" /proc/stat 2>/dev/null
+echo "__MEM__"
+awk "/MemTotal|MemAvailable|SwapTotal|SwapFree/ {print \$1 \"=\" \$2}" /proc/meminfo 2>/dev/null
+echo "__NET__"
+cat /proc/net/dev 2>/dev/null | tail -n +3
+echo "__DF__"
+df -P -B1 2>/dev/null | tail -n +2
+echo "__PS__"
+ps -eo pid,comm,pcpu,pmem,rss --sort=-pcpu 2>/dev/null | head -n 8
+'
+)SH");
+}
+
+// 把缓存里的静态字段补回 dynamic 命令解析出来的 snapshot 上。dynamic 命令
+// 没跑那些 awk，info/cpuDetails 是空的，cpu 只有 ticks 没有 model/cores，
+// 这里负责把它们填回去，最终 QML 拿到的 snapshot 结构跟 full 模式完全一致。
+void mergeStaticInfo(QVariantMap &snapshot, const QVariantMap &cached)
+{
+    QVariantMap info = snapshot.value(QStringLiteral("info")).toMap();
+    const QVariantMap cachedInfo = cached.value(QStringLiteral("info")).toMap();
+    for (auto it = cachedInfo.cbegin(); it != cachedInfo.cend(); ++it) {
+        if (!info.contains(it.key())) {
+            info.insert(it.key(), it.value());
+        }
+    }
+    snapshot.insert(QStringLiteral("info"), info);
+
+    snapshot.insert(QStringLiteral("cpuDetails"),
+                    cached.value(QStringLiteral("cpuDetails")));
+
+    QVariantMap cpu = snapshot.value(QStringLiteral("cpu")).toMap();
+    const QVariantMap cachedCpu = cached.value(QStringLiteral("cpu")).toMap();
+    for (auto it = cachedCpu.cbegin(); it != cachedCpu.cend(); ++it) {
+        if (!cpu.contains(it.key())) {
+            cpu.insert(it.key(), it.value());
+        }
+    }
+    snapshot.insert(QStringLiteral("cpu"), cpu);
+}
+
+// 从 full 模式 snapshot 里抽出可缓存的静态部分。
+QVariantMap extractStaticInfo(const QVariantMap &snapshot)
+{
+    QVariantMap cache;
+    cache.insert(QStringLiteral("info"), snapshot.value(QStringLiteral("info")));
+    cache.insert(QStringLiteral("cpuDetails"),
+                 snapshot.value(QStringLiteral("cpuDetails")));
+    const QVariantMap cpu = snapshot.value(QStringLiteral("cpu")).toMap();
+    QVariantMap cpuStatic;
+    if (cpu.contains(QStringLiteral("model"))) {
+        cpuStatic.insert(QStringLiteral("model"), cpu.value(QStringLiteral("model")));
+    }
+    if (cpu.contains(QStringLiteral("cores"))) {
+        cpuStatic.insert(QStringLiteral("cores"), cpu.value(QStringLiteral("cores")));
+    }
+    cache.insert(QStringLiteral("cpu"), cpuStatic);
+    return cache;
 }
 
 QString humanBytes(double bytes)
@@ -226,29 +298,40 @@ SystemMonitorController::SystemMonitorController(QObject *parent)
 QString SystemMonitorController::requestSnapshot(const QString &connectionId, const ConnectionProfile &profile)
 {
     const QString requestId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const QVariantMap cachedStatic = m_staticInfoByConnection.value(connectionId);
+    const bool useFull = cachedStatic.isEmpty();
+    const QString command = useFull ? fullMonitorCommand() : dynamicMonitorCommand();
+
     auto *watcher = new QFutureWatcher<QVariantMap>(this);
     connect(watcher, &QFutureWatcher<QVariantMap>::finished, this,
-            [this, watcher, requestId, connectionId]() {
+            [this, watcher, requestId, connectionId, useFull]() {
                 const QVariantMap result = watcher->result();
                 const QString error = result.value(QStringLiteral("error")).toString();
-                const QVariantMap snapshot = normalizeSnapshot(connectionId,
-                                                               result.value(QStringLiteral("snapshot")).toMap());
+                QVariantMap snapshot = result.value(QStringLiteral("snapshot")).toMap();
+                if (useFull && error.isEmpty() && !snapshot.isEmpty()) {
+                    m_staticInfoByConnection.insert(connectionId, extractStaticInfo(snapshot));
+                }
+                snapshot = normalizeSnapshot(connectionId, snapshot);
                 emit snapshotReady(requestId, connectionId, snapshot, error);
                 watcher->deleteLater();
             });
-    watcher->setFuture(QtConcurrent::run([profile]() {
+    watcher->setFuture(QtConcurrent::run([profile, command, cachedStatic]() {
         QVariantMap result;
         if (profile.id.isEmpty()) {
             result.insert(QStringLiteral("error"), QObject::tr("Unknown connection"));
             return result;
         }
         QString error;
-        const QString output = SftpDirectoryLister::execute(profile, monitorCommand(), &error);
+        const QString output = SftpDirectoryLister::execute(profile, command, &error);
         if (!error.isEmpty()) {
             result.insert(QStringLiteral("error"), error);
             return result;
         }
-        result.insert(QStringLiteral("snapshot"), parseSystemMonitorOutput(output));
+        QVariantMap snapshot = parseSystemMonitorOutput(output);
+        if (!cachedStatic.isEmpty()) {
+            mergeStaticInfo(snapshot, cachedStatic);
+        }
+        result.insert(QStringLiteral("snapshot"), snapshot);
         result.insert(QStringLiteral("error"), QString());
         return result;
     }));
