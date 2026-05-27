@@ -6,6 +6,7 @@
 #include "SystemMonitorController.h"
 #include "TranslationManager.h"
 
+#include <QCoreApplication>
 #include <QFileSystemWatcher>
 #include <QRect>
 
@@ -55,6 +56,18 @@ AppController::AppController(QObject *parent)
             &AppController::systemMonitorSnapshotReady);
     connect(m_remoteEditWatcher, &QFileSystemWatcher::fileChanged, this,
             &AppController::handleWatchedRemoteEditChanged);
+
+    // 在 event loop 还活着的时候并行 teardown 所有 SSH 会话，给每个 worker
+    // 一次机会发出 libssh2_session_disconnect。否则要等到栈上的 AppController
+    // 析构 -> SessionController 析构 -> 每个 SshSession 串行 wait，遇到 worker
+    // 卡顿时窗口会被放大成 N 倍。
+    if (auto *app = QCoreApplication::instance()) {
+        connect(app, &QCoreApplication::aboutToQuit, this, [this]() {
+            if (m_sessions) {
+                m_sessions->shutdownAll();
+            }
+        });
+    }
 }
 
 AppController::~AppController() = default;

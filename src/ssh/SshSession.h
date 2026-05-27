@@ -47,6 +47,12 @@ public:
     void requestResize(int cols, int rows);
     void clearScreen();
 
+    // 进程退出路径专用：投 stop 并 quit 线程但不 wait，调用方在投完所有会话
+    // 之后用 waitForShutdown 统一收。这样 N 个会话能并行 teardown，而不是
+    // 串行 2s × N。
+    void prepareForShutdown();
+    bool waitForShutdown(int msec);
+
 signals:
     void statusChanged();
     void screenUpdated(); // 终端模型已变更（光标/cells/title 等任意维度）

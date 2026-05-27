@@ -24,6 +24,9 @@ public:
 
     QString open(const ConnectionProfile &profile, QString *error = nullptr);
     void close(const QString &sessionId);
+    // 进程退出前并行 teardown：先给每个会话投 stop+quit，再共享一个
+    // 总预算 budget 去 wait，避免析构时 N 个会话串行 2s × N 的窗口。
+    void shutdownAll(int budgetMs = 3000);
     void sendInput(const QString &sessionId, const QByteArray &data);
     void requestResize(const QString &sessionId, int cols, int rows);
     void clearBuffer(const QString &sessionId);

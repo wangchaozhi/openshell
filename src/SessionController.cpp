@@ -5,6 +5,7 @@
 #include "ssh/TelnetChannelWorker.h"
 #include "terminal/VtScreen.h"
 
+#include <QDeadlineTimer>
 #include <QUuid>
 #include <QVariantMap>
 
@@ -66,6 +67,22 @@ QString SessionController::open(const ConnectionProfile &profile, QString *error
 
     emit sessionsChanged();
     return sessionId;
+}
+
+void SessionController::shutdownAll(int budgetMs)
+{
+    // Phase 1: 给所有会话同时投 stop + quit，每个 worker 线程并行跑 teardown。
+    for (SshSession *session : m_sessions) {
+        session->prepareForShutdown();
+    }
+    // Phase 2: 共享总预算 wait。teardown 包含 libssh2_session_disconnect，
+    // 是同步的 socket 写，正常网络下毫秒级返回；只要不是握手中卡死，几乎
+    // 立刻就能收回所有线程。
+    QDeadlineTimer deadline(budgetMs);
+    for (SshSession *session : m_sessions) {
+        const auto remaining = deadline.remainingTime();
+        session->waitForShutdown(remaining > 0 ? static_cast<int>(remaining) : 0);
+    }
 }
 
 void SessionController::close(const QString &sessionId)

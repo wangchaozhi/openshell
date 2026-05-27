@@ -60,13 +60,13 @@ SshSession::SshSession(const QString &id,
 
 SshSession::~SshSession()
 {
-    m_reconnectTimer.stop();
-    m_userRequestedStop = true;
-    if (m_worker) {
-        QMetaObject::invokeMethod(m_worker, "stop", Qt::QueuedConnection);
-    }
-    m_thread.quit();
-    if (!m_thread.wait(2000)) {
+    prepareForShutdown();
+    // 进程退出时 SessionController::shutdownAll 已经在 aboutToQuit 阶段并行
+    // 跑完 teardown，这里大概率立刻返回。close-tab 路径走 deleteLater，到这
+    // 里时 worker thread 也已经 finished。留 5s 作兜底，时间到仍未退出再
+    // terminate —— 这种情况意味着 worker 卡在阻塞调用里（极少见），不强杀
+    // 会泄漏整个线程。
+    if (!m_thread.wait(5000)) {
         m_thread.terminate();
         m_thread.wait();
     }
@@ -99,6 +99,24 @@ void SshSession::requestStop()
     QMetaObject::invokeMethod(m_worker, "stop", Qt::QueuedConnection);
     // 线程的 quit 由 handleDisconnected 在收到 worker 的 disconnected 后触发；
     // 这样 teardown 能在 worker 线程里跑完再退线程，避免悬挂资源。
+}
+
+void SshSession::prepareForShutdown()
+{
+    m_reconnectTimer.stop();
+    m_userRequestedStop = true;
+    if (m_worker) {
+        QMetaObject::invokeMethod(m_worker, "stop", Qt::QueuedConnection);
+    }
+    // 直接 quit 线程而不是等 handleDisconnected：调用方常常是 aboutToQuit，
+    // GUI 线程已经阻塞在 wait 里，handleDisconnected 这条 queued signal
+    // 永远没机会跑。FIFO 保证 worker 先消费 stop 再消费 quit 事件。
+    m_thread.quit();
+}
+
+bool SshSession::waitForShutdown(int msec)
+{
+    return m_thread.wait(msec);
 }
 
 void SshSession::sendInput(const QByteArray &data)

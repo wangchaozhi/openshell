@@ -128,6 +128,16 @@ void applyTcpNoDelay(OpenShellSocket sock)
                  reinterpret_cast<const char *>(&one), sizeof(one));
 }
 
+// OS 层 TCP keepalive：libssh2 那层握手用不上、teardown 又因为线程被强杀
+// 没发出 disconnect 时，至少让内核能更早把"对端死了"探测出来并发 FIN/RST，
+// 服务端 sshd 不至于挂在 ESTABLISHED 上等到 TCP 默认 2 小时才超时。
+void applyTcpKeepalive(OpenShellSocket sock)
+{
+    int one = 1;
+    ::setsockopt(static_cast<int>(sock), SOL_SOCKET, SO_KEEPALIVE,
+                 reinterpret_cast<const char *>(&one), sizeof(one));
+}
+
 // libssh2 的 session abstract 是一个 void* 槽位，被 jump callbacks
 // 和 kbdint callback 同时使用。统一放一个 SessionAbstract，避免互相覆盖。
 ssize_t jumpSendCallback(libssh2_socket_t /*socket*/, const void *buffer, size_t length,
@@ -467,6 +477,7 @@ bool Libssh2ChannelWorker::openSocket(const QString &host, int port, QString *er
             return false;
         }
         applyTcpNoDelay(m_socket);
+        applyTcpKeepalive(m_socket);
         return true;
     }
 
@@ -507,6 +518,7 @@ bool Libssh2ChannelWorker::openSocket(const QString &host, int port, QString *er
                     return false;
                 }
                 applyTcpNoDelay(m_socket);
+                applyTcpKeepalive(m_socket);
                 return true;
             }
             if (errorOut) {
