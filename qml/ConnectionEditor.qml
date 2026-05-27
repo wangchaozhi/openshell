@@ -10,6 +10,8 @@ Dialog {
     property string uiTheme: "dark"
     property string validationMessage: ""
     property bool validationShown: false
+    property bool passwordVisible: false
+    property bool jumpPasswordVisible: false
 
     readonly property bool classic: theme.classic
     readonly property var protocols: ["ssh", "sftp", "telnet"]
@@ -77,6 +79,7 @@ Dialog {
         portField.text = "22"
         userField.text = ""
         passwordField.text = ""
+        passwordVisible = false
         keyPathField.text = ""
         protocolBox.currentIndex = 0
         authBox.currentIndex = 0
@@ -89,6 +92,7 @@ Dialog {
         jumpPortField.text = "22"
         jumpUserField.text = ""
         jumpPasswordField.text = ""
+        jumpPasswordVisible = false
         jumpKeyPathField.text = ""
         jumpAuthBox.currentIndex = 0
         forwardsField.text = ""
@@ -107,6 +111,7 @@ Dialog {
                 portField.text = String(p.port || 22)
                 userField.text = p.username || ""
                 passwordField.text = p.password || ""
+                passwordVisible = false
                 keyPathField.text = p.privateKeyPath || ""
                 protocolBox.currentIndex = Math.max(0, root.protocols.indexOf(p.protocol || "ssh"))
                 authBox.currentIndex = Math.max(0, ["password", "key", "agent"].indexOf(p.authType || "password"))
@@ -119,6 +124,7 @@ Dialog {
                 jumpPortField.text = String(p.jumpPort || 22)
                 jumpUserField.text = p.jumpUsername || ""
                 jumpPasswordField.text = p.jumpPassword || ""
+                jumpPasswordVisible = false
                 jumpKeyPathField.text = p.jumpPrivateKeyPath || ""
                 jumpAuthBox.currentIndex = Math.max(0, ["password", "key", "agent"].indexOf(p.jumpAuthType || "password"))
                 forwardsField.text = _forwardsToText(p.forwards)
@@ -343,14 +349,27 @@ Dialog {
             }
 
             Label { text: qsTr("Password"); color: theme.textMuted; font.pixelSize: 12 }
-            ThemedTextField {
-                id: passwordField
-                classic: root.classic
+            RowLayout {
                 Layout.fillWidth: true
-                echoMode: TextInput.Password
-                enabled: root.isTelnet || authBox.currentText === "password"
                 opacity: enabled ? 1.0 : 0.4
-                placeholderText: root.isTelnet ? qsTr("Optional auto-login password") : ""
+                enabled: root.isTelnet || authBox.currentText === "password"
+                spacing: 8
+
+                ThemedTextField {
+                    id: passwordField
+                    classic: root.classic
+                    Layout.fillWidth: true
+                    echoMode: root.passwordVisible ? TextInput.Normal : TextInput.Password
+                    enabled: parent.enabled
+                    placeholderText: root.isTelnet ? qsTr("Optional auto-login password") : ""
+                }
+
+                CheckBox {
+                    checked: root.passwordVisible
+                    text: qsTr("Show")
+                    enabled: parent.enabled
+                    onToggled: root.passwordVisible = checked
+                }
             }
 
             Label { text: qsTr("Private Key"); color: theme.textMuted; font.pixelSize: 12 }
@@ -487,13 +506,26 @@ Dialog {
             }
 
             Label { text: qsTr("Jump Password"); color: theme.textMuted; font.pixelSize: 12 }
-            ThemedTextField {
-                id: jumpPasswordField
-                classic: root.classic
+            RowLayout {
                 Layout.fillWidth: true
-                echoMode: TextInput.Password
-                enabled: !root.isTelnet && jumpAuthBox.currentText === "password"
                 opacity: enabled ? 1.0 : 0.4
+                enabled: !root.isTelnet && jumpAuthBox.currentText === "password"
+                spacing: 8
+
+                ThemedTextField {
+                    id: jumpPasswordField
+                    classic: root.classic
+                    Layout.fillWidth: true
+                    echoMode: root.jumpPasswordVisible ? TextInput.Normal : TextInput.Password
+                    enabled: parent.enabled
+                }
+
+                CheckBox {
+                    checked: root.jumpPasswordVisible
+                    text: qsTr("Show")
+                    enabled: parent.enabled
+                    onToggled: root.jumpPasswordVisible = checked
+                }
             }
 
             Label { text: qsTr("Jump Private Key"); color: theme.textMuted; font.pixelSize: 12 }

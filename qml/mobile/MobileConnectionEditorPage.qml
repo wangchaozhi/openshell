@@ -7,6 +7,7 @@ Rectangle {
 
     property string editingId: ""
     property string errorMessage: ""
+    property bool passwordVisible: false
     readonly property var protocols: ["ssh", "sftp", "telnet"]
     readonly property bool isTelnet: protocolBox.currentText === "telnet"
 
@@ -24,6 +25,7 @@ Rectangle {
         userField.text = ""
         authBox.currentIndex = 0
         passwordField.text = ""
+        passwordVisible = false
         keyPathField.text = ""
         telnetAutoLoginCheck.checked = true
         telnetTerminalTypeField.text = "xterm-256color"
@@ -41,6 +43,7 @@ Rectangle {
         userField.text = profile.username || ""
         authBox.currentIndex = Math.max(0, ["password", "key", "agent"].indexOf(profile.authType || "password"))
         passwordField.text = profile.password || ""
+        passwordVisible = false
         keyPathField.text = profile.privateKeyPath || ""
         telnetAutoLoginCheck.checked = (profile.telnetAutoLogin !== false)
         telnetTerminalTypeField.text = profile.telnetTerminalType || "xterm-256color"
@@ -213,15 +216,28 @@ Rectangle {
                 }
 
                 Label { Layout.leftMargin: 16; text: qsTr("Password"); color: "#93c5fd"; font.pixelSize: 12 }
-                TextField {
-                    id: passwordField
+                RowLayout {
                     Layout.fillWidth: true
                     Layout.leftMargin: 16
                     Layout.rightMargin: 16
-                    echoMode: TextInput.Password
                     enabled: root.isTelnet || authBox.currentText === "password"
                     opacity: enabled ? 1.0 : 0.45
-                    placeholderText: root.isTelnet ? qsTr("Optional auto-login password") : ""
+                    spacing: 8
+
+                    TextField {
+                        id: passwordField
+                        Layout.fillWidth: true
+                        echoMode: root.passwordVisible ? TextInput.Normal : TextInput.Password
+                        enabled: parent.enabled
+                        placeholderText: root.isTelnet ? qsTr("Optional auto-login password") : ""
+                    }
+
+                    CheckBox {
+                        checked: root.passwordVisible
+                        text: qsTr("Show")
+                        enabled: parent.enabled
+                        onToggled: root.passwordVisible = checked
+                    }
                 }
 
                 Label { Layout.leftMargin: 16; text: qsTr("Private Key"); color: "#93c5fd"; font.pixelSize: 12 }

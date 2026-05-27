@@ -528,9 +528,8 @@ ApplicationWindow {
                         SplitView.fillWidth: true
                         SplitView.preferredHeight: window.fileBrowserPanesDetached ? 0 : 220
                         SplitView.minimumHeight: window.fileBrowserPanesDetached ? 0 : 120
-                        visible: !window.fileBrowserPanesDetached
-                        active: window.fileBrowserVisible
-                                && window.activeView === "terminal"
+                        visible: window.fileBrowserVisible && !window.fileBrowserPanesDetached
+                        active: window.activeView === "terminal"
                                 && window.activeSessionId.length > 0
                                 && !window.activeConnectionIsTelnet
                         sourceComponent: FileBrowser {

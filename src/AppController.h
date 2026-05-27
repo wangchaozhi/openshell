@@ -5,9 +5,12 @@
 #include <QRect>
 #include <QDateTime>
 #include <QHash>
+#include <QSharedPointer>
 #include <QStringList>
 #include <QVariantList>
 #include <QVariantMap>
+
+#include <atomic>
 
 class ConnectionCatalog;
 class QFileSystemWatcher;
@@ -103,6 +106,7 @@ public:
     Q_INVOKABLE QString requestRemoteDownload(const QString &connectionId,
                                               const QString &remotePath,
                                               const QString &localDirectory);
+    Q_INVOKABLE void cancelRemoteOperation(const QString &requestId);
     Q_INVOKABLE QString requestOpenRemotePath(const QString &connectionId,
                                               const QString &remotePath);
     Q_INVOKABLE QString requestUploadEditedRemoteFile(const QString &connectionId,
@@ -201,4 +205,5 @@ private:
     TrayController *m_tray = nullptr;
     QFileSystemWatcher *m_remoteEditWatcher = nullptr;
     QHash<QString, RemoteEditWatch> m_remoteEditWatches;
+    QHash<QString, QSharedPointer<std::atomic_bool>> m_transferCancelFlags;
 };

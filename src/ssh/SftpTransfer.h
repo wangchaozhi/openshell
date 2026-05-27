@@ -14,6 +14,7 @@ class QFileInfo;
 namespace SftpTransfer {
 
 using ProgressCallback = SftpDirectoryLister::ProgressCallback;
+using CancelCallback = SftpDirectoryLister::CancelCallback;
 
 // "/a" + "b" -> "/a/b"; handles the root directory special case.
 QString joinRemotePath(const QString &base, const QString &name);
@@ -36,7 +37,8 @@ bool uploadPathRecursive(LIBSSH2_SFTP *sftp,
                          QString *errorOut,
                          qint64 bytesTotal,
                          qint64 *bytesDone,
-                         const ProgressCallback &progress);
+                         const ProgressCallback &progress,
+                         const CancelCallback &isCanceled = {});
 
 bool downloadPathRecursive(LIBSSH2_SFTP *sftp,
                            const QString &remotePath,
@@ -44,7 +46,8 @@ bool downloadPathRecursive(LIBSSH2_SFTP *sftp,
                            QString *errorOut,
                            qint64 bytesTotal,
                            qint64 *bytesDone,
-                           const ProgressCallback &progress);
+                           const ProgressCallback &progress,
+                           const CancelCallback &isCanceled = {});
 
 bool removePathRecursive(LIBSSH2_SFTP *sftp,
                          const QString &remotePath,

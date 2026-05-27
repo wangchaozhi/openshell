@@ -935,6 +935,24 @@ Rectangle {
         }
     }
 
+    function cancelTransferTask(task) {
+        if (!task || task.status !== "running" || !task.requestId) {
+            return
+        }
+        appController.cancelRemoteOperation(task.requestId)
+        const next = transferTasks.slice()
+        for (let i = 0; i < next.length; ++i) {
+            if (next[i].requestId === task.requestId) {
+                next[i] = Object.assign({}, next[i], {
+                    status: "canceling",
+                    message: qsTr("Stopping...")
+                })
+                break
+            }
+        }
+        transferTasks = next
+    }
+
     function transferPercent(task) { return FileFormat.transferPercent(task) }
 
     function upsertTransferTask(requestId, connectionId, operation, path, done, total, speed) {
@@ -987,10 +1005,11 @@ Rectangle {
             if (next[i].requestId === requestId) {
                 const done = ok && next[i].total > 0 ? next[i].total : next[i].done
                 const localPath = ok && next[i].operation === "download" ? (message || next[i].localPath || "") : next[i].localPath
+                const canceled = !ok && message === qsTr("Transfer cancelled")
                 next[i] = Object.assign({}, next[i], {
                     done: done,
                     speed: ok ? 0 : next[i].speed,
-                    status: ok ? "done" : "failed",
+                    status: ok ? "done" : (canceled ? "canceled" : "failed"),
                     message: message || "",
                     localPath: localPath,
                     finishedAt: Date.now()
@@ -1009,7 +1028,7 @@ Rectangle {
                 done: 0,
                 total: 0,
                 speed: 0,
-                status: ok ? "done" : "failed",
+                status: ok ? "done" : (!ok && message === qsTr("Transfer cancelled") ? "canceled" : "failed"),
                 message: message || "",
                 localPath: localPath,
                 localDirectory: operation === "download" ? (downloadTargetFolders[requestId] || "") : "",

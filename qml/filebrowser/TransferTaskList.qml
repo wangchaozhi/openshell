@@ -55,7 +55,9 @@ Rectangle {
                        ? (root.fileBrowser.classic ? "#dcfce7" : "#10251c")
                        : root.fileBrowser.panelColor
                 radius: 4
-                border.color: modelData.status === "failed" ? root.fileBrowser.theme.danger : root.fileBrowser.borderColor
+                border.color: modelData.status === "failed" || modelData.status === "canceled"
+                              ? root.fileBrowser.theme.danger
+                              : root.fileBrowser.borderColor
 
                 MouseArea {
                     id: downloadMouse
@@ -85,13 +87,26 @@ Rectangle {
                         Label {
                             text: modelData.status === "failed"
                                   ? qsTr("Failed")
+                                  : modelData.status === "canceled"
+                                    ? qsTr("Stopped")
+                                    : modelData.status === "canceling"
+                                      ? qsTr("Stopping")
                                   : modelData.status === "done"
                                     ? qsTr("Done")
                                     : qsTr("%1%").arg(root.fileBrowser.transferPercent(modelData))
-                            color: modelData.status === "failed" ? root.fileBrowser.theme.danger
+                            color: modelData.status === "failed" || modelData.status === "canceled"
+                                  ? root.fileBrowser.theme.danger
                                   : modelData.status === "done" ? root.fileBrowser.theme.success
                                   : root.fileBrowser.mutedTextColor
                             font.pixelSize: 11
+                        }
+
+                        Button {
+                            visible: modelData.status === "running"
+                            Layout.preferredWidth: 54
+                            Layout.preferredHeight: 22
+                            text: qsTr("Stop")
+                            onClicked: root.fileBrowser.cancelTransferTask(modelData)
                         }
                     }
 
@@ -123,7 +138,8 @@ Rectangle {
                                        : parent.width * transferProgress.visualPosition
                                 height: parent.height
                                 radius: 3
-                                color: modelData.status === "failed" ? root.fileBrowser.theme.danger
+                                color: modelData.status === "failed" || modelData.status === "canceled"
+                                      ? root.fileBrowser.theme.danger
                                       : modelData.status === "done" ? root.fileBrowser.theme.success
                                       : root.fileBrowser.theme.focus
                             }

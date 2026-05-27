@@ -210,6 +210,12 @@
             <translation>密码</translation>
         </message>
         <message>
+            <location filename="../qml/ConnectionEditor.qml" line="363" />
+            <location filename="../qml/ConnectionEditor.qml" line="525" />
+            <source>Show</source>
+            <translation>显示</translation>
+        </message>
+        <message>
             <location filename="../qml/ConnectionEditor.qml" line="356" />
             <source>Private Key</source>
             <translation>私钥</translation>
@@ -539,6 +545,17 @@
             <location filename="../qml/FileBrowser.qml" line="879" />
             <source>Interrupted</source>
             <translation>已中断</translation>
+        </message>
+        <message>
+            <location filename="../qml/FileBrowser.qml" line="948" />
+            <source>Stopping...</source>
+            <translation>正在停止...</translation>
+        </message>
+        <message>
+            <location filename="../qml/FileBrowser.qml" line="1008" />
+            <location filename="../qml/FileBrowser.qml" line="1031" />
+            <source>Transfer cancelled</source>
+            <translation>传输已取消</translation>
         </message>
     </context>
     <context>
@@ -1021,6 +1038,11 @@
             <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="224" />
             <source>Optional auto-login password</source>
             <translation>可选自动登录密码</translation>
+        </message>
+        <message>
+            <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="239" />
+            <source>Show</source>
+            <translation>显示</translation>
         </message>
         <message>
             <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="241" />
@@ -1531,9 +1553,27 @@
             <translation>SFTP 初始化失败：%1</translation>
         </message>
         <message>
+            <location filename="../src/ssh/SftpDirectoryLister.cpp" line="239" />
+            <location filename="../src/ssh/SftpDirectoryLister.cpp" line="325" />
+            <location filename="../src/ssh/SftpTransfer.cpp" line="23" />
+            <location filename="../src/ssh/SftpTransfer.cpp" line="54" />
+            <location filename="../src/ssh/SftpTransfer.cpp" line="64" />
+            <location filename="../src/ssh/SftpTransfer.cpp" line="120" />
+            <location filename="../src/ssh/SftpTransfer.cpp" line="151" />
+            <location filename="../src/ssh/SftpTransfer.cpp" line="291" />
+            <location filename="../src/ssh/SftpTransfer.cpp" line="339" />
+            <source>Transfer cancelled</source>
+            <translation>传输已取消</translation>
+        </message>
+        <message>
             <location filename="../src/ssh/SftpTransfer.cpp" line="23" />
             <source>Cannot read local file %1</source>
             <translation>无法读取本地文件 %1</translation>
+        </message>
+        <message>
+            <location filename="../src/ssh/SftpDirectoryLister.cpp" line="221" />
+            <source>Cannot determine upload name for %1</source>
+            <translation>无法确定 %1 的上传名称</translation>
         </message>
         <message>
             <location filename="../src/ssh/SftpDirectoryLister.cpp" line="348" />
@@ -2286,9 +2326,24 @@
             <translation>失败</translation>
         </message>
         <message>
+            <location filename="../qml/filebrowser/TransferTaskList.qml" line="91" />
+            <source>Stopped</source>
+            <translation>已停止</translation>
+        </message>
+        <message>
+            <location filename="../qml/filebrowser/TransferTaskList.qml" line="93" />
+            <source>Stopping</source>
+            <translation>正在停止</translation>
+        </message>
+        <message>
             <location filename="../qml/filebrowser/TransferTaskList.qml" line="89" />
             <source>Done</source>
             <translation>完成</translation>
+        </message>
+        <message>
+            <location filename="../qml/filebrowser/TransferTaskList.qml" line="111" />
+            <source>Stop</source>
+            <translation>停止</translation>
         </message>
         <message>
             <location filename="../qml/filebrowser/TransferTaskList.qml" line="90" />

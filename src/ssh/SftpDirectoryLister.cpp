@@ -5,6 +5,7 @@
 
 #include <QDateTime>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QObject>
 #include <QVariantMap>
@@ -192,7 +193,8 @@ bool SftpDirectoryLister::upload(const ConnectionProfile &profile,
                                  const QString &localPath,
                                  const QString &remoteDirectory,
                                  QString *errorOut,
-                                 ProgressCallback progress)
+                                 ProgressCallback progress,
+                                 CancelCallback isCanceled)
 {
     if (!SftpConnectionPool::ensureLibssh2(errorOut)) {
         return false;
@@ -204,7 +206,8 @@ bool SftpDirectoryLister::upload(const ConnectionProfile &profile,
         return false;
     }
 
-    const QFileInfo info(localPath);
+    const QString cleanLocalPath = QDir::cleanPath(localPath);
+    const QFileInfo info(cleanLocalPath);
     if (!info.exists()) {
         if (errorOut) {
             *errorOut = QObject::tr("Local path does not exist: %1").arg(localPath);
@@ -212,8 +215,19 @@ bool SftpDirectoryLister::upload(const ConnectionProfile &profile,
         return false;
     }
 
+    QString uploadName = info.fileName();
+    if (uploadName.isEmpty() && info.isDir()) {
+        uploadName = QDir(cleanLocalPath).dirName();
+    }
+    if (uploadName.isEmpty()) {
+        if (errorOut) {
+            *errorOut = QObject::tr("Cannot determine upload name for %1").arg(localPath);
+        }
+        return false;
+    }
+
     const QString targetDir = remoteDirectory.isEmpty() ? QStringLiteral("/") : remoteDirectory;
-    const QString remotePath = SftpTransfer::joinRemotePath(targetDir, info.fileName());
+    const QString remotePath = SftpTransfer::joinRemotePath(targetDir, uploadName);
     const qint64 bytesTotal = SftpTransfer::localPathSize(info);
     qint64 bytesDone = 0;
     if (progress) {
@@ -225,7 +239,18 @@ bool SftpDirectoryLister::upload(const ConnectionProfile &profile,
                                                       errorOut,
                                                       bytesTotal,
                                                       &bytesDone,
-                                                      progress);
+                                                      progress,
+                                                      isCanceled);
+    if (!ok && isCanceled && isCanceled()) {
+        QString cleanupError;
+        SftpTransfer::removePathRecursive(SftpConnectionPool::sftp(connection),
+                                          remotePath,
+                                          true,
+                                          &cleanupError);
+        if (errorOut) {
+            *errorOut = QObject::tr("Transfer cancelled");
+        }
+    }
     if (ok && progress) {
         progress(bytesTotal, bytesTotal);
     }
@@ -273,7 +298,8 @@ bool SftpDirectoryLister::download(const ConnectionProfile &profile,
                                    const QString &localDirectory,
                                    QString *downloadedPath,
                                    QString *errorOut,
-                                   ProgressCallback progress)
+                                   ProgressCallback progress,
+                                   CancelCallback isCanceled)
 {
     if (!SftpConnectionPool::ensureLibssh2(errorOut)) {
         return false;
@@ -298,7 +324,19 @@ bool SftpDirectoryLister::download(const ConnectionProfile &profile,
                                                         errorOut,
                                                         bytesTotal,
                                                         &bytesDone,
-                                                        progress);
+                                                        progress,
+                                                        isCanceled);
+    if (!ok && isCanceled && isCanceled()) {
+        const QFileInfo info(localPath);
+        if (info.isDir()) {
+            QDir(localPath).removeRecursively();
+        } else {
+            QFile::remove(localPath);
+        }
+        if (errorOut) {
+            *errorOut = QObject::tr("Transfer cancelled");
+        }
+    }
     if (ok) {
         if (progress) {
             progress(bytesTotal, bytesTotal);

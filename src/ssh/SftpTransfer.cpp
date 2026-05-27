@@ -15,8 +15,16 @@ bool uploadFile(LIBSSH2_SFTP *sftp,
                 QString *errorOut,
                 qint64 bytesTotal,
                 qint64 *bytesDone,
-                const ProgressCallback &progress)
+                const ProgressCallback &progress,
+                const CancelCallback &isCanceled)
 {
+    if (isCanceled && isCanceled()) {
+        if (errorOut) {
+            *errorOut = QObject::tr("Transfer cancelled");
+        }
+        return false;
+    }
+
     QFile file(localPath);
     if (!file.open(QIODevice::ReadOnly)) {
         if (errorOut) {
@@ -40,9 +48,23 @@ bool uploadFile(LIBSSH2_SFTP *sftp,
     }
 
     while (!file.atEnd()) {
+        if (isCanceled && isCanceled()) {
+            libssh2_sftp_close(handle);
+            if (errorOut) {
+                *errorOut = QObject::tr("Transfer cancelled");
+            }
+            return false;
+        }
         const QByteArray chunk = file.read(32768);
         qsizetype written = 0;
         while (written < chunk.size()) {
+            if (isCanceled && isCanceled()) {
+                libssh2_sftp_close(handle);
+                if (errorOut) {
+                    *errorOut = QObject::tr("Transfer cancelled");
+                }
+                return false;
+            }
             const ssize_t n = libssh2_sftp_write(handle,
                                                  chunk.constData() + written,
                                                  static_cast<size_t>(chunk.size() - written));
@@ -90,8 +112,16 @@ bool downloadFile(LIBSSH2_SFTP *sftp,
                   QString *errorOut,
                   qint64 bytesTotal,
                   qint64 *bytesDone,
-                  const ProgressCallback &progress)
+                  const ProgressCallback &progress,
+                  const CancelCallback &isCanceled)
 {
+    if (isCanceled && isCanceled()) {
+        if (errorOut) {
+            *errorOut = QObject::tr("Transfer cancelled");
+        }
+        return false;
+    }
+
     const QByteArray encoded = remotePath.toUtf8();
     LIBSSH2_SFTP_HANDLE *handle = libssh2_sftp_open(sftp,
                                                     encoded.constData(),
@@ -115,6 +145,13 @@ bool downloadFile(LIBSSH2_SFTP *sftp,
 
     char buffer[32768];
     for (;;) {
+        if (isCanceled && isCanceled()) {
+            libssh2_sftp_close(handle);
+            if (errorOut) {
+                *errorOut = QObject::tr("Transfer cancelled");
+            }
+            return false;
+        }
         const ssize_t n = libssh2_sftp_read(handle, buffer, sizeof(buffer));
         if (n == 0) {
             break;
@@ -246,8 +283,16 @@ bool uploadPathRecursive(LIBSSH2_SFTP *sftp,
                          QString *errorOut,
                          qint64 bytesTotal,
                          qint64 *bytesDone,
-                         const ProgressCallback &progress)
+                         const ProgressCallback &progress,
+                         const CancelCallback &isCanceled)
 {
+    if (isCanceled && isCanceled()) {
+        if (errorOut) {
+            *errorOut = QObject::tr("Transfer cancelled");
+        }
+        return false;
+    }
+
     const QFileInfo info(localPath);
     if (info.isDir()) {
         if (!makeRemoteDirectory(sftp, remotePath)) {
@@ -269,14 +314,15 @@ bool uploadPathRecursive(LIBSSH2_SFTP *sftp,
                                      errorOut,
                                      bytesTotal,
                                      bytesDone,
-                                     progress)) {
+                                     progress,
+                                     isCanceled)) {
                 return false;
             }
         }
         return true;
     }
 
-    return uploadFile(sftp, localPath, remotePath, errorOut, bytesTotal, bytesDone, progress);
+    return uploadFile(sftp, localPath, remotePath, errorOut, bytesTotal, bytesDone, progress, isCanceled);
 }
 
 bool downloadPathRecursive(LIBSSH2_SFTP *sftp,
@@ -285,10 +331,18 @@ bool downloadPathRecursive(LIBSSH2_SFTP *sftp,
                            QString *errorOut,
                            qint64 bytesTotal,
                            qint64 *bytesDone,
-                           const ProgressCallback &progress)
+                           const ProgressCallback &progress,
+                           const CancelCallback &isCanceled)
 {
+    if (isCanceled && isCanceled()) {
+        if (errorOut) {
+            *errorOut = QObject::tr("Transfer cancelled");
+        }
+        return false;
+    }
+
     if (!isRemoteDir(sftp, remotePath)) {
-        return downloadFile(sftp, remotePath, localPath, errorOut, bytesTotal, bytesDone, progress);
+        return downloadFile(sftp, remotePath, localPath, errorOut, bytesTotal, bytesDone, progress, isCanceled);
     }
 
     QDir().mkpath(localPath);
@@ -318,7 +372,8 @@ bool downloadPathRecursive(LIBSSH2_SFTP *sftp,
                                    errorOut,
                                    bytesTotal,
                                    bytesDone,
-                                   progress)) {
+                                   progress,
+                                   isCanceled)) {
             libssh2_sftp_closedir(dir);
             return false;
         }

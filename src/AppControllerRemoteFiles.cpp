@@ -6,6 +6,7 @@
 #include "ssh/SftpDirectoryLister.h"
 
 #include <QDir>
+#include <QFile>
 #include <QFutureWatcher>
 #include <QTimer>
 #include <QUuid>
@@ -120,8 +121,11 @@ QString AppController::requestUploadLocalPath(const QString &connectionId,
                                               const QString &remoteDirectory)
 {
     const QString requestId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const auto cancelFlag = QSharedPointer<std::atomic_bool>::create(false);
+    m_transferCancelFlags.insert(requestId, cancelFlag);
     const ConnectionProfile profile = m_catalog->profileById(connectionId);
     if (profile.id.isEmpty()) {
+        m_transferCancelFlags.remove(requestId);
         const QString error = tr("Unknown connection");
         setLastError(error);
         QTimer::singleShot(0, this, [this, requestId, connectionId, localPath, error]() {
@@ -137,6 +141,7 @@ QString AppController::requestUploadLocalPath(const QString &connectionId,
                 const QVariantMap result = watcher->result();
                 const bool ok = result.value(QStringLiteral("ok")).toBool();
                 const QString message = result.value(QStringLiteral("message")).toString();
+                m_transferCancelFlags.remove(requestId);
                 setLastError(ok ? QString() : message);
                 emit remoteOperationFinished(requestId,
                                              connectionId,
@@ -147,7 +152,7 @@ QString AppController::requestUploadLocalPath(const QString &connectionId,
                 watcher->deleteLater();
             });
 
-    watcher->setFuture(QtConcurrent::run([this, requestId, connectionId, profile, localPath, remoteDirectory]() {
+    watcher->setFuture(QtConcurrent::run([this, requestId, connectionId, profile, localPath, remoteDirectory, cancelFlag]() {
         QString error;
         AppControllerTransferProgressReporter progress(this,
                                           requestId,
@@ -160,6 +165,9 @@ QString AppController::requestUploadLocalPath(const QString &connectionId,
                                                     &error,
                                                     [&progress](qint64 done, qint64 total) {
                                                         progress.report(done, total, done == 0 || done == total);
+                                                    },
+                                                    [cancelFlag]() {
+                                                        return cancelFlag->load();
                                                     });
         QVariantMap result;
         result.insert(QStringLiteral("ok"), ok);
@@ -225,6 +233,8 @@ QString AppController::requestRemoteDownload(const QString &connectionId,
                                              const QString &localDirectory)
 {
     const QString requestId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const auto cancelFlag = QSharedPointer<std::atomic_bool>::create(false);
+    m_transferCancelFlags.insert(requestId, cancelFlag);
     const ConnectionProfile profile = m_catalog->profileById(connectionId);
     auto *watcher = new QFutureWatcher<QVariantMap>(this);
     connect(watcher, &QFutureWatcher<QVariantMap>::finished, this,
@@ -232,12 +242,13 @@ QString AppController::requestRemoteDownload(const QString &connectionId,
                 const QVariantMap result = watcher->result();
                 const bool ok = result.value(QStringLiteral("ok")).toBool();
                 const QString message = result.value(QStringLiteral("message")).toString();
+                m_transferCancelFlags.remove(requestId);
                 setLastError(ok ? QString() : message);
                 emit remoteOperationFinished(requestId, connectionId, QStringLiteral("download"),
                                              remotePath, ok, message);
                 watcher->deleteLater();
             });
-    watcher->setFuture(QtConcurrent::run([this, requestId, connectionId, profile, remotePath, localDirectory]() {
+    watcher->setFuture(QtConcurrent::run([this, requestId, connectionId, profile, remotePath, localDirectory, cancelFlag]() {
         QString error;
         QString downloadedPath;
         AppControllerTransferProgressReporter progress(this,
@@ -253,6 +264,9 @@ QString AppController::requestRemoteDownload(const QString &connectionId,
                                                          &error,
                                                          [&progress](qint64 done, qint64 total) {
                                                              progress.report(done, total, done == 0 || done == total);
+                                                         },
+                                                         [cancelFlag]() {
+                                                             return cancelFlag->load();
                                                          });
         QVariantMap result;
         result.insert(QStringLiteral("ok"), ok);
@@ -260,6 +274,15 @@ QString AppController::requestRemoteDownload(const QString &connectionId,
         return result;
     }));
     return requestId;
+}
+
+void AppController::cancelRemoteOperation(const QString &requestId)
+{
+    const auto it = m_transferCancelFlags.constFind(requestId);
+    if (it == m_transferCancelFlags.constEnd()) {
+        return;
+    }
+    (*it)->store(true);
 }
 
 QString AppController::requestSystemMonitorSnapshot(const QString &connectionId)
@@ -361,4 +384,3 @@ QString AppController::requestDeleteRemotePath(const QString &connectionId,
     }));
     return requestId;
 }
-
