@@ -899,6 +899,9 @@ Rectangle {
         const saved = []
         for (let i = 0; i < transferTasks.length && saved.length < 60; ++i) {
             const task = transferTasks[i]
+            if (task.status === "running" || task.status === "canceling") {
+                continue
+            }
             saved.push({
                 requestId: task.requestId || "",
                 connectionId: task.connectionId || "",
@@ -960,6 +963,13 @@ Rectangle {
         let found = false
         for (let i = 0; i < next.length; ++i) {
             if (next[i].requestId === requestId) {
+                const previousStatus = next[i].status || "running"
+                const previousMessage = next[i].message || ""
+                const staleInterrupted = previousStatus === "failed" && previousMessage === qsTr("Interrupted")
+                if ((previousStatus === "done" || previousStatus === "canceled"
+                        || previousStatus === "failed") && !staleInterrupted) {
+                    return
+                }
                 next[i] = {
                     requestId: requestId,
                     connectionId: connectionId,
@@ -968,12 +978,12 @@ Rectangle {
                     done: done,
                     total: total,
                     speed: speed,
-                    status: next[i].status || "running",
-                    message: next[i].message || "",
+                    status: previousStatus === "canceling" ? "canceling" : "running",
+                    message: previousStatus === "canceling" ? previousMessage : "",
                     localPath: next[i].localPath || "",
                     localDirectory: next[i].localDirectory || "",
                     startedAt: next[i].startedAt || Date.now(),
-                    finishedAt: next[i].finishedAt || 0
+                    finishedAt: previousStatus === "canceling" ? (next[i].finishedAt || 0) : 0
                 }
                 found = true
                 break
