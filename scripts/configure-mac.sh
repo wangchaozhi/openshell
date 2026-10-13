@@ -64,7 +64,7 @@ detect_ninja
 
 if [[ -z "${QT_PREFIX:-}" ]]; then
     echo "Qt for macOS was not found." >&2
-    echo "  Set QT_PREFIX, e.g.: export QT_PREFIX=\"\$HOME/Qt/6.11.1/macos\"" >&2
+    echo "  Set QT_PREFIX, e.g.: export QT_PREFIX=\"\$HOME/Qt/6.12.0/macos\"" >&2
     exit 1
 fi
 if [[ -z "${CMAKE_EXE:-}" ]]; then

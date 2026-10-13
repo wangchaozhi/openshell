@@ -72,12 +72,12 @@ detect_cmake
 
 if [[ -z "${QT_IOS_ROOT:-}" ]]; then
     echo "Qt iOS kit not found. Set QT_IOS_ROOT, e.g.:" >&2
-    echo "  export QT_IOS_ROOT=\"\$HOME/Qt/6.11.1/ios\"" >&2
+    echo "  export QT_IOS_ROOT=\"\$HOME/Qt/6.12.0/ios\"" >&2
     exit 1
 fi
 if [[ -z "${QT_HOST_ROOT:-}" ]]; then
     echo "Qt host (macOS) kit not found. Set QT_HOST_ROOT, e.g.:" >&2
-    echo "  export QT_HOST_ROOT=\"\$HOME/Qt/6.11.1/macos\"" >&2
+    echo "  export QT_HOST_ROOT=\"\$HOME/Qt/6.12.0/macos\"" >&2
     exit 1
 fi
 if [[ -z "${NINJA_EXE:-}" ]]; then

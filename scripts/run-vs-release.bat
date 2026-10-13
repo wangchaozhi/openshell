@@ -20,7 +20,7 @@ if not defined CMAKE_EXE (
     exit /b 1
 )
 
-if not defined QT_PREFIX if exist "E:\Qt\6.11.1\msvc2022_64\lib\cmake\Qt6\Qt6Config.cmake" set "QT_PREFIX=E:\Qt\6.11.1\msvc2022_64"
+if not defined QT_PREFIX if exist "E:\Qt\6.12.0\msvc2022_64\lib\cmake\Qt6\Qt6Config.cmake" set "QT_PREFIX=E:\Qt\6.12.0\msvc2022_64"
 
 if not defined QT_PREFIX (
     for /d %%Q in ("E:\Qt\6.*\msvc*_64" "C:\Qt\6.*\msvc*_64") do (

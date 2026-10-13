@@ -10,7 +10,7 @@ if not defined JAVA_HOME if exist "D:\Program Files\Java\jdk-17.0.11\bin\java.ex
 if not defined ANDROID_SDK_ROOT if exist "E:\android\sdk\platform-tools\adb.exe" set "ANDROID_SDK_ROOT=E:\android\sdk"
 if not defined ANDROID_NDK_ROOT if exist "%ANDROID_SDK_ROOT%\ndk\27.0.12077973\build\cmake\android.toolchain.cmake" set "ANDROID_NDK_ROOT=%ANDROID_SDK_ROOT%\ndk\27.0.12077973"
 
-if not defined QT_ANDROID_PREFIX if exist "E:\Qt\6.11.1\android_arm64_v8a\bin\qt-cmake.bat" set "QT_ANDROID_PREFIX=E:\Qt\6.11.1\android_arm64_v8a"
+if not defined QT_ANDROID_PREFIX if exist "E:\Qt\6.12.0\android_arm64_v8a\bin\qt-cmake.bat" set "QT_ANDROID_PREFIX=E:\Qt\6.12.0\android_arm64_v8a"
 if not defined CMAKE_EXE if exist "E:\Qt\Tools\CMake_64\bin\cmake.exe" set "CMAKE_EXE=E:\Qt\Tools\CMake_64\bin\cmake.exe"
 if not defined NINJA_DIR if exist "E:\Qt\Tools\Ninja\ninja.exe" set "NINJA_DIR=E:\Qt\Tools\Ninja"
 

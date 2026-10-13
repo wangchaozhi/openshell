@@ -45,7 +45,7 @@ scripts\run-vs-debug.bat
 
 ```bat
 set "CMAKE_EXE=E:\Qt\Tools\CMake_64\bin\cmake.exe"
-set "QT_PREFIX=E:\Qt\6.11.1\msvc2022_64"
+set "QT_PREFIX=E:\Qt\6.12.0\msvc2022_64"
 scripts\run-vs-debug.bat
 ```
 
