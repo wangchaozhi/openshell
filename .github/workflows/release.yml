@@ -383,6 +383,10 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # The default ("tools platform-tools") fails with cmdline-tools 16+, which no
+          # longer ship the legacy "tools" package; the next step installs what we need.
+          packages: ''
 
       - name: Install Android SDK packages
         shell: bash
