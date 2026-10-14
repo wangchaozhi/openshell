@@ -293,12 +293,12 @@ iOS：
 
 当前机器已有：
 
-- Qt `E:\Qt\6.11.1\msvc2022_64`
-- Qt `E:\Qt\6.11.1\mingw_64`
-- Qt `E:\Qt\6.11.1\android_arm64_v8a`
-- Qt `E:\Qt\6.11.1\android_armv7`
-- Qt `E:\Qt\6.11.1\android_x86`
-- Qt `E:\Qt\6.11.1\android_x86_64`
+- Qt `E:\Qt\6.12.0\msvc2022_64`
+- Qt `E:\Qt\6.12.0\mingw_64`
+- Qt `E:\Qt\6.12.0\android_arm64_v8a`
+- Qt `E:\Qt\6.12.0\android_armv7`
+- Qt `E:\Qt\6.12.0\android_x86`
+- Qt `E:\Qt\6.12.0\android_x86_64`
 - JDK 17：`D:\Program Files\Java\jdk-17.0.11`
 - JDK 21：`D:\Program Files\Java\jdk-21.0.1`
 - Android SDK：`E:\android\sdk`
@@ -318,7 +318,7 @@ iOS：
 
 - 临时设置 `JAVA_HOME=D:\Program Files\Java\jdk-21.0.1` 后，`sdkmanager.bat --list_installed` 可正常列出已安装 Android SDK 包。
 - JDK 17 和 JDK 21 均可运行，后续优先使用 JDK 21。
-- 使用 `E:\Qt\6.11.1\android_arm64_v8a\bin\qt-cmake.bat`、`-G Ninja`、NDK `27.0.12077973`、`ANDROID_ABI=arm64-v8a` 可启动 Android 配置。
+- 使用 `E:\Qt\6.12.0\android_arm64_v8a\bin\qt-cmake.bat`、`-G Ninja`、NDK `27.0.12077973`、`ANDROID_ABI=arm64-v8a` 可启动 Android 配置。
 - Android 已接入 bundled mbedTLS，libssh2 可使用 `CRYPTO_BACKEND=mbedTLS` 完成配置。
 - Android arm64 APK 已生成：`build-android-arm64/android-build/OpenShell.apk`。
 
@@ -336,7 +336,7 @@ $env:ANDROID_SDK_ROOT='E:\android\sdk'
 $env:ANDROID_NDK_ROOT='E:\android\sdk\ndk\27.0.12077973'
 $env:PATH="$env:JAVA_HOME\bin;E:\Qt\Tools\CMake_64\bin;E:\Qt\Tools\Ninja;$env:PATH"
 
-E:\Qt\6.11.1\android_arm64_v8a\bin\qt-cmake.bat `
+E:\Qt\6.12.0\android_arm64_v8a\bin\qt-cmake.bat `
   -S . `
   -B build-android-arm64 `
   -G Ninja `
@@ -366,7 +366,7 @@ scripts\install-android-arm64.bat
 scripts\run-android-arm64.bat
 ```
 
-脚本会优先使用 `D:\Program Files\Java\jdk-21.0.1`，再兜底到 `D:\Program Files\Java\jdk-17.0.11`，并默认使用 `E:\Qt\6.11.1\android_arm64_v8a`、`E:\android\sdk`、NDK `27.0.12077973`。
+脚本会优先使用 `D:\Program Files\Java\jdk-21.0.1`，再兜底到 `D:\Program Files\Java\jdk-17.0.11`，并默认使用 `E:\Qt\6.12.0\android_arm64_v8a`、`E:\android\sdk`、NDK `27.0.12077973`。
 
 常用方式：
 
