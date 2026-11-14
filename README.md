@@ -6,7 +6,18 @@ OpenShell is a cross-platform SSH / SFTP / Telnet terminal client built with Qt 
 
 The project is no longer only a UI skeleton. It already includes real SSH sessions, Telnet terminal sessions, terminal rendering, SFTP browsing and transfer operations, remote file open/edit/upload-back workflows, a system tray, and basic localization.
 
-![OpenShell screenshot](assets/screenshots/Snipaste_2026-05-18_16-21-31.png)
+
+## Screenshots
+
+Screenshots from the [project introduction on Zhihu](https://zhuanlan.zhihu.com/p/2095584636550263904).
+
+**Terminal and SFTP workspace**
+
+![Terminal and SFTP workspace](docs/images/zhihu/2095584636550263904-01.jpg)
+
+**Localized interface**
+
+![Localized interface](docs/images/zhihu/2095584636550263904-02.jpg)
 
 ## Features
 
