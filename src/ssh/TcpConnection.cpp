@@ -336,6 +336,15 @@ bool setBlocking(Socket socket, bool blocking)
 #endif
 }
 
+void shutdown(Socket socket)
+{
+#ifdef _WIN32
+    ::shutdown(socket, SD_BOTH);
+#else
+    ::shutdown(socket, SHUT_RDWR);
+#endif
+}
+
 void close(Socket socket)
 {
 #ifdef _WIN32

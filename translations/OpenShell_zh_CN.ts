@@ -1457,6 +1457,10 @@
     <context>
         <name>QObject</name>
         <message>
+            <source>Cannot read remote directory %1</source>
+            <translation>无法读取远程目录 %1</translation>
+        </message>
+        <message>
             <source>Could not connect to %1:%2</source>
             <translation>无法连接到 %1:%2</translation>
         </message>

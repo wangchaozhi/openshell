@@ -16,6 +16,9 @@ namespace SftpConnectionPool {
 
 struct CachedConnection
 {
+    explicit CachedConnection(Lane connectionLane) : lane(connectionLane) {}
+
+    const Lane lane;
     TcpConnection::Socket sock = TcpConnection::invalidSocket;
     Socks5Proxy socks5;
     LIBSSH2_SESSION *session = nullptr;
@@ -238,7 +241,7 @@ Lease acquire(const ConnectionProfile &profile, Lane lane)
         QMutexLocker lock(&cacheMapMutex());
         auto &pool = connectionCache()[key];
         if (pool.isEmpty()) {
-            pool.append(new CachedConnection);
+            pool.append(new CachedConnection(lane));
         }
 
         for (CachedConnection *connection : pool) {
@@ -248,7 +251,7 @@ Lease acquire(const ConnectionProfile &profile, Lane lane)
         }
 
         if (pool.size() < poolSize) {
-            auto *connection = new CachedConnection;
+            auto *connection = new CachedConnection(lane);
             connection->mutex.lock();
             pool.append(connection);
             return Lease(connection, true);
@@ -262,17 +265,24 @@ Lease acquire(const ConnectionProfile &profile, Lane lane)
     return Lease(fallback, false);
 }
 
-void reset(CachedConnection *connection)
+void reset(CachedConnection *connection, LIBSSH2_SFTP_HANDLE *openHandle)
 {
     if (!connection) {
         return;
+    }
+    if (connection->sock != TcpConnection::invalidSocket) {
+        // Stop network I/O before freeing libssh2 state, keeping the descriptor
+        // reserved until libssh2 has finished with it.
+        TcpConnection::shutdown(connection->sock);
+    }
+    if (openHandle) {
+        libssh2_sftp_close_handle(openHandle);
     }
     if (connection->sftp) {
         libssh2_sftp_shutdown(connection->sftp);
         connection->sftp = nullptr;
     }
     if (connection->session) {
-        libssh2_session_disconnect(connection->session, "OpenShell SFTP closing");
         libssh2_session_free(connection->session);
         connection->session = nullptr;
     }
@@ -283,12 +293,45 @@ void reset(CachedConnection *connection)
     connection->socks5 = {};
 }
 
+bool connectionLost(CachedConnection *connection, int errorCode)
+{
+    if (libssh2_channel_eof(libssh2_sftp_get_channel(connection->sftp))) {
+        return true;
+    }
+    switch (errorCode) {
+    case LIBSSH2_ERROR_SOCKET_SEND:
+    case LIBSSH2_ERROR_SOCKET_RECV:
+    case LIBSSH2_ERROR_SOCKET_DISCONNECT:
+    case LIBSSH2_ERROR_SOCKET_TIMEOUT:
+    case LIBSSH2_ERROR_BAD_SOCKET:
+    case LIBSSH2_ERROR_CHANNEL_CLOSED:
+    case LIBSSH2_ERROR_CHANNEL_EOF_SENT:
+    case LIBSSH2_ERROR_TIMEOUT:
+        return true;
+    case LIBSSH2_ERROR_SFTP_PROTOCOL: {
+        const auto status = libssh2_sftp_last_error(connection->sftp);
+        return status == LIBSSH2_FX_NO_CONNECTION || status == LIBSSH2_FX_CONNECTION_LOST;
+    }
+    default:
+        return false;
+    }
+}
+
 bool ensureConnected(CachedConnection *connection,
                      const ConnectionProfile &profile,
                      QString *errorOut)
 {
     if (connection->session && connection->sftp && connection->socks5 == profile.socks5) {
-        return true;
+        if (connection->lane != Lane::Transfer) {
+            return true;
+        }
+        // Verify the reused connection before a transfer can create or
+        // truncate a file. A server-side permission error still proves liveness.
+        LIBSSH2_SFTP_ATTRIBUTES attributes{};
+        const int rc = libssh2_sftp_stat(connection->sftp, ".", &attributes);
+        if (rc == 0 || !connectionLost(connection, rc)) {
+            return true;
+        }
     }
 
     reset(connection);

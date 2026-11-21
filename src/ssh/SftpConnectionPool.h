@@ -56,8 +56,11 @@ bool ensureConnected(CachedConnection *connection,
                      const ConnectionProfile &profile,
                      QString *errorOut);
 
-// Tears down the session/socket so the next ensureConnected() rebuilds it.
-void reset(CachedConnection *connection);
+// Tears down the session/socket, releasing an open handle if the caller has one.
+void reset(CachedConnection *connection, LIBSSH2_SFTP_HANDLE *openHandle = nullptr);
+
+// Classifies a failed libssh2 operation on the leased SFTP connection.
+bool connectionLost(CachedConnection *connection, int errorCode);
 
 LIBSSH2_SESSION *session(CachedConnection *connection);
 LIBSSH2_SFTP *sftp(CachedConnection *connection);

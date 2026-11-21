@@ -144,8 +144,12 @@ void SshSession::clearScreen()
 
 void SshSession::handleConnected()
 {
+    const bool wasReconnecting = m_reconnectAttempt > 0 && !m_userRequestedStop;
     m_reconnectAttempt = 0;
     setStatus(QStringLiteral("connected"));
+    if (wasReconnecting) {
+        emit reconnected();
+    }
 }
 
 void SshSession::handleDisconnected(const QString &reason)

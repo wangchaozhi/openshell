@@ -61,6 +61,9 @@ QString SessionController::open(const ConnectionProfile &profile, QString *error
                 emit sessionStatusChanged(session->id(), session->status(), session->lastMessage());
                 emit sessionsChanged();
             });
+    connect(session, &SshSession::reconnected, this, [this, sessionId]() {
+        emit sessionReconnected(sessionId);
+    });
 
     m_sessions.append(session);
     session->start();

@@ -151,6 +151,7 @@ signals:
     void sessionActivationRequested(const QString &sessionId);
     void sessionScreenUpdated(const QString &sessionId);
     void sessionStatusChanged(const QString &sessionId, const QString &status, const QString &message);
+    void sessionReconnected(const QString &sessionId);
     void remoteDirectoryEntriesReady(const QString &requestId,
                                      const QString &connectionId,
                                      const QString &path,

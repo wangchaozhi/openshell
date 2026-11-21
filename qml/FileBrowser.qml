@@ -18,9 +18,11 @@ Rectangle {
     property var localEntries: []
     property string remotePath: ""
     property var remoteEntries: []
-    property string remoteError: ""
+    property string remoteError: qsTr("Open a session to enable SFTP browsing.")
     property bool remoteLoading: false
+    property bool remoteNeedsRefresh: true
     property string remoteRequestId: ""
+    property string reconnectListingId: ""
     property string remoteOperationRequestId: ""
     property string pendingChmodPath: ""
     property string pendingChmodName: ""
@@ -32,9 +34,9 @@ Rectangle {
     property string editingRemotePath: ""
     property string editingLocalPath: ""
     property string editingConnectionId: ""
-    readonly property string connectionId: session && session.connectionId ? session.connectionId : ""
-    readonly property string sessionKey: session && session.id ? session.id : ""
-    property string loadedSessionKey: ""
+    readonly property string connectionId: loadedRemoteSession.connectionId
+    readonly property string sessionKey: loadedRemoteSession.id
+    property var loadedRemoteSession: ({ id: "", connectionId: "" })
     property var remoteStateBySession: ({})
     property var remoteRequestOwners: ({})
     property var remoteOperationOwners: ({})
@@ -106,7 +108,7 @@ Rectangle {
     Component.onCompleted: {
         loadTransferHistory()
         refreshLocal()
-        switchRemoteSession()
+        Qt.callLater(switchRemoteSession)
     }
 
     onTransferTasksChanged: {
@@ -129,12 +131,15 @@ Rectangle {
             if (!root.remoteListingLoading) {
                 return
             }
-            root.forgetRequestOwner(root.remoteRequestId, false)
+            const requestId = root.remoteRequestId
+            root.forgetRequestOwner(requestId, false)
             root.remoteLoading = false
+            root.remoteNeedsRefresh = true
             root.remoteRequestId = ""
             root.remoteError = qsTr("Remote listing timed out. Try refresh again.")
             root.sftpStatusChanged("error", root.remoteError)
             root.saveCurrentRemoteState()
+            root.finishReconnectListing(requestId, true)
         }
     }
 
@@ -148,7 +153,8 @@ Rectangle {
         }
     }
 
-    onSessionKeyChanged: switchRemoteSession()
+    // Closing a tab can briefly leave the window without an active session.
+    onSessionChanged: Qt.callLater(switchRemoteSession)
 
     function columnTitle(colId) {
         switch (colId) {
@@ -266,6 +272,7 @@ Rectangle {
             remoteEntries: cloneEntries(remoteEntries),
             remoteError: remoteError,
             remoteLoading: remoteLoading,
+            remoteNeedsRefresh: remoteNeedsRefresh,
             remoteRequestId: remoteRequestId,
             remoteOperationRequestId: remoteOperationRequestId,
             remoteSortColumn: remoteSortColumn,
@@ -285,9 +292,7 @@ Rectangle {
     }
 
     function saveCurrentRemoteState() {
-        if (loadedSessionKey && loadedSessionKey.length > 0) {
-            saveRemoteStateForKey(loadedSessionKey, currentRemoteState())
-        }
+        saveRemoteStateForKey(sessionKey, currentRemoteState())
     }
 
     function stateForSession(key, connId) {
@@ -300,6 +305,7 @@ Rectangle {
             remoteEntries: [],
             remoteError: connId && connId.length > 0 ? "" : qsTr("Open a session to enable SFTP browsing."),
             remoteLoading: false,
+            remoteNeedsRefresh: true,
             remoteRequestId: "",
             remoteOperationRequestId: "",
             remoteSortColumn: "name",
@@ -314,6 +320,7 @@ Rectangle {
         remoteEntries = cloneEntries(state.remoteEntries)
         remoteError = state.remoteError || ""
         remoteLoading = state.remoteLoading || false
+        remoteNeedsRefresh = state.remoteNeedsRefresh
         remoteRequestId = state.remoteRequestId || ""
         remoteOperationRequestId = state.remoteOperationRequestId || ""
         remoteSortColumn = state.remoteSortColumn || "name"
@@ -328,16 +335,25 @@ Rectangle {
     }
 
     function switchRemoteSession() {
-        saveCurrentRemoteState()
-        loadedSessionKey = sessionKey
-        const state = stateForSession(sessionKey, connectionId)
-        applyRemoteState(state)
-        if (connectionId === "") {
+        const key = session && session.id ? session.id : ""
+        const connId = session && session.connectionId ? session.connectionId : ""
+        if (key === sessionKey && connId === connectionId) {
             return
         }
-        if (!state.remoteRequestId && !state.remoteOperationRequestId
-                && state.remoteEntries.length === 0 && state.remoteError.length === 0) {
+        saveCurrentRemoteState()
+        loadedRemoteSession = { id: key, connectionId: connId }
+        reconnectListingId = ""
+        const state = stateForSession(key, connId)
+        applyRemoteState(state)
+        if (!key || !connId) {
+            return
+        }
+        if (state.remoteRequestId) {
+            sftpStatusChanged("connecting", "")
+        } else if (state.remoteNeedsRefresh || state.remoteError.length > 0) {
             refreshRemote()
+        } else {
+            sftpStatusChanged("connected", "")
         }
     }
 
@@ -382,25 +398,12 @@ Rectangle {
         }
     }
 
-    function requestRemoteForSession(key, connId, path) {
-        if (!key || key.length === 0 || !connId || connId.length === 0) {
-            return
-        }
-        root.sftpStatusChanged("connecting", "")
-        const requestId = appController.requestRemoteDirectoryEntries(connId, path)
-        const owners = Object.assign({}, remoteRequestOwners)
-        owners[requestId] = key
-        remoteRequestOwners = owners
-        updateRemoteStateForKey(key, {
-            connectionId: connId,
-            remotePath: path,
-            remoteError: "",
-            remoteLoading: true,
-            remoteRequestId: requestId,
-            remoteOperationRequestId: ""
-        })
-        if (key === sessionKey) {
-            remoteRequestTimeout.restart()
+    function finishReconnectListing(requestId, failed) {
+        if (requestId === reconnectListingId) {
+            reconnectListingId = ""
+            if (failed) {
+                refreshRemote()
+            }
         }
     }
 
@@ -489,7 +492,7 @@ Rectangle {
     }
 
     function refreshRemote() {
-        if (connectionId === "") {
+        if (!sessionKey || !connectionId) {
             remoteEntries = []
             remoteLoading = false
             remoteRequestId = ""
@@ -499,7 +502,15 @@ Rectangle {
             saveCurrentRemoteState()
             return
         }
-        requestRemoteForSession(sessionKey, connectionId, remotePath)
+        forgetRequestOwner(remoteRequestId, false)
+        remoteRequestId = appController.requestRemoteDirectoryEntries(connectionId, remotePath)
+        rememberRequestOwner(remoteRequestId, false)
+        remoteError = ""
+        remoteLoading = true
+        reconnectListingId = ""
+        saveCurrentRemoteState()
+        remoteRequestTimeout.restart()
+        sftpStatusChanged("connecting", "")
     }
 
     function navigateRemote(path, recordHistory) {
@@ -1070,6 +1081,17 @@ Rectangle {
 
     Connections {
         target: appController
+        function onSessionReconnected(sessionId) {
+            if (sessionId !== root.sessionKey) {
+                return
+            }
+            if (root.remoteListingLoading) {
+                root.reconnectListingId = root.remoteRequestId
+            } else {
+                root.refreshRemote()
+            }
+        }
+
         function onRemoteDirectoryEntriesReady(requestId, connectionId, path, entries, error) {
             const key = root.remoteRequestOwners[requestId] || ""
             if (key.length === 0) {
@@ -1078,6 +1100,9 @@ Rectangle {
             root.forgetRequestOwner(requestId, false)
             const base = key === root.sessionKey ? root.currentRemoteState()
                                                  : root.stateForSession(key, connectionId)
+            if (requestId !== base.remoteRequestId) {
+                return
+            }
             const sortColumn = base.remoteSortColumn || "name"
             const sortAsc = base.remoteSortAsc === undefined ? true : base.remoteSortAsc
             root.updateRemoteStateForKey(key, {
@@ -1086,11 +1111,13 @@ Rectangle {
                 remoteEntries: root.sortEntries(entries, sortColumn, sortAsc),
                 remoteError: error || "",
                 remoteLoading: false,
+                remoteNeedsRefresh: !!error,
                 remoteRequestId: ""
             })
             if (key === root.sessionKey) {
                 remoteRequestTimeout.stop()
                 root.sftpStatusChanged(error && error.length > 0 ? "error" : "connected", error || "")
+                root.finishReconnectListing(requestId, !!error)
             }
         }
 
@@ -1101,21 +1128,25 @@ Rectangle {
                 return
             }
             root.forgetRequestOwner(requestId, true)
-            const base = key === root.sessionKey ? root.currentRemoteState()
-                                                 : root.stateForSession(key, connectionId)
-            root.updateRemoteStateForKey(key, {
+            const active = key === root.sessionKey
+            const base = active ? root.currentRemoteState() : root.stateForSession(key, connectionId)
+            const update = {
                 connectionId: connectionId,
-                remoteOperationRequestId: "",
+                remoteOperationRequestId: base.remoteOperationRequestId === requestId
+                                          ? "" : base.remoteOperationRequestId,
                 remoteError: ok ? "" : message
-            })
-            if (ok) {
-                if (key === root.sessionKey) {
-                    root.sftpStatusChanged("connected", "")
-                }
-                root.requestRemoteForSession(key, connectionId, base.remotePath || appController.remoteHomePath(connectionId))
-            } else if (key === root.sessionKey) {
+            }
+            if (ok && !active) {
+                root.forgetRequestOwner(base.remoteRequestId, false)
+                update.remoteRequestId = ""
+                update.remoteLoading = false
+                update.remoteNeedsRefresh = true
+            }
+            root.updateRemoteStateForKey(key, update)
+            if (active && ok) {
+                root.refreshRemote()
+            } else if (active && !root.remoteListingLoading) {
                 root.sftpStatusChanged("error", message || "")
-                remoteRequestTimeout.stop()
             }
         }
 

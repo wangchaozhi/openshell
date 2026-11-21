@@ -52,6 +52,8 @@ AppController::AppController(QObject *parent)
             &AppController::sessionScreenUpdated);
     connect(m_sessions, &SessionController::sessionStatusChanged, this,
             &AppController::sessionStatusChanged);
+    connect(m_sessions, &SessionController::sessionReconnected, this,
+            &AppController::sessionReconnected);
     connect(m_monitor, &SystemMonitorController::snapshotReady, this,
             &AppController::systemMonitorSnapshotReady);
     connect(m_remoteEditWatcher, &QFileSystemWatcher::fileChanged, this,

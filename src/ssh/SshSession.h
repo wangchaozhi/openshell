@@ -55,6 +55,7 @@ public:
 
 signals:
     void statusChanged();
+    void reconnected();
     void screenUpdated(); // 终端模型已变更（光标/cells/title 等任意维度）
     void workerThreadFinished();
 

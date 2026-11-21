@@ -209,7 +209,8 @@ ApplicationWindow {
             }
 
             MobileFilesPage {
-                hasSession: window.activeSessionId.length > 0
+                hasSession: window.activeSessionId.length > 0 && !window.activeConnectionIsTelnet
+                sessionId: window.activeSessionId
                 connectionId: window.activeSession && window.activeSession.connectionId
                               ? window.activeSession.connectionId : ""
             }

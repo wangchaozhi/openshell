@@ -1427,6 +1427,10 @@
     <context>
         <name>QObject</name>
         <message>
+            <source>Cannot read remote directory %1</source>
+            <translation>Remote-Verzeichnis %1 konnte nicht gelesen werden</translation>
+        </message>
+        <message>
             <location filename="../src/AppControllerRemoteEdit.cpp" line="110" />
             <source>Remote file saved</source>
             <translation>Remote-Datei gespeichert</translation>

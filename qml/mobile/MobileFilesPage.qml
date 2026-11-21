@@ -8,12 +8,14 @@ Rectangle {
     id: root
 
     property bool hasSession: false
+    property string sessionId: ""
     property string connectionId: ""
 
     property string currentPath: ""
     property var entries: []
     property bool loading: false
     property string pendingRequestId: ""
+    property string reconnectListingId: ""
     property string errorMessage: ""
     property string pendingOp: ""        // "delete" | "rename" | "create" | "upload" — refresh-pending
     property string renameTargetPath: ""
@@ -34,6 +36,7 @@ Rectangle {
         }
         errorMessage = ""
         loading = true
+        reconnectListingId = ""
         pendingRequestId = appController.requestRemoteDirectoryEntries(connectionId, path)
     }
 
@@ -88,6 +91,9 @@ Rectangle {
             entries = []
             currentPath = ""
             errorMessage = ""
+            loading = false
+            pendingRequestId = ""
+            reconnectListingId = ""
         }
     }
 
@@ -95,6 +101,9 @@ Rectangle {
         currentPath = ""
         entries = []
         errorMessage = ""
+        loading = false
+        pendingRequestId = ""
+        reconnectListingId = ""
         if (hasSession && connectionId.length > 0) {
             navigateHome()
         }
@@ -103,14 +112,30 @@ Rectangle {
     Connections {
         target: appController
 
+        function onSessionReconnected(sessionId) {
+            if (!root.hasSession || sessionId !== root.sessionId) {
+                return
+            }
+            if (root.loading) {
+                root.reconnectListingId = root.pendingRequestId
+            } else {
+                root.refresh()
+            }
+        }
+
         function onRemoteDirectoryEntriesReady(requestId, connId, path, entries, error) {
             if (requestId !== root.pendingRequestId) {
                 return
             }
+            const retryOnFailure = requestId === root.reconnectListingId
+            root.reconnectListingId = ""
             root.pendingRequestId = ""
             root.loading = false
             if (error && error.length > 0) {
                 root.errorMessage = error
+                if (retryOnFailure) {
+                    root.loadDirectory(path)
+                }
                 return
             }
             root.currentPath = path

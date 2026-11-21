@@ -121,6 +121,7 @@ private slots:
     void closeReleasesSession();
     void closeDuringConnectReturnsImmediately();
     void exitCommandTransitionsToDisconnected();
+    void autoReconnectEmitsRecoverySignal();
     void telnetProtocolUsesTcpWorker();
     void telnetUsesSocks5_data();
     void telnetUsesSocks5();
@@ -248,6 +249,29 @@ void TestSessionController::exitCommandTransitionsToDisconnected()
     QVERIFY(sawDisconnected);
     QVERIFY2(waitForBuffer(controller, id, QStringLiteral("Connection disconnected")),
              qPrintable(QStringLiteral("buffer was: %1").arg(controller.sessionBuffer(id))));
+}
+
+void TestSessionController::autoReconnectEmitsRecoverySignal()
+{
+    SessionController controller;
+    installEchoFactory(controller);
+    QSignalSpy reconnectSpy(&controller, &SessionController::sessionReconnected);
+
+    ConnectionProfile profile = makeProfile();
+    profile.autoReconnect = true;
+    profile.reconnectInitialDelayMs = 20;
+    QString error;
+    const QString id = controller.open(profile, &error);
+    QVERIFY2(!id.isEmpty(), qPrintable(error));
+    QVERIFY(waitForBuffer(controller, id, QStringLiteral("OpenShell echo backend")));
+    QVERIFY(reconnectSpy.isEmpty());
+
+    controller.sendInput(id, QByteArrayLiteral("exit\n"));
+    QTRY_COMPARE(reconnectSpy.size(), 1);
+    QCOMPARE(reconnectSpy.first().first().toString(), id);
+    QCOMPARE(controller.sessionsAsVariantList().first().toMap().value(QStringLiteral("status")).toString(),
+             QStringLiteral("connected"));
+    controller.close(id);
 }
 
 void TestSessionController::telnetProtocolUsesTcpWorker()

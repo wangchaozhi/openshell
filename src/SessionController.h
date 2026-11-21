@@ -40,6 +40,7 @@ signals:
     void sessionsChanged();
     void sessionScreenUpdated(const QString &sessionId);
     void sessionStatusChanged(const QString &sessionId, const QString &status, const QString &message);
+    void sessionReconnected(const QString &sessionId);
 
 private:
     QVariantMap toVariantMap(const SshSession *session) const;

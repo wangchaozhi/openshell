@@ -1427,6 +1427,10 @@
     <context>
         <name>QObject</name>
         <message>
+            <source>Cannot read remote directory %1</source>
+            <translation>원격 디렉터리 %1을(를) 읽을 수 없습니다</translation>
+        </message>
+        <message>
             <location filename="../src/AppControllerRemoteEdit.cpp" line="110" />
             <source>Remote file saved</source>
             <translation>원격 파일 저장됨</translation>

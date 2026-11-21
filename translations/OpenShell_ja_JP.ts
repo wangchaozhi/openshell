@@ -1457,6 +1457,10 @@
     <context>
         <name>QObject</name>
         <message>
+            <source>Cannot read remote directory %1</source>
+            <translation>リモートディレクトリ %1 を読み込めません</translation>
+        </message>
+        <message>
             <source>Could not connect to %1:%2</source>
             <translation>%1:%2 に接続できませんでした</translation>
         </message>

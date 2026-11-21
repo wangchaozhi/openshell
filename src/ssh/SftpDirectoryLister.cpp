@@ -15,39 +15,29 @@
 
 using SftpConnectionPool::Lane;
 
-QVariantList SftpDirectoryLister::list(const ConnectionProfile &profile,
-                                       const QString &remotePath,
-                                       QString *errorOut)
+namespace {
+
+struct DirectoryListing
 {
     QVariantList rows;
+    QString error;
+    bool connectionLost = false;
+};
 
-    if (!SftpConnectionPool::ensureLibssh2(errorOut)) {
-        return rows;
-    }
-
-    auto lease = SftpConnectionPool::acquire(profile, Lane::Browse);
-    auto *connection = lease.get();
-    if (!SftpConnectionPool::ensureConnected(connection, profile, errorOut)) {
-        return rows;
-    }
-
-    const QString cleanPath = remotePath.isEmpty() ? QStringLiteral("/") : remotePath;
-    const QByteArray path = cleanPath.toUtf8();
+DirectoryListing readDirectory(SftpConnectionPool::CachedConnection *connection, const QString &path)
+{
+    DirectoryListing result;
+    const QByteArray encoded = path.toUtf8();
     LIBSSH2_SFTP_HANDLE *dir = libssh2_sftp_opendir(SftpConnectionPool::sftp(connection),
-                                                    path.constData());
+                                                   encoded.constData());
     if (!dir) {
-        // The cached SFTP session can look valid after the SSH server drops it.
-        // Rebuild the browse connection once so a manual refresh behaves like a reconnect.
-        SftpConnectionPool::reset(connection);
-        if (SftpConnectionPool::ensureConnected(connection, profile, errorOut)) {
-            dir = libssh2_sftp_opendir(SftpConnectionPool::sftp(connection), path.constData());
+        result.error = QObject::tr("Cannot open remote directory %1").arg(path);
+        result.connectionLost = SftpConnectionPool::connectionLost(
+            connection, libssh2_session_last_errno(SftpConnectionPool::session(connection)));
+        if (result.connectionLost) {
+            SftpConnectionPool::reset(connection);
         }
-    }
-    if (!dir) {
-        if (errorOut) {
-            *errorOut = QObject::tr("Cannot open remote directory %1").arg(cleanPath);
-        }
-        return rows;
+        return result;
     }
 
     char name[512];
@@ -61,6 +51,15 @@ QVariantList SftpDirectoryLister::list(const ConnectionProfile &profile,
                                                sizeof(longentry),
                                                &attrs);
         if (rc <= 0) {
+            if (rc < 0) {
+                result.error = QObject::tr("Cannot read remote directory %1").arg(path);
+                result.connectionLost = SftpConnectionPool::connectionLost(connection, rc);
+                result.rows.clear();
+                if (result.connectionLost) {
+                    SftpConnectionPool::reset(connection, dir);
+                    return result;
+                }
+            }
             break;
         }
         const QString fileName = QString::fromUtf8(name, rc);
@@ -84,7 +83,7 @@ QVariantList SftpDirectoryLister::list(const ConnectionProfile &profile,
 
         QVariantMap row;
         row.insert(QStringLiteral("name"), fileName);
-        row.insert(QStringLiteral("path"), SftpTransfer::joinRemotePath(cleanPath, fileName));
+        row.insert(QStringLiteral("path"), SftpTransfer::joinRemotePath(path, fileName));
         row.insert(QStringLiteral("isDir"), isDir);
         row.insert(QStringLiteral("size"),
                    isDir ? QStringLiteral("--") : QString::number(attrs.filesize));
@@ -94,14 +93,41 @@ QVariantList SftpDirectoryLister::list(const ConnectionProfile &profile,
                    attrs.flags & LIBSSH2_SFTP_ATTR_ACMODTIME
                        ? QDateTime::fromSecsSinceEpoch(attrs.mtime).toString(QStringLiteral("yyyy-MM-dd HH:mm"))
                        : QString());
-        rows.append(row);
+        result.rows.append(row);
     }
 
     libssh2_sftp_closedir(dir);
-    if (errorOut) {
-        errorOut->clear();
+    return result;
+}
+
+} // namespace
+
+QVariantList SftpDirectoryLister::list(const ConnectionProfile &profile,
+                                       const QString &remotePath,
+                                       QString *errorOut)
+{
+    if (!SftpConnectionPool::ensureLibssh2(errorOut)) {
+        return {};
     }
-    return rows;
+
+    auto lease = SftpConnectionPool::acquire(profile, Lane::Browse);
+    auto *connection = lease.get();
+    if (!SftpConnectionPool::ensureConnected(connection, profile, errorOut)) {
+        return {};
+    }
+
+    const QString path = remotePath.isEmpty() ? QStringLiteral("/") : remotePath;
+    DirectoryListing result = readDirectory(connection, path);
+    if (result.connectionLost) {
+        if (!SftpConnectionPool::ensureConnected(connection, profile, errorOut)) {
+            return {};
+        }
+        result = readDirectory(connection, path);
+    }
+    if (errorOut) {
+        *errorOut = result.error;
+    }
+    return result.rows;
 }
 
 QString SftpDirectoryLister::execute(const ConnectionProfile &profile,

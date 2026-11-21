@@ -18,6 +18,7 @@ inline constexpr Socket invalidSocket = static_cast<Socket>(-1);
 int timeoutMs(const ConnectionProfile &profile);
 Socket open(const ConnectionProfile &profile, const QString &host, int port, QString *error);
 bool setBlocking(Socket socket, bool blocking);
+void shutdown(Socket socket);
 void close(Socket socket);
 
 } // namespace TcpConnection
