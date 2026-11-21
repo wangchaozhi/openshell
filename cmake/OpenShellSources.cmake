@@ -67,6 +67,7 @@ set(OPENSHELL_QML_FILES
     qml/ConnectionEditor.qml
     qml/SessionTabs.qml
     qml/TerminalView.qml
+    qml/SystemMonitorPoller.qml
     qml/SystemInfoView.qml
     qml/FileBrowser.qml
     qml/ThemePalette.qml

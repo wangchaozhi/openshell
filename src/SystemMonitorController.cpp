@@ -11,59 +11,81 @@
 #include <QtConcurrent>
 
 namespace {
-// 全量命令：第一次取快照用，包含开机不变的静态信息（os/kernel/hostname/
-// cpuinfo/cpuDetails）+ 所有动态字段。返回结果会被拆出静态部分缓存到
-// SystemMonitorController::m_staticInfoByConnection。
-QString fullMonitorCommand()
+constexpr qint64 processIntervalMs = 15000;
+constexpr qint64 filesystemIntervalMs = 30000;
+
+struct MonitorQuery
 {
-    return QStringLiteral(R"SH(
-sh -c '
-echo "__INFO__"
+    bool details;
+    bool staticInfo;
+    bool processes;
+    bool filesystems;
+};
+
+QString monitorCommand(const MonitorQuery &query)
+{
+    QString command = QStringLiteral("sh -c '\n");
+    if (query.details || query.staticInfo) {
+        command += QStringLiteral("echo \"__INFO__\"\n");
+        if (query.staticInfo) {
+            command += QStringLiteral(R"SH(
+echo "hostname=$(hostname)"
+)SH");
+            if (query.details) {
+                command += QStringLiteral(R"SH(
 if [ -r /etc/os-release ]; then . /etc/os-release; echo "os=${PRETTY_NAME:-$NAME}"; else echo "os=$(uname -s)"; fi
 echo "kernel=$(uname -s)"
 echo "kernel_release=$(uname -r)"
 echo "arch=$(uname -m)"
-echo "hostname=$(hostname)"
+)SH");
+            }
+        }
+        if (query.details) {
+            command += QStringLiteral(R"SH(
 echo "uptime=$(uptime -p 2>/dev/null || uptime)"
-echo "__CPUINFO__"
+)SH");
+        }
+    }
+    command += QStringLiteral("echo \"__CPUINFO__\"\n");
+    if (query.staticInfo && query.details) {
+        command += QStringLiteral(R"SH(
 awk -F: "/model name|Hardware|Processor/ {gsub(/^[ \t]+/,\"\",\$2); print \"model=\" \$2; exit}" /proc/cpuinfo 2>/dev/null
 echo "cores=$(getconf _NPROCESSORS_ONLN 2>/dev/null || nproc 2>/dev/null || echo 1)"
+)SH");
+    }
+    command += QStringLiteral(R"SH(
 awk "/^cpu / {usr=\$2; nice=\$3; sys=\$4; idle=\$5; iowait=\$6; irq=\$7; softirq=\$8; steal=\$9; total=usr+nice+sys+idle+iowait+irq+softirq+steal; printf \"stat=%s %s %s %s %s %s %s %s %s\n\", usr,nice,sys,idle,iowait,irq,softirq,steal,total}" /proc/stat 2>/dev/null
+)SH");
+    if (query.staticInfo && query.details) {
+        command += QStringLiteral(R"SH(
 echo "__CPUS__"
 awk -F: "/^processor/ {if (seen) {printf \"cpu=%s|%s|%s|%s|%s\n\", model, cores, mhz, cache, bogo} seen=1; model=\"\"; cores=\"1\"; mhz=\"\"; cache=\"\"; bogo=\"\"} /^model name|^Hardware|^Processor/ {gsub(/^[ \t]+/,\"\",\$2); model=\$2} /^cpu cores/ {gsub(/^[ \t]+/,\"\",\$2); cores=\$2} /^cpu MHz/ {gsub(/^[ \t]+/,\"\",\$2); mhz=\$2} /^cache size/ {gsub(/^[ \t]+/,\"\",\$2); cache=\$2} /^bogomips|^BogoMIPS/ {gsub(/^[ \t]+/,\"\",\$2); bogo=\$2} END {if (seen) printf \"cpu=%s|%s|%s|%s|%s\n\", model, cores, mhz, cache, bogo}" /proc/cpuinfo 2>/dev/null
+)SH");
+    }
+    command += QStringLiteral(R"SH(
 echo "__MEM__"
 awk "/MemTotal|MemAvailable|SwapTotal|SwapFree/ {print \$1 \"=\" \$2}" /proc/meminfo 2>/dev/null
+)SH");
+    if (query.details) {
+        command += QStringLiteral(R"SH(
 echo "__NET__"
 cat /proc/net/dev 2>/dev/null | tail -n +3
+)SH");
+    }
+    if (query.filesystems) {
+        command += QStringLiteral(R"SH(
 echo "__DF__"
 df -P -B1 2>/dev/null | tail -n +2
+)SH");
+    }
+    if (query.processes) {
+        command += QStringLiteral(R"SH(
 echo "__PS__"
 ps -eo pid,comm,pcpu,pmem,rss --sort=-pcpu 2>/dev/null | head -n 8
-'
 )SH");
-}
-
-// 动态命令：跳过 os-release / uname / hostname / 完整 cpuinfo 这些不会变的，
-// 只跑 uptime + /proc/stat + /proc/meminfo + 网卡 + df + ps。在主机上少跑
-// 几个 awk、少读两次 /proc/cpuinfo；网络上每次少 ~1KB。
-QString dynamicMonitorCommand()
-{
-    return QStringLiteral(R"SH(
-sh -c '
-echo "__INFO__"
-echo "uptime=$(uptime -p 2>/dev/null || uptime)"
-echo "__CPUINFO__"
-awk "/^cpu / {usr=\$2; nice=\$3; sys=\$4; idle=\$5; iowait=\$6; irq=\$7; softirq=\$8; steal=\$9; total=usr+nice+sys+idle+iowait+irq+softirq+steal; printf \"stat=%s %s %s %s %s %s %s %s %s\n\", usr,nice,sys,idle,iowait,irq,softirq,steal,total}" /proc/stat 2>/dev/null
-echo "__MEM__"
-awk "/MemTotal|MemAvailable|SwapTotal|SwapFree/ {print \$1 \"=\" \$2}" /proc/meminfo 2>/dev/null
-echo "__NET__"
-cat /proc/net/dev 2>/dev/null | tail -n +3
-echo "__DF__"
-df -P -B1 2>/dev/null | tail -n +2
-echo "__PS__"
-ps -eo pid,comm,pcpu,pmem,rss --sort=-pcpu 2>/dev/null | head -n 8
-'
-)SH");
+    }
+    command += QStringLiteral("'");
+    return command;
 }
 
 // 把缓存里的静态字段补回 dynamic 命令解析出来的 snapshot 上。dynamic 命令
@@ -97,7 +119,9 @@ void mergeStaticInfo(QVariantMap &snapshot, const QVariantMap &cached)
 QVariantMap extractStaticInfo(const QVariantMap &snapshot)
 {
     QVariantMap cache;
-    cache.insert(QStringLiteral("info"), snapshot.value(QStringLiteral("info")));
+    QVariantMap info = snapshot.value(QStringLiteral("info")).toMap();
+    info.remove(QStringLiteral("uptime"));
+    cache.insert(QStringLiteral("info"), info);
     cache.insert(QStringLiteral("cpuDetails"),
                  snapshot.value(QStringLiteral("cpuDetails")));
     const QVariantMap cpu = snapshot.value(QStringLiteral("cpu")).toMap();
@@ -295,27 +319,59 @@ SystemMonitorController::SystemMonitorController(QObject *parent)
 {
 }
 
-QString SystemMonitorController::requestSnapshot(const QString &connectionId, const ConnectionProfile &profile)
+QString SystemMonitorController::requestSnapshot(const QString &connectionId, const ConnectionProfile &profile,
+                                                bool includeDetails)
 {
+    auto &samples = m_samplesByConnection[connectionId];
+    if (!samples.requestId.isEmpty()) {
+        return samples.requestId;
+    }
+
     const QString requestId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    const QVariantMap cachedStatic = m_staticInfoByConnection.value(connectionId);
-    const bool useFull = cachedStatic.isEmpty();
-    const QString command = useFull ? fullMonitorCommand() : dynamicMonitorCommand();
+    samples.requestId = requestId;
+    const MonitorQuery query{
+        includeDetails,
+        samples.staticInfo.isEmpty() || (includeDetails && !samples.hasDetailedStaticInfo),
+        includeDetails && samples.nextProcessSample.hasExpired(),
+        includeDetails && samples.nextFilesystemSample.hasExpired()
+    };
+    const QString command = monitorCommand(query);
+    const QDeadlineTimer processDeadline(processIntervalMs, Qt::PreciseTimer);
+    const QDeadlineTimer filesystemDeadline(filesystemIntervalMs, Qt::PreciseTimer);
 
     auto *watcher = new QFutureWatcher<QVariantMap>(this);
     connect(watcher, &QFutureWatcher<QVariantMap>::finished, this,
-            [this, watcher, requestId, connectionId, useFull]() {
+            [this, watcher, requestId, connectionId, query, processDeadline, filesystemDeadline]() {
                 const QVariantMap result = watcher->result();
                 const QString error = result.value(QStringLiteral("error")).toString();
                 QVariantMap snapshot = result.value(QStringLiteral("snapshot")).toMap();
-                if (useFull && error.isEmpty() && !snapshot.isEmpty()) {
-                    m_staticInfoByConnection.insert(connectionId, extractStaticInfo(snapshot));
+                auto &samples = m_samplesByConnection[connectionId];
+                samples.requestId.clear();
+                if (error.isEmpty() && !snapshot.isEmpty()) {
+                    if (query.staticInfo) {
+                        samples.staticInfo = extractStaticInfo(snapshot);
+                        samples.hasDetailedStaticInfo = query.details;
+                    } else {
+                        mergeStaticInfo(snapshot, samples.staticInfo);
+                    }
+                    if (query.processes) {
+                        samples.processes = snapshot.value(QStringLiteral("processes")).toList();
+                        samples.nextProcessSample = processDeadline;
+                    } else if (query.details) {
+                        snapshot.insert(QStringLiteral("processes"), samples.processes);
+                    }
+                    if (query.filesystems) {
+                        samples.filesystems = snapshot.value(QStringLiteral("filesystems")).toList();
+                        samples.nextFilesystemSample = filesystemDeadline;
+                    } else if (query.details) {
+                        snapshot.insert(QStringLiteral("filesystems"), samples.filesystems);
+                    }
                 }
-                snapshot = normalizeSnapshot(connectionId, snapshot);
+                snapshot = normalizeSnapshot(samples.previousCpu, snapshot);
                 emit snapshotReady(requestId, connectionId, snapshot, error);
                 watcher->deleteLater();
             });
-    watcher->setFuture(QtConcurrent::run([profile, command, cachedStatic]() {
+    watcher->setFuture(QtConcurrent::run([profile, command]() {
         QVariantMap result;
         if (profile.id.isEmpty()) {
             result.insert(QStringLiteral("error"), QObject::tr("Unknown connection"));
@@ -327,18 +383,14 @@ QString SystemMonitorController::requestSnapshot(const QString &connectionId, co
             result.insert(QStringLiteral("error"), error);
             return result;
         }
-        QVariantMap snapshot = parseSystemMonitorOutput(output);
-        if (!cachedStatic.isEmpty()) {
-            mergeStaticInfo(snapshot, cachedStatic);
-        }
-        result.insert(QStringLiteral("snapshot"), snapshot);
+        result.insert(QStringLiteral("snapshot"), parseSystemMonitorOutput(output));
         result.insert(QStringLiteral("error"), QString());
         return result;
     }));
     return requestId;
 }
 
-QVariantMap SystemMonitorController::normalizeSnapshot(const QString &connectionId,
+QVariantMap SystemMonitorController::normalizeSnapshot(CpuTicks &previous,
                                                        const QVariantMap &snapshot)
 {
     QVariantMap normalized = snapshot;
@@ -355,7 +407,6 @@ QVariantMap SystemMonitorController::normalizeSnapshot(const QString &connection
     current.total = cpu.value(QStringLiteral("totalTicks")).toDouble();
     current.valid = current.total > 0;
 
-    const CpuTicks previous = m_lastCpuTicksByConnection.value(connectionId);
     if (current.valid && previous.valid && current.total > previous.total) {
         const double totalDelta = qMax(1.0, current.total - previous.total);
         const double userDelta = current.user - previous.user;
@@ -378,7 +429,7 @@ QVariantMap SystemMonitorController::normalizeSnapshot(const QString &connection
         cpu.insert(QStringLiteral("busyPercent"), busyDelta * 100.0 / totalDelta);
     }
     if (current.valid) {
-        m_lastCpuTicksByConnection.insert(connectionId, current);
+        previous = current;
     }
     normalized.insert(QStringLiteral("cpu"), cpu);
     return normalized;

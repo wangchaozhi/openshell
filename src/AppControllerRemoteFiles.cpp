@@ -285,9 +285,9 @@ void AppController::cancelRemoteOperation(const QString &requestId)
     (*it)->store(true);
 }
 
-QString AppController::requestSystemMonitorSnapshot(const QString &connectionId)
+QString AppController::requestSystemMonitorSnapshot(const QString &connectionId, bool includeDetails)
 {
-    return m_monitor->requestSnapshot(connectionId, m_catalog->profileById(connectionId));
+    return m_monitor->requestSnapshot(connectionId, m_catalog->profileById(connectionId), includeDetails);
 }
 
 

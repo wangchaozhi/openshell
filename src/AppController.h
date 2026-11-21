@@ -125,7 +125,7 @@ public:
     Q_INVOKABLE QString requestDeleteRemotePath(const QString &connectionId,
                                                 const QString &remotePath,
                                                 bool recursive);
-    Q_INVOKABLE QString requestSystemMonitorSnapshot(const QString &connectionId);
+    Q_INVOKABLE QString requestSystemMonitorSnapshot(const QString &connectionId, bool includeDetails = true);
     Q_INVOKABLE QString remoteSiblingPath(const QString &path, const QString &name) const;
     Q_INVOKABLE void copyTextToClipboard(const QString &text) const;
     Q_INVOKABLE QString clipboardText() const;

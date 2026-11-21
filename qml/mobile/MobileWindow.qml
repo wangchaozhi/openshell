@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
+import ".."
 
 ApplicationWindow {
     id: window
@@ -38,10 +39,6 @@ ApplicationWindow {
     property string activeSessionId: ""
     property string editingConnectionId: ""
     property string statusMessage: ""
-    property var monitorSnapshot: ({})
-    property string monitorError: ""
-    property string monitorRequestId: ""
-    property bool monitorRequestInFlight: false
 
     readonly property var activeSession: {
         for (let i = 0; i < activeSessions.length; ++i) {
@@ -127,35 +124,15 @@ ApplicationWindow {
             }
         }
 
-        function onSystemMonitorSnapshotReady(requestId, connectionId, snapshot, error) {
-            if (requestId !== window.monitorRequestId) {
-                return
-            }
-            window.monitorRequestInFlight = false
-            window.monitorSnapshot = snapshot || ({})
-            window.monitorError = error || ""
-        }
     }
 
-    Timer {
-        id: monitorTimer
-        interval: 5000
-        repeat: true
-        // 只在系统页前台时轮询，切到 terminal/files/connections 时停掉。
-        running: !!(window.activeSession
-                    && window.activeSession.connectionId
-                    && !window.activeConnectionIsTelnet
-                    && window.activePage === "system")
-        triggeredOnStart: true
-        onTriggered: {
-            if (window.activeSession
-                    && window.activeSession.connectionId
-                    && !window.activeConnectionIsTelnet
-                    && !window.monitorRequestInFlight) {
-                window.monitorRequestInFlight = true
-                window.monitorRequestId = appController.requestSystemMonitorSnapshot(window.activeSession.connectionId)
-            }
-        }
+    SystemMonitorPoller {
+        id: systemMonitor
+        controller: appController
+        session: window.activeSession
+        includeDetails: false
+        enabled: window.activePage === "system" && !window.activeConnectionIsTelnet
+                 && window.visible && Qt.application.state === Qt.ApplicationActive
     }
 
     ColumnLayout {
@@ -203,8 +180,8 @@ ApplicationWindow {
             }
 
             MobileSystemPage {
-                snapshot: window.monitorSnapshot
-                error: window.monitorError
+                snapshot: systemMonitor.snapshot
+                error: systemMonitor.error
                 hasSession: window.activeSessionId.length > 0
             }
 

@@ -21,10 +21,6 @@ ApplicationWindow {
     property string activeView: "connections"
     property string uiTheme: appController.uiTheme
     property string statusMessage: ""
-    property var monitorSnapshot: ({})
-    property string monitorError: ""
-    property string monitorRequestId: ""
-    property bool monitorRequestInFlight: false
     property string sftpStatus: ""
     property string sftpMessage: ""
     property bool fileBrowserVisible: false
@@ -317,8 +313,8 @@ ApplicationWindow {
 
             Sidebar {
                 anchors.fill: parent
-                monitorSnapshot: window.monitorSnapshot
-                monitorError: window.monitorError
+                monitorSnapshot: systemMonitor.snapshot
+                monitorError: systemMonitor.error
                 uiTheme: window.uiTheme
                 hasActiveSession: window.activeSessionId.length > 0
                 sessionStatus: window.activeSession && window.activeSession.status ? window.activeSession.status : ""
@@ -369,13 +365,6 @@ ApplicationWindow {
             } else if (status === "connected") {
                 window.statusMessage = qsTr("Connected")
             }
-            if (id === window.activeSessionId && status !== "connected") {
-                monitorTimer.stop()
-                window.monitorSnapshot = ({})
-                window.monitorError = message || ""
-                window.monitorRequestId = ""
-                window.monitorRequestInFlight = false
-            }
         }
         function onLanguageChanged() {
             window.refreshConnections()
@@ -422,8 +411,8 @@ ApplicationWindow {
             SplitView.preferredWidth: window.detachedSidebarWindow ? 0 : 280
             SplitView.minimumWidth: window.detachedSidebarWindow ? 0 : 220
 
-            monitorSnapshot: window.monitorSnapshot
-            monitorError: window.monitorError
+            monitorSnapshot: systemMonitor.snapshot
+            monitorError: systemMonitor.error
             uiTheme: window.uiTheme
             hasActiveSession: window.activeSessionId.length > 0
             sessionStatus: window.activeSession && window.activeSession.status ? window.activeSession.status : ""
@@ -550,8 +539,8 @@ ApplicationWindow {
                 Loader {
                     active: window.activeView === "system"
                     sourceComponent: SystemInfoView {
-                        snapshot: window.monitorSnapshot
-                        error: window.monitorError
+                        snapshot: systemMonitor.snapshot
+                        error: systemMonitor.error
                         uiTheme: window.uiTheme
                     }
                 }
@@ -619,34 +608,16 @@ ApplicationWindow {
         onSaveFailed: (message) => window.statusMessage = message
     }
 
-    Timer {
-        id: monitorTimer
-        interval: 5000
-        repeat: true
-        // 只在用户实际看着系统信息页时才轮询；切到 terminal/connections/files
-        // 或最小化到 tray 时停掉，省一次 SSH exec + awk 解析。
-        running: !!(window.activeSession
-                    && window.activeSession.connectionId
-                    && window.activeSession.status === "connected"
-                    && !window.activeConnectionIsTelnet
-                    && window.activeView === "system")
-        triggeredOnStart: true
-        onTriggered: {
-            if (window.activeSession
-                    && window.activeSession.connectionId
-                    && !window.activeConnectionIsTelnet
-                    && !window.monitorRequestInFlight) {
-                window.monitorRequestInFlight = true
-                window.monitorRequestId = appController.requestSystemMonitorSnapshot(window.activeSession.connectionId)
-            }
-        }
+    SystemMonitorPoller {
+        id: systemMonitor
+        controller: appController
+        session: window.activeSession
+        enabled: window.activeView === "system" && !window.activeConnectionIsTelnet
+                 && window.visible && window.visibility !== Window.Minimized
+                 && Qt.application.state === Qt.ApplicationActive
     }
 
     onActiveSessionIdChanged: {
-        monitorSnapshot = ({})
-        monitorError = ""
-        monitorRequestId = ""
-        monitorRequestInFlight = false
         sftpStatus = ""
         sftpMessage = ""
         fileBrowserVisible = false
@@ -656,7 +627,6 @@ ApplicationWindow {
         if (!activeConnectionIsTelnet) {
             delayedFileBrowserLoad.restart()
         }
-        monitorTimer.restart()
     }
 
     Timer {
@@ -668,15 +638,4 @@ ApplicationWindow {
                                              && !window.activeConnectionIsTelnet
     }
 
-    Connections {
-        target: appController
-        function onSystemMonitorSnapshotReady(requestId, connectionId, snapshot, error) {
-            if (requestId !== window.monitorRequestId) {
-                return
-            }
-            window.monitorRequestInFlight = false
-            window.monitorSnapshot = snapshot || ({})
-            window.monitorError = error || ""
-        }
-    }
 }
