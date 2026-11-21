@@ -16,6 +16,8 @@ Dialog {
     readonly property bool classic: theme.classic
     readonly property var protocols: ["ssh", "sftp", "telnet"]
     readonly property bool isTelnet: protocolBox.currentText === "telnet"
+    readonly property bool useSocks5Proxy: socks5Check.checked
+    readonly property bool useJumpHost: !isTelnet && jumpHostCheck.checked
 
     ThemePalette {
         id: theme
@@ -88,6 +90,12 @@ Dialog {
         autoReconnectCheck.checked = true
         telnetAutoLoginCheck.checked = true
         telnetTerminalTypeField.text = "xterm-256color"
+        socks5Check.checked = false
+        socks5HostField.text = ""
+        socks5PortField.text = "1080"
+        socks5UserField.text = ""
+        socks5PasswordField.text = ""
+        jumpHostCheck.checked = false
         jumpHostField.text = ""
         jumpPortField.text = "22"
         jumpUserField.text = ""
@@ -120,7 +128,13 @@ Dialog {
                 autoReconnectCheck.checked = (p.autoReconnect !== false)
                 telnetAutoLoginCheck.checked = (p.telnetAutoLogin !== false)
                 telnetTerminalTypeField.text = p.telnetTerminalType || "xterm-256color"
+                socks5HostField.text = p.socks5Host || ""
+                socks5Check.checked = socks5HostField.text.trim().length > 0
+                socks5PortField.text = String(p.socks5Port || 1080)
+                socks5UserField.text = p.socks5Username || ""
+                socks5PasswordField.text = p.socks5Password || ""
                 jumpHostField.text = p.jumpHost || ""
+                jumpHostCheck.checked = jumpHostField.text.trim().length > 0
                 jumpPortField.text = String(p.jumpPort || 22)
                 jumpUserField.text = p.jumpUsername || ""
                 jumpPasswordField.text = p.jumpPassword || ""
@@ -147,6 +161,14 @@ Dialog {
             hostField.forceActiveFocus()
             return
         }
+        if (useSocks5Proxy && socks5HostField.text.trim().length === 0) {
+            socks5HostField.forceActiveFocus()
+            return
+        }
+        if (useJumpHost && jumpHostField.text.trim().length === 0) {
+            jumpHostField.forceActiveFocus()
+            return
+        }
 
         const payload = {
             "id": editingId,
@@ -163,12 +185,16 @@ Dialog {
             "autoReconnect": autoReconnectCheck.checked,
             "telnetAutoLogin": telnetAutoLoginCheck.checked,
             "telnetTerminalType": telnetTerminalTypeField.text.trim() || "xterm-256color",
-            "jumpHost": root.isTelnet ? "" : jumpHostField.text.trim(),
-            "jumpPort": Math.max(1, Math.min(65535, Number(jumpPortField.text) || 22)),
-            "jumpUsername": root.isTelnet ? "" : jumpUserField.text.trim(),
-            "jumpAuthType": root.isTelnet ? "" : jumpAuthBox.currentText,
-            "jumpPassword": root.isTelnet ? "" : jumpPasswordField.text,
-            "jumpPrivateKeyPath": root.isTelnet ? "" : jumpKeyPathField.text,
+            "socks5Host": useSocks5Proxy ? socks5HostField.text.trim() : "",
+            "socks5Port": useSocks5Proxy && socks5PortField.text !== "" ? Number(socks5PortField.text) : 1080,
+            "socks5Username": useSocks5Proxy ? socks5UserField.text : "",
+            "socks5Password": useSocks5Proxy ? socks5PasswordField.text : "",
+            "jumpHost": useJumpHost ? jumpHostField.text.trim() : "",
+            "jumpPort": useJumpHost ? Math.max(1, Math.min(65535, Number(jumpPortField.text) || 22)) : 22,
+            "jumpUsername": useJumpHost ? jumpUserField.text.trim() : "",
+            "jumpAuthType": useJumpHost ? jumpAuthBox.currentText : "password",
+            "jumpPassword": useJumpHost ? jumpPasswordField.text : "",
+            "jumpPrivateKeyPath": useJumpHost ? jumpKeyPathField.text : "",
             "forwards": root.isTelnet ? [] : _parseForwards(forwardsField.text)
         }
         if (appController.saveConnectionProfile(payload)) {
@@ -454,62 +480,113 @@ Dialog {
                 text: "xterm-256color"
             }
 
-            Label {
+            CheckBox {
+                id: socks5Check
                 Layout.columnSpan: 2
-                text: qsTr("Jump Host (ProxyJump) — leave blank for direct connect")
-                color: theme.textMuted
-                font.pixelSize: 12
                 Layout.topMargin: 6
+                text: qsTr("Use SOCKS5 Proxy")
             }
 
-            Label { text: qsTr("Jump Host"); color: theme.textMuted; font.pixelSize: 12 }
+            Label { visible: root.useSocks5Proxy; text: qsTr("Host"); color: theme.textMuted; font.pixelSize: 12 }
+            ThemedTextField {
+                id: socks5HostField
+                classic: root.classic
+                visible: root.useSocks5Proxy
+                error: root.validationShown && text.trim().length === 0
+                Layout.fillWidth: true
+                placeholderText: error ? qsTr("SOCKS5 proxy host is required") : qsTr("Hostname or IP")
+            }
+
+            Label { visible: root.useSocks5Proxy; text: qsTr("Port"); color: theme.textMuted; font.pixelSize: 12 }
+            ThemedTextField {
+                id: socks5PortField
+                classic: root.classic
+                visible: root.useSocks5Proxy
+                Layout.preferredWidth: 88
+                text: "1080"
+                enabled: socks5HostField.text.trim().length > 0
+                inputMethodHints: Qt.ImhDigitsOnly
+                validator: IntValidator { bottom: 1; top: 65535 }
+            }
+
+            Label { visible: root.useSocks5Proxy; text: qsTr("Username"); color: theme.textMuted; font.pixelSize: 12 }
+            ThemedTextField {
+                id: socks5UserField
+                classic: root.classic
+                visible: root.useSocks5Proxy
+                Layout.fillWidth: true
+                enabled: socks5PortField.enabled
+            }
+
+            Label { visible: root.useSocks5Proxy; text: qsTr("Password"); color: theme.textMuted; font.pixelSize: 12 }
+            ThemedTextField {
+                id: socks5PasswordField
+                classic: root.classic
+                visible: root.useSocks5Proxy
+                Layout.fillWidth: true
+                enabled: socks5PortField.enabled
+                echoMode: TextInput.Password
+            }
+
+            CheckBox {
+                id: jumpHostCheck
+                Layout.columnSpan: 2
+                Layout.topMargin: 6
+                visible: !root.isTelnet
+                text: qsTr("Use Jump Host (ProxyJump)")
+                onToggled: {
+                    if (!checked) {
+                        root.jumpPasswordVisible = false
+                    }
+                }
+            }
+
+            Label { visible: root.useJumpHost; text: qsTr("Jump Host"); color: theme.textMuted; font.pixelSize: 12 }
             ThemedTextField {
                 id: jumpHostField
                 classic: root.classic
+                visible: root.useJumpHost
+                error: root.validationShown && text.trim().length === 0
                 Layout.fillWidth: true
-                placeholderText: qsTr("Hostname or IP of bastion")
-                enabled: !root.isTelnet
-                opacity: enabled ? 1.0 : 0.4
+                placeholderText: error ? qsTr("Jump host is required") : qsTr("Hostname or IP of bastion")
             }
 
-            Label { text: qsTr("Jump Port"); color: theme.textMuted; font.pixelSize: 12 }
+            Label { visible: root.useJumpHost; text: qsTr("Jump Port"); color: theme.textMuted; font.pixelSize: 12 }
             ThemedTextField {
                 id: jumpPortField
                 classic: root.classic
+                visible: root.useJumpHost
                 Layout.preferredWidth: 88
                 horizontalAlignment: TextInput.AlignHCenter
                 inputMethodHints: Qt.ImhDigitsOnly
                 validator: IntValidator { bottom: 1; top: 65535 }
                 text: "22"
-                enabled: !root.isTelnet
-                opacity: enabled ? 1.0 : 0.4
             }
 
-            Label { text: qsTr("Jump Username"); color: theme.textMuted; font.pixelSize: 12 }
+            Label { visible: root.useJumpHost; text: qsTr("Jump Username"); color: theme.textMuted; font.pixelSize: 12 }
             ThemedTextField {
                 id: jumpUserField
                 classic: root.classic
+                visible: root.useJumpHost
                 Layout.fillWidth: true
-                enabled: !root.isTelnet
-                opacity: enabled ? 1.0 : 0.4
             }
 
-            Label { text: qsTr("Jump Auth"); color: theme.textMuted; font.pixelSize: 12 }
+            Label { visible: root.useJumpHost; text: qsTr("Jump Auth"); color: theme.textMuted; font.pixelSize: 12 }
             ThemedComboBox {
                 id: jumpAuthBox
                 classic: root.classic
+                visible: root.useJumpHost
                 menuTheme: theme
                 Layout.fillWidth: true
                 model: ["password", "key", "agent"]
-                enabled: !root.isTelnet
-                opacity: enabled ? 1.0 : 0.4
             }
 
-            Label { text: qsTr("Jump Password"); color: theme.textMuted; font.pixelSize: 12 }
+            Label { visible: root.useJumpHost; text: qsTr("Jump Password"); color: theme.textMuted; font.pixelSize: 12 }
             RowLayout {
+                visible: root.useJumpHost
                 Layout.fillWidth: true
                 opacity: enabled ? 1.0 : 0.4
-                enabled: !root.isTelnet && jumpAuthBox.currentText === "password"
+                enabled: jumpAuthBox.currentText === "password"
                 spacing: 8
 
                 ThemedTextField {
@@ -528,13 +605,14 @@ Dialog {
                 }
             }
 
-            Label { text: qsTr("Jump Private Key"); color: theme.textMuted; font.pixelSize: 12 }
+            Label { visible: root.useJumpHost; text: qsTr("Jump Private Key"); color: theme.textMuted; font.pixelSize: 12 }
             ThemedTextField {
                 id: jumpKeyPathField
                 classic: root.classic
+                visible: root.useJumpHost
                 Layout.fillWidth: true
                 placeholderText: qsTr("Absolute path")
-                enabled: !root.isTelnet && jumpAuthBox.currentText === "key"
+                enabled: jumpAuthBox.currentText === "key"
                 opacity: enabled ? 1.0 : 0.4
             }
 

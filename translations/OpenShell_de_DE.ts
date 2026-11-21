@@ -120,6 +120,14 @@
     <context>
         <name>ConnectionEditor</name>
         <message>
+            <source>SOCKS5 proxy host is required</source>
+            <translation>Ein SOCKS5-Proxy-Host ist erforderlich</translation>
+        </message>
+        <message>
+            <source>Use SOCKS5 Proxy</source>
+            <translation>SOCKS5-Proxy verwenden</translation>
+        </message>
+        <message>
             <location filename="../qml/ConnectionEditor.qml" line="26" />
             <source>New Connection</source>
             <translation>Neue Verbindung</translation>
@@ -221,8 +229,12 @@
         </message>
         <message>
             <location filename="../qml/ConnectionEditor.qml" line="440" />
-            <source>Jump Host (ProxyJump) — leave blank for direct connect</source>
-            <translation>Jump-Host (ProxyJump) — für Direktverbindung leer lassen</translation>
+            <source>Use Jump Host (ProxyJump)</source>
+            <translation>Jump-Host (ProxyJump) verwenden</translation>
+        </message>
+        <message>
+            <source>Jump host is required</source>
+            <translation>Ein Jump-Host ist erforderlich</translation>
         </message>
         <message>
             <location filename="../qml/ConnectionEditor.qml" line="446" />
@@ -972,6 +984,14 @@
     </context>
     <context>
         <name>MobileConnectionEditorPage</name>
+        <message>
+            <source>SOCKS5 proxy host is required</source>
+            <translation>Ein SOCKS5-Proxy-Host ist erforderlich</translation>
+        </message>
+        <message>
+            <source>Use SOCKS5 Proxy</source>
+            <translation>SOCKS5-Proxy verwenden</translation>
+        </message>
         <message>
             <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="55" />
             <source>Connection name is required</source>

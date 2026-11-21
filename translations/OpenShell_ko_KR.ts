@@ -120,6 +120,14 @@
     <context>
         <name>ConnectionEditor</name>
         <message>
+            <source>SOCKS5 proxy host is required</source>
+            <translation>SOCKS5 프록시 호스트를 입력하세요</translation>
+        </message>
+        <message>
+            <source>Use SOCKS5 Proxy</source>
+            <translation>SOCKS5 프록시 사용</translation>
+        </message>
+        <message>
             <location filename="../qml/ConnectionEditor.qml" line="26" />
             <source>New Connection</source>
             <translation>새 연결</translation>
@@ -221,8 +229,12 @@
         </message>
         <message>
             <location filename="../qml/ConnectionEditor.qml" line="440" />
-            <source>Jump Host (ProxyJump) — leave blank for direct connect</source>
-            <translation>점프 호스트(ProxyJump) — 직접 연결은 비워 두세요</translation>
+            <source>Use Jump Host (ProxyJump)</source>
+            <translation>점프 호스트(ProxyJump) 사용</translation>
+        </message>
+        <message>
+            <source>Jump host is required</source>
+            <translation>점프 호스트를 입력하세요</translation>
         </message>
         <message>
             <location filename="../qml/ConnectionEditor.qml" line="446" />
@@ -972,6 +984,14 @@
     </context>
     <context>
         <name>MobileConnectionEditorPage</name>
+        <message>
+            <source>SOCKS5 proxy host is required</source>
+            <translation>SOCKS5 프록시 호스트를 입력하세요</translation>
+        </message>
+        <message>
+            <source>Use SOCKS5 Proxy</source>
+            <translation>SOCKS5 프록시 사용</translation>
+        </message>
         <message>
             <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="55" />
             <source>Connection name is required</source>

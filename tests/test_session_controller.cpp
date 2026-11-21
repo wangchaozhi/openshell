@@ -122,6 +122,10 @@ private slots:
     void closeDuringConnectReturnsImmediately();
     void exitCommandTransitionsToDisconnected();
     void telnetProtocolUsesTcpWorker();
+    void telnetUsesSocks5_data();
+    void telnetUsesSocks5();
+    void telnetSocks5Failure_data();
+    void telnetSocks5Failure();
     void telnetAutoLoginRespondsToPrompts();
     void telnetAutoLoginCanBeDisabled();
     void clearScreenKeepsPromptLine();
@@ -346,6 +350,124 @@ void TestSessionController::telnetProtocolUsesTcpWorker()
 
     controller.close(id);
     QTest::qWait(100);
+}
+
+void TestSessionController::telnetUsesSocks5_data()
+{
+    using namespace Qt::Literals::StringLiterals;
+    QTest::addColumn<bool>("authenticate");
+    QTest::addColumn<QString>("destination");
+    QTest::addColumn<QByteArray>("connectRequest");
+    QTest::newRow("domain-no-auth")
+        << false << QStringLiteral("proxy-only.invalid")
+        << ("\x05\x01\x00\x03\x12"_ba + "proxy-only.invalid"_ba + "\x00\x17"_ba);
+    QTest::newRow("loopback-with-auth")
+        << true << QStringLiteral("127.0.0.1")
+        << "\x05\x01\x00\x01\x7f\x00\x00\x01\x00\x17"_ba;
+    QTest::newRow("ipv6")
+        << false << QStringLiteral("::1")
+        << "\x05\x01\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00"
+           "\x00\x00\x00\x00\x00\x00\x00\x01\x00\x17"_ba;
+}
+
+void TestSessionController::telnetUsesSocks5()
+{
+    using namespace Qt::Literals::StringLiterals;
+    QFETCH(bool, authenticate);
+    QFETCH(QString, destination);
+    QFETCH(QByteArray, connectRequest);
+
+    QTcpServer proxy;
+    QVERIFY(proxy.listen(QHostAddress::LocalHost, 0));
+    const QList<QByteArray> requests = authenticate
+        ? QList<QByteArray>{"\x05\x01\x02"_ba, "\x01\x04user\x04pass"_ba, connectRequest}
+        : QList<QByteArray>{"\x05\x01\x00"_ba, connectRequest};
+    const QByteArray accepted = "\x05\x00\x00\x03\x05proxy\x00\x00SOCKS5 telnet ready\r\n"_ba;
+    const QList<QByteArray> replies = authenticate
+        ? QList<QByteArray>{"\x05\x02"_ba, "\x01\x00"_ba, accepted}
+        : QList<QByteArray>{"\x05\x00"_ba, accepted};
+
+    qsizetype step = 0;
+    QByteArray clientInput;
+    connect(&proxy, &QTcpServer::newConnection, &proxy, [&] {
+        auto *peer = proxy.nextPendingConnection();
+        connect(peer, &QTcpSocket::readyRead, &proxy, [&, peer] {
+            if (step == requests.size()) {
+                clientInput.append(peer->readAll());
+            } else if (peer->bytesAvailable() >= requests[step].size()) {
+                QCOMPARE(peer->read(requests[step].size()), requests[step]);
+                peer->write(replies[step]);
+                ++step;
+            }
+        });
+    });
+
+    SessionController controller;
+    ConnectionProfile profile = makeProfile(QStringLiteral("Proxied Telnet"));
+    profile.protocol = QStringLiteral("telnet");
+    profile.host = destination;
+    profile.port = 23;
+    profile.telnetAutoLogin = false;
+    profile.socks5.host = proxy.serverAddress().toString();
+    profile.socks5.port = proxy.serverPort();
+    if (authenticate) {
+        profile.socks5.username = QStringLiteral("user");
+        profile.socks5.password = QStringLiteral("pass");
+    }
+    QString error;
+    const QString id = controller.open(profile, &error);
+    QVERIFY2(!id.isEmpty(), qPrintable(error));
+    QVERIFY(waitForBuffer(controller, id, QStringLiteral("SOCKS5 telnet ready")));
+    QCOMPARE(step, requests.size());
+
+    controller.sendInput(id, "hello\r\n"_ba);
+    QVERIFY(waitForBytes(clientInput, "hello\r\n"_ba));
+    controller.close(id);
+}
+
+void TestSessionController::telnetSocks5Failure_data()
+{
+    QTest::addColumn<bool>("reply");
+    QTest::addColumn<QString>("message");
+    QTest::newRow("rejected") << true << QStringLiteral("SOCKS5 proxy rejected the authentication method");
+    QTest::newRow("timeout") << false << QStringLiteral("SOCKS5 handshake timed out");
+}
+
+void TestSessionController::telnetSocks5Failure()
+{
+    QFETCH(bool, reply);
+    QFETCH(QString, message);
+
+    QTcpServer target;
+    QVERIFY(target.listen(QHostAddress::LocalHost, 0));
+    QSignalSpy directConnection(&target, &QTcpServer::newConnection);
+
+    QTcpServer proxy;
+    QVERIFY(proxy.listen(QHostAddress::LocalHost, 0));
+    connect(&proxy, &QTcpServer::newConnection, &proxy, [&] {
+        auto *peer = proxy.nextPendingConnection();
+        if (reply) {
+            peer->write(QByteArray("\x05\xff", 2));
+        }
+    });
+
+    SessionController controller;
+    ConnectionProfile profile = makeProfile();
+    profile.protocol = QStringLiteral("telnet");
+    profile.host = target.serverAddress().toString();
+    profile.port = target.serverPort();
+    profile.connectTimeoutSec = 1;
+    profile.socks5.host = proxy.serverAddress().toString();
+    profile.socks5.port = proxy.serverPort();
+    QString error;
+    const QString id = controller.open(profile, &error);
+    QVERIFY2(!id.isEmpty(), qPrintable(error));
+
+    const auto current = [&] { return controller.sessionsAsVariantList().first().toMap(); };
+    QTRY_COMPARE(current().value(QStringLiteral("status")).toString(), QStringLiteral("disconnected"));
+    QCOMPARE(current().value(QStringLiteral("lastMessage")).toString(), message);
+    QVERIFY(directConnection.isEmpty());
+    controller.close(id);
 }
 
 void TestSessionController::telnetAutoLoginRespondsToPrompts()

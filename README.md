@@ -31,6 +31,7 @@ Screenshots from the [project introduction on Zhihu](https://zhuanlan.zhihu.com/
 - Remote file opening: double-click remote files and open them with the system default app, a configured editor, or the built-in editor.
 - Edit upload-back: external editor saves can be watched and uploaded back to the original remote path; the built-in editor uploads on save.
 - Jump host (ProxyJump): chain through a bastion via a libssh2 `direct-tcpip` tunnel with custom send/recv callbacks.
+- Outbound SOCKS5 proxy: configure the proxy host, port (default 1080), and optional credentials per SSH, SFTP, or Telnet connection. The proxy resolves destination names. SSH terminal sessions with a jump host reach the bastion through the proxy.
 - Local port forwarding (`-L`): bind a local port and tunnel it to a remote host through the established session. Remote (`-R`) and dynamic (`-D`) forwarders are not yet implemented and surface a clear error.
 - Auto reconnect: configurable per profile, with exponential backoff capped at 30 s.
 - Credentials: passwords / passphrases stored in the OS keychain (macOS Keychain / Windows Credential Manager / libsecret on Linux via QtKeychain; iOS via Sec API). Plaintext fields in legacy JSON are migrated on first load.

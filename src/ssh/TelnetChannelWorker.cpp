@@ -1,5 +1,7 @@
 #include "TelnetChannelWorker.h"
 
+#include "TcpConnection.h"
+
 #include <QAbstractSocket>
 #include <QHostAddress>
 #include <QtGlobal>
@@ -65,9 +67,24 @@ void TelnetChannelWorker::start()
     connect(m_socket, &QTcpSocket::errorOccurred,
             this, &TelnetChannelWorker::handleSocketError);
 
-    m_connectTimer->start(m_profile.connectTimeoutSec > 0
-                              ? m_profile.connectTimeoutSec * 1000
-                              : 10000);
+    if (m_profile.socks5.enabled()) {
+        QString error;
+        const auto socket = TcpConnection::open(m_profile, m_profile.host, port(), &error);
+        if (socket == TcpConnection::invalidSocket) {
+            emit errorOccurred(error);
+            finishDisconnected(error);
+            return;
+        }
+        if (!m_socket->setSocketDescriptor(static_cast<qintptr>(socket))) {
+            TcpConnection::close(socket);
+            handleSocketError(m_socket->error());
+            return;
+        }
+        handleConnected();
+        return;
+    }
+
+    m_connectTimer->start(TcpConnection::timeoutMs(m_profile));
     m_socket->connectToHost(m_profile.host, port());
 }
 

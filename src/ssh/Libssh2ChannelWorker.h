@@ -4,16 +4,11 @@
 #include <QString>
 
 #include "SshChannelWorker.h"
+#include "TcpConnection.h"
 
 class QSocketNotifier;
 class QTcpServer;
 class QTcpSocket;
-
-#ifdef _WIN32
-using OpenShellSocket = quintptr;   // SOCKET 是无符号整型
-#else
-using OpenShellSocket = int;
-#endif
 
 struct _LIBSSH2_SESSION;
 struct _LIBSSH2_CHANNEL;
@@ -74,7 +69,7 @@ private:
     void schedulePump(int delayMs = 0);
     QString lastSessionError(LIBSSH2_SESSION *session = nullptr) const;
 
-    OpenShellSocket m_socket = static_cast<OpenShellSocket>(-1);
+    TcpConnection::Socket m_socket = TcpConnection::invalidSocket;
     LIBSSH2_SESSION *m_session = nullptr;
     LIBSSH2_CHANNEL *m_channel = nullptr;
     LIBSSH2_SESSION *m_jumpSession = nullptr;  // 跳板机的 SSH session

@@ -91,6 +91,14 @@
     <context>
         <name>ConnectionCatalog</name>
         <message>
+            <source>SOCKS5 proxy port must be between 1 and 65535</source>
+            <translation>SOCKS5 代理端口必须在 1 到 65535 之间</translation>
+        </message>
+        <message>
+            <source>Enter both SOCKS5 credentials, up to 255 bytes each, or leave both blank</source>
+            <translation>请同时填写 SOCKS5 用户名和密码（各最多 255 字节），或将两项都留空</translation>
+        </message>
+        <message>
             <location filename="../src/ConnectionCatalog.cpp" line="173" />
             <source>Connection name is required</source>
             <translation>请填写连接名称</translation>
@@ -119,6 +127,14 @@
     </context>
     <context>
         <name>ConnectionEditor</name>
+        <message>
+            <source>SOCKS5 proxy host is required</source>
+            <translation>请填写 SOCKS5 代理地址</translation>
+        </message>
+        <message>
+            <source>Use SOCKS5 Proxy</source>
+            <translation>使用 SOCKS5 代理</translation>
+        </message>
         <message>
             <location filename="../qml/ConnectionEditor.qml" line="26" />
             <source>New Connection</source>
@@ -247,8 +263,12 @@
         </message>
         <message>
             <location filename="../qml/ConnectionEditor.qml" line="440" />
-            <source>Jump Host (ProxyJump) — leave blank for direct connect</source>
-            <translation>跳板机 (ProxyJump) — 留空表示直连</translation>
+            <source>Use Jump Host (ProxyJump)</source>
+            <translation>使用跳板机 (ProxyJump)</translation>
+        </message>
+        <message>
+            <source>Jump host is required</source>
+            <translation>请填写跳板机地址</translation>
         </message>
         <message>
             <location filename="../qml/ConnectionEditor.qml" line="446" />
@@ -990,6 +1010,14 @@
     <context>
         <name>MobileConnectionEditorPage</name>
         <message>
+            <source>SOCKS5 proxy host is required</source>
+            <translation>请填写 SOCKS5 代理地址</translation>
+        </message>
+        <message>
+            <source>Use SOCKS5 Proxy</source>
+            <translation>使用 SOCKS5 代理</translation>
+        </message>
+        <message>
             <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="55" />
             <source>Connection name is required</source>
             <translation>请填写连接名称</translation>
@@ -1428,6 +1456,38 @@
     </context>
     <context>
         <name>QObject</name>
+        <message>
+            <source>Could not connect to %1:%2</source>
+            <translation>无法连接到 %1:%2</translation>
+        </message>
+        <message>
+            <source>Invalid SOCKS5 destination hostname</source>
+            <translation>SOCKS5 目标主机名无效</translation>
+        </message>
+        <message>
+            <source>Invalid SOCKS5 proxy reply</source>
+            <translation>SOCKS5 代理响应无效</translation>
+        </message>
+        <message>
+            <source>SOCKS5 handshake failed</source>
+            <translation>SOCKS5 握手失败</translation>
+        </message>
+        <message>
+            <source>SOCKS5 handshake timed out</source>
+            <translation>SOCKS5 握手超时</translation>
+        </message>
+        <message>
+            <source>SOCKS5 proxy refused the connection (code %1)</source>
+            <translation>SOCKS5 代理拒绝了连接（代码 %1）</translation>
+        </message>
+        <message>
+            <source>SOCKS5 proxy rejected the authentication method</source>
+            <translation>SOCKS5 代理拒绝了认证方式</translation>
+        </message>
+        <message>
+            <source>SOCKS5 username or password rejected</source>
+            <translation>SOCKS5 代理拒绝了用户名或密码</translation>
+        </message>
         <message>
             <location filename="../src/AppControllerRemoteFiles.cpp" line="167" />
             <source>Upload completed</source>

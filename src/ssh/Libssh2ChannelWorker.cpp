@@ -1,9 +1,7 @@
 ﻿#include "Libssh2ChannelWorker.h"
 
-#include <QElapsedTimer>
 #include <QFile>
 #include <QHostAddress>
-#include <QHostInfo>
 #include <QSocketNotifier>
 #include <QString>
 #include <QTcpServer>
@@ -17,27 +15,10 @@
 
 #ifdef _WIN32
 #include <winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-using socket_len_t = int;
-inline int openshell_close_socket(OpenShellSocket s) { return ::closesocket(static_cast<SOCKET>(s)); }
-inline int openshell_socket_errno() { return WSAGetLastError(); }
-inline bool openshell_socket_would_block(int err) { return err == WSAEWOULDBLOCK || err == WSAEINPROGRESS; }
 #else
-#include <arpa/inet.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <netdb.h>
+#include <cerrno>
 #include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <sys/select.h>
 #include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
-using socket_len_t = socklen_t;
-inline int openshell_close_socket(OpenShellSocket s) { return ::close(s); }
-inline int openshell_socket_errno() { return errno; }
-inline bool openshell_socket_would_block(int err) { return err == EWOULDBLOCK || err == EAGAIN || err == EINPROGRESS; }
 #endif
 
 // Note: SessionAbstract is declared at file scope (not in anonymous namespace)
@@ -52,89 +33,13 @@ namespace {
 constexpr int kReadChunk = 32 * 1024;
 constexpr int kPumpFallbackMs = 250; // 兜底心跳，避免 QSocketNotifier 漏事件
 
-#ifdef _WIN32
-bool openshell_set_nonblocking(OpenShellSocket s)
-{
-    u_long mode = 1;
-    return ::ioctlsocket(static_cast<SOCKET>(s), FIONBIO, &mode) == 0;
-}
-
-bool openshell_set_blocking(OpenShellSocket s)
-{
-    u_long mode = 0;
-    return ::ioctlsocket(static_cast<SOCKET>(s), FIONBIO, &mode) == 0;
-}
-#else
-bool openshell_set_nonblocking(OpenShellSocket s)
-{
-    int flags = ::fcntl(s, F_GETFL, 0);
-    if (flags < 0) {
-        return false;
-    }
-    return ::fcntl(s, F_SETFL, flags | O_NONBLOCK) == 0;
-}
-
-bool openshell_set_blocking(OpenShellSocket s)
-{
-    int flags = ::fcntl(s, F_GETFL, 0);
-    if (flags < 0) {
-        return false;
-    }
-    return ::fcntl(s, F_SETFL, flags & ~O_NONBLOCK) == 0;
-}
-#endif
-
-bool isInvalidSocket(OpenShellSocket s)
-{
-#ifdef _WIN32
-    return s == static_cast<OpenShellSocket>(INVALID_SOCKET);
-#else
-    return s < 0;
-#endif
-}
-
-int connectTimeoutMs(const ConnectionProfile &profile)
-{
-    return profile.connectTimeoutSec > 0 ? profile.connectTimeoutSec * 1000 : 10000;
-}
-
-bool resolveHostAddress(const QString &host, QHostAddress *out, QString *errorOut)
-{
-    // IP literal short-circuit avoids QHostInfo's AAAA / reverse-DNS overhead on LAN IPs.
-    if (out->setAddress(host)) {
-        return true;
-    }
-    const QHostInfo info = QHostInfo::fromName(host);
-    if (info.error() != QHostInfo::NoError || info.addresses().isEmpty()) {
-        if (errorOut) {
-            *errorOut = QObject::tr("Cannot resolve host %1: %2").arg(host, info.errorString());
-        }
-        return false;
-    }
-    for (const QHostAddress &candidate : info.addresses()) {
-        if (candidate.protocol() == QAbstractSocket::IPv4Protocol) {
-            *out = candidate;
-            return true;
-        }
-    }
-    *out = info.addresses().first();
-    return true;
-}
-
-void applyTcpNoDelay(OpenShellSocket sock)
-{
-    int one = 1;
-    ::setsockopt(static_cast<int>(sock), IPPROTO_TCP, TCP_NODELAY,
-                 reinterpret_cast<const char *>(&one), sizeof(one));
-}
-
 // OS 层 TCP keepalive：libssh2 那层握手用不上、teardown 又因为线程被强杀
 // 没发出 disconnect 时，至少让内核能更早把"对端死了"探测出来并发 FIN/RST，
 // 服务端 sshd 不至于挂在 ESTABLISHED 上等到 TCP 默认 2 小时才超时。
-void applyTcpKeepalive(OpenShellSocket sock)
+void applyTcpKeepalive(TcpConnection::Socket sock)
 {
     int one = 1;
-    ::setsockopt(static_cast<int>(sock), SOL_SOCKET, SO_KEEPALIVE,
+    ::setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE,
                  reinterpret_cast<const char *>(&one), sizeof(one));
 }
 
@@ -414,137 +319,13 @@ void Libssh2ChannelWorker::pump()
 
 bool Libssh2ChannelWorker::openSocket(const QString &host, int port, QString *errorOut)
 {
-    const QString hostStr = host.isEmpty() ? QStringLiteral("127.0.0.1") : host;
-    QHostAddress addr;
-    if (!resolveHostAddress(hostStr, &addr, errorOut)) {
+    const QString target = host.isEmpty() ? QStringLiteral("127.0.0.1") : host;
+    m_socket = TcpConnection::open(m_profile, target, port, errorOut);
+    if (m_socket == TcpConnection::invalidSocket) {
         return false;
     }
-    if (port <= 0) {
-        port = 22;
-    }
-
-#ifdef _WIN32
-    WSADATA wsa;
-    static bool wsaInited = false;
-    if (!wsaInited) {
-        if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
-            if (errorOut) {
-                *errorOut = tr("WSAStartup failed");
-            }
-            return false;
-        }
-        wsaInited = true;
-    }
-#endif
-
-    const int family = (addr.protocol() == QAbstractSocket::IPv6Protocol) ? AF_INET6 : AF_INET;
-    m_socket = static_cast<OpenShellSocket>(::socket(family, SOCK_STREAM, 0));
-    if (isInvalidSocket(m_socket)) {
-        if (errorOut) {
-            *errorOut = tr("socket() failed");
-        }
-        return false;
-    }
-
-    if (!openshell_set_nonblocking(m_socket)) {
-        if (errorOut) {
-            *errorOut = tr("Failed to switch socket to non-blocking mode");
-        }
-        return false;
-    }
-
-    int connectRc = -1;
-    if (family == AF_INET6) {
-        sockaddr_in6 sa{};
-        sa.sin6_family = AF_INET6;
-        sa.sin6_port = htons(static_cast<uint16_t>(port));
-        Q_IPV6ADDR raw = addr.toIPv6Address();
-        memcpy(&sa.sin6_addr, &raw, sizeof(raw));
-        connectRc = ::connect(static_cast<int>(m_socket), reinterpret_cast<sockaddr *>(&sa), sizeof(sa));
-    } else {
-        sockaddr_in sa{};
-        sa.sin_family = AF_INET;
-        sa.sin_port = htons(static_cast<uint16_t>(port));
-        sa.sin_addr.s_addr = htonl(addr.toIPv4Address());
-        connectRc = ::connect(static_cast<int>(m_socket), reinterpret_cast<sockaddr *>(&sa), sizeof(sa));
-    }
-
-    if (connectRc == 0) {
-        if (!openshell_set_blocking(m_socket)) {
-            if (errorOut) {
-                *errorOut = tr("Failed to switch socket to blocking mode");
-            }
-            return false;
-        }
-        applyTcpNoDelay(m_socket);
-        applyTcpKeepalive(m_socket);
-        return true;
-    }
-
-    if (connectRc != 0 && openshell_socket_would_block(openshell_socket_errno())) {
-        fd_set writeSet;
-        FD_ZERO(&writeSet);
-#ifdef _WIN32
-        FD_SET(static_cast<SOCKET>(m_socket), &writeSet);
-#else
-        FD_SET(m_socket, &writeSet);
-#endif
-
-        timeval timeout{};
-        const int timeoutMs = connectTimeoutMs(m_profile);
-        timeout.tv_sec = timeoutMs / 1000;
-        timeout.tv_usec = (timeoutMs % 1000) * 1000;
-
-        const int waitRc = ::select(static_cast<int>(m_socket) + 1, nullptr, &writeSet, nullptr, &timeout);
-        if (waitRc > 0) {
-            int socketError = 0;
-            socket_len_t len = sizeof(socketError);
-            if (::getsockopt(static_cast<int>(m_socket),
-                             SOL_SOCKET,
-                             SO_ERROR,
-#ifdef _WIN32
-                             reinterpret_cast<char *>(&socketError),
-#else
-                             &socketError,
-#endif
-                             &len) != 0) {
-                socketError = openshell_socket_errno();
-            }
-            if (socketError == 0) {
-                if (!openshell_set_blocking(m_socket)) {
-                    if (errorOut) {
-                        *errorOut = tr("Failed to switch socket to blocking mode");
-                    }
-                    return false;
-                }
-                applyTcpNoDelay(m_socket);
-                applyTcpKeepalive(m_socket);
-                return true;
-            }
-            if (errorOut) {
-                *errorOut = tr("connect() to %1:%2 failed (errno=%3)")
-                                .arg(addr.toString(), QString::number(port),
-                                     QString::number(socketError));
-            }
-            return false;
-        }
-
-        if (waitRc == 0) {
-            if (errorOut) {
-                *errorOut = tr("connect() to %1:%2 timed out after %3 seconds")
-                                .arg(addr.toString(), QString::number(port),
-                                     QString::number(timeoutMs / 1000));
-            }
-            return false;
-        }
-    }
-
-    if (errorOut) {
-        *errorOut = tr("connect() to %1:%2 failed (errno=%3)")
-                        .arg(addr.toString(), QString::number(port),
-                             QString::number(openshell_socket_errno()));
-    }
-    return false;
+    applyTcpKeepalive(m_socket);
+    return true;
 }
 
 bool Libssh2ChannelWorker::handshake(LIBSSH2_SESSION *session, QString *errorOut)
@@ -558,9 +339,9 @@ bool Libssh2ChannelWorker::handshake(LIBSSH2_SESSION *session, QString *errorOut
     libssh2_session_set_blocking(session, 1);
     // 用 jump 时 socket fd 对应跳板机连接，没法 select 出主 session 的活动；
     // 把 timeout 设到底层 socket 上仍是 OK 的，因为 callback 会接管 I/O。
-    libssh2_session_set_timeout(session, connectTimeoutMs(m_profile));
+    libssh2_session_set_timeout(session, TcpConnection::timeoutMs(m_profile));
 
-    const int rc = libssh2_session_handshake(session, static_cast<int>(m_socket));
+    const int rc = libssh2_session_handshake(session, m_socket);
     if (rc != 0) {
         if (errorOut) {
             *errorOut = tr("SSH handshake failed: %1").arg(lastSessionError(session));
@@ -764,7 +545,7 @@ bool Libssh2ChannelWorker::openShell(QString *errorOut)
         libssh2_keepalive_config(m_session, 1, m_profile.keepaliveSec);
     }
 
-    if (!openshell_set_nonblocking(m_socket)) {
+    if (!TcpConnection::setBlocking(m_socket, false)) {
         if (errorOut) {
             *errorOut = tr("Failed to switch socket to non-blocking mode");
         }
@@ -817,9 +598,9 @@ void Libssh2ChannelWorker::teardown()
     m_sessionAbstract = nullptr;
     delete m_jumpSessionAbstract;
     m_jumpSessionAbstract = nullptr;
-    if (!isInvalidSocket(m_socket)) {
-        openshell_close_socket(m_socket);
-        m_socket = static_cast<OpenShellSocket>(-1);
+    if (m_socket != TcpConnection::invalidSocket) {
+        TcpConnection::close(m_socket);
+        m_socket = TcpConnection::invalidSocket;
     }
     if (m_libsshInited) {
         libssh2_exit();

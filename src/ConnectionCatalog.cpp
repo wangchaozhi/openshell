@@ -4,6 +4,7 @@
 #include "CredentialStore.h"
 #endif
 
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
@@ -13,6 +14,21 @@
 #include <QSaveFile>
 #include <QStandardPaths>
 #include <QUuid>
+
+QString Socks5Proxy::validationError() const
+{
+    if (!enabled()) {
+        return {};
+    }
+    if (port < 1 || port > 65535) {
+        return QCoreApplication::translate("ConnectionCatalog", "SOCKS5 proxy port must be between 1 and 65535");
+    }
+    if (username.isEmpty() != password.isEmpty() ||
+        username.toUtf8().size() > 255 || password.toUtf8().size() > 255) {
+        return QCoreApplication::translate("ConnectionCatalog", "Enter both SOCKS5 credentials, up to 255 bytes each, or leave both blank");
+    }
+    return {};
+}
 
 QVariantMap ConnectionProfile::toVariantMap() const
 {
@@ -37,6 +53,10 @@ QVariantMap ConnectionProfile::toVariantMap() const
     map.insert(QStringLiteral("reconnectInitialDelayMs"), reconnectInitialDelayMs);
     map.insert(QStringLiteral("telnetAutoLogin"), telnetAutoLogin);
     map.insert(QStringLiteral("telnetTerminalType"), telnetTerminalType);
+    map.insert(QStringLiteral("socks5Host"), socks5.host);
+    map.insert(QStringLiteral("socks5Port"), socks5.port);
+    map.insert(QStringLiteral("socks5Username"), socks5.username);
+    map.insert(QStringLiteral("socks5Password"), socks5.password);
     map.insert(QStringLiteral("jumpHost"), jumpHost);
     map.insert(QStringLiteral("jumpPort"), jumpPort);
     map.insert(QStringLiteral("jumpUsername"), jumpUsername);
@@ -84,6 +104,10 @@ ConnectionProfile ConnectionProfile::fromVariantMap(const QVariantMap &map)
     p.telnetAutoLogin = map.value(QStringLiteral("telnetAutoLogin"), true).toBool();
     p.telnetTerminalType = map.value(QStringLiteral("telnetTerminalType"),
                                      QStringLiteral("xterm-256color")).toString();
+    p.socks5.host = map.value(QStringLiteral("socks5Host")).toString().trimmed();
+    p.socks5.port = map.value(QStringLiteral("socks5Port"), 1080).toInt();
+    p.socks5.username = map.value(QStringLiteral("socks5Username")).toString();
+    p.socks5.password = map.value(QStringLiteral("socks5Password")).toString();
     p.jumpHost = map.value(QStringLiteral("jumpHost")).toString();
     p.jumpPort = map.value(QStringLiteral("jumpPort"), 22).toInt();
     p.jumpUsername = map.value(QStringLiteral("jumpUsername")).toString();
@@ -180,6 +204,16 @@ bool ConnectionCatalog::upsert(const ConnectionProfile &profile, QString *error)
         }
         return false;
     }
+    const QString proxyError = p.socks5.validationError();
+    if (!proxyError.isEmpty()) {
+        if (error) {
+            *error = proxyError;
+        }
+        return false;
+    }
+    if (!p.socks5.enabled()) {
+        p.socks5 = {};
+    }
     if (p.id.isEmpty()) {
         p.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
     }
@@ -214,6 +248,7 @@ bool ConnectionCatalog::remove(const QString &id, QString *error)
     CredentialStore::remove(id, QStringLiteral("keyPassphrase"));
     CredentialStore::remove(id, QStringLiteral("jumpPassword"));
     CredentialStore::remove(id, QStringLiteral("jumpKeyPassphrase"));
+    CredentialStore::remove(id, QStringLiteral("socks5Password"));
 #endif
 
     reload();
@@ -244,7 +279,8 @@ ConnectionProfile ConnectionCatalog::loadFromFile(const QString &path) const
         const bool hadPlainSecret = obj.contains(QStringLiteral("password"))
                                     || obj.contains(QStringLiteral("keyPassphrase"))
                                     || obj.contains(QStringLiteral("jumpPassword"))
-                                    || obj.contains(QStringLiteral("jumpKeyPassphrase"));
+                                    || obj.contains(QStringLiteral("jumpKeyPassphrase"))
+                                    || obj.contains(QStringLiteral("socks5Password"));
         if (p.password.isEmpty()) {
             p.password = CredentialStore::load(p.id, QStringLiteral("password"));
         }
@@ -256,6 +292,9 @@ ConnectionProfile ConnectionCatalog::loadFromFile(const QString &path) const
         }
         if (p.jumpKeyPassphrase.isEmpty()) {
             p.jumpKeyPassphrase = CredentialStore::load(p.id, QStringLiteral("jumpKeyPassphrase"));
+        }
+        if (p.socks5.enabled() && !p.socks5.username.isEmpty() && p.socks5.password.isEmpty()) {
+            p.socks5.password = CredentialStore::load(p.id, QStringLiteral("socks5Password"));
         }
         if (hadPlainSecret) {
             saveToFile(p, nullptr);
@@ -288,10 +327,15 @@ bool ConnectionCatalog::saveToFile(const ConnectionProfile &profile, QString *er
                                profile.jumpKeyPassphrase, error)) {
         return false;
     }
+    if (!CredentialStore::save(profile.id, QStringLiteral("socks5Password"),
+                               profile.socks5.password, error)) {
+        return false;
+    }
     map.remove(QStringLiteral("password"));
     map.remove(QStringLiteral("keyPassphrase"));
     map.remove(QStringLiteral("jumpPassword"));
     map.remove(QStringLiteral("jumpKeyPassphrase"));
+    map.remove(QStringLiteral("socks5Password"));
 #endif
 
     // QSaveFile writes to a temp file and atomically renames on commit, so a

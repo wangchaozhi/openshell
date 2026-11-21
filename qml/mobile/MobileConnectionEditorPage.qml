@@ -10,6 +10,7 @@ Rectangle {
     property bool passwordVisible: false
     readonly property var protocols: ["ssh", "sftp", "telnet"]
     readonly property bool isTelnet: protocolBox.currentText === "telnet"
+    readonly property bool useSocks5Proxy: socks5Check.checked
 
     signal saved()
     signal canceled()
@@ -22,6 +23,11 @@ Rectangle {
         protocolBox.currentIndex = 0
         hostField.text = ""
         portField.text = "22"
+        socks5Check.checked = false
+        socks5HostField.text = ""
+        socks5PortField.text = "1080"
+        socks5UserField.text = ""
+        socks5PasswordField.text = ""
         userField.text = ""
         authBox.currentIndex = 0
         passwordField.text = ""
@@ -40,6 +46,11 @@ Rectangle {
         protocolBox.currentIndex = Math.max(0, root.protocols.indexOf(profile.protocol || "ssh"))
         hostField.text = profile.host || ""
         portField.text = String(profile.port || 22)
+        socks5HostField.text = profile.socks5Host || ""
+        socks5Check.checked = socks5HostField.text.trim().length > 0
+        socks5PortField.text = String(profile.socks5Port || 1080)
+        socks5UserField.text = profile.socks5Username || ""
+        socks5PasswordField.text = profile.socks5Password || ""
         userField.text = profile.username || ""
         authBox.currentIndex = Math.max(0, ["password", "key", "agent"].indexOf(profile.authType || "password"))
         passwordField.text = profile.password || ""
@@ -64,6 +75,11 @@ Rectangle {
             hostField.forceActiveFocus()
             return
         }
+        if (useSocks5Proxy && socks5HostField.text.trim().length === 0) {
+            errorMessage = qsTr("SOCKS5 proxy host is required")
+            socks5HostField.forceActiveFocus()
+            return
+        }
 
         const payload = {
             "id": editingId,
@@ -71,6 +87,10 @@ Rectangle {
             "protocol": protocolBox.currentText,
             "host": hostField.text.trim(),
             "port": Math.max(1, Math.min(65535, Number(portField.text) || 22)),
+            "socks5Host": useSocks5Proxy ? socks5HostField.text.trim() : "",
+            "socks5Port": useSocks5Proxy && socks5PortField.text !== "" ? Number(socks5PortField.text) : 1080,
+            "socks5Username": useSocks5Proxy ? socks5UserField.text : "",
+            "socks5Password": useSocks5Proxy ? socks5PasswordField.text : "",
             "username": userField.text.trim(),
             "authType": root.isTelnet ? "password" : authBox.currentText,
             "password": passwordField.text,
@@ -283,6 +303,53 @@ Rectangle {
                     Layout.rightMargin: 16
                     visible: root.isTelnet
                     text: "xterm-256color"
+                }
+
+                CheckBox {
+                    id: socks5Check
+                    Layout.leftMargin: 16
+                    text: qsTr("Use SOCKS5 Proxy")
+                }
+                TextField {
+                    id: socks5HostField
+                    visible: root.useSocks5Proxy
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 16
+                    Layout.rightMargin: 16
+                    placeholderText: qsTr("Hostname or IP")
+                }
+
+                Label { visible: root.useSocks5Proxy; Layout.leftMargin: 16; text: qsTr("Port"); color: "#93c5fd"; font.pixelSize: 12 }
+                TextField {
+                    id: socks5PortField
+                    visible: root.useSocks5Proxy
+                    Layout.preferredWidth: 120
+                    Layout.leftMargin: 16
+                    text: "1080"
+                    enabled: socks5HostField.text.trim().length > 0
+                    inputMethodHints: Qt.ImhDigitsOnly
+                    validator: IntValidator { bottom: 1; top: 65535 }
+                }
+
+                Label { visible: root.useSocks5Proxy; Layout.leftMargin: 16; text: qsTr("Username"); color: "#93c5fd"; font.pixelSize: 12 }
+                TextField {
+                    id: socks5UserField
+                    visible: root.useSocks5Proxy
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 16
+                    Layout.rightMargin: 16
+                    enabled: socks5PortField.enabled
+                }
+
+                Label { visible: root.useSocks5Proxy; Layout.leftMargin: 16; text: qsTr("Password"); color: "#93c5fd"; font.pixelSize: 12 }
+                TextField {
+                    id: socks5PasswordField
+                    visible: root.useSocks5Proxy
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 16
+                    Layout.rightMargin: 16
+                    enabled: socks5PortField.enabled
+                    echoMode: TextInput.Password
                 }
 
                 Label { Layout.leftMargin: 16; text: qsTr("Group"); color: "#93c5fd"; font.pixelSize: 12 }

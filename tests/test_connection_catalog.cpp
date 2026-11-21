@@ -15,6 +15,7 @@ private slots:
     void upsertRequiresNameAndHost();
     void upsertAssignsIdWhenMissing();
     void upsertRoundTripsAllFields();
+    void invalidSocks5ProfileIsRejected();
     void removeDeletesProfile();
 
 private:
@@ -78,6 +79,8 @@ void TestConnectionCatalog::upsertRoundTripsAllFields()
     p.privateKeyPath = QStringLiteral("/keys/id_rsa");
     p.telnetAutoLogin = false;
     p.telnetTerminalType = QStringLiteral("vt100");
+    p.socks5 = {QStringLiteral("proxy.example"), 10808,
+                QStringLiteral("proxy-user"), QStringLiteral("test-password")};
     p.group = QStringLiteral("Production");
     p.notes = QStringLiteral("Datacenter A");
 
@@ -96,6 +99,7 @@ void TestConnectionCatalog::upsertRoundTripsAllFields()
             QCOMPARE(profile.privateKeyPath, QStringLiteral("/keys/id_rsa"));
             QCOMPARE(profile.telnetAutoLogin, false);
             QCOMPARE(profile.telnetTerminalType, QStringLiteral("vt100"));
+            QVERIFY(profile.socks5 == p.socks5);
             QCOMPARE(profile.group, QStringLiteral("Production"));
             QCOMPARE(profile.notes, QStringLiteral("Datacenter A"));
             found = true;
@@ -103,6 +107,29 @@ void TestConnectionCatalog::upsertRoundTripsAllFields()
         }
     }
     QVERIFY(found);
+}
+
+void TestConnectionCatalog::invalidSocks5ProfileIsRejected()
+{
+    const ConnectionProfile legacy = ConnectionProfile::fromVariantMap({});
+    QVERIFY(!legacy.socks5.enabled());
+    QCOMPARE(legacy.socks5.port, 1080);
+
+    ConnectionCatalog catalog;
+    ConnectionProfile p;
+    p.name = QStringLiteral("Invalid proxy");
+    p.host = QStringLiteral("example.test");
+    p.socks5.host = QStringLiteral("proxy.test");
+    p.socks5.port = 65536;
+    QString error;
+    QVERIFY(!catalog.upsert(p, &error));
+    QVERIFY(!error.isEmpty());
+
+    p.socks5.port = 1080;
+    p.socks5.username = QStringLiteral("user");
+    error.clear();
+    QVERIFY(!catalog.upsert(p, &error));
+    QVERIFY(!error.isEmpty());
 }
 
 void TestConnectionCatalog::removeDeletesProfile()

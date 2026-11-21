@@ -20,6 +20,7 @@ OpenShell 是一个基于 Qt 6 / QML / C++20 的跨平台 SSH / SFTP / Telnet �
 - 远程文件打开：双击远程文件可用系统默认应用、指定文本编辑器或内置编辑器打开。
 - 编辑回传：外部编辑器保存后自动上传回远程；内置编辑器保存时上传回远程。
 - 跳板机（ProxyJump）：通过自定义 libssh2 send/recv 回调走 `direct-tcpip` 通道连接目标。
+- 出站 SOCKS5 代理：在连接编辑器填写代理地址和端口（默认 1080），可选用户名和密码。适用于 SSH、SFTP 和 Telnet，目标域名由代理解析。SSH 终端配置了跳板机时，先通过 SOCKS5 连接跳板机。
 - 本地端口转发（`-L`）：在本地绑定端口、经会话隧道转发到远程目标。Remote（`-R`）/ Dynamic（`-D`）尚未实现，触发时会给出明确报错。
 - 断线自动重连：每个连接可配置开关，按指数退避（封顶 30 秒）。
 - 凭据安全：密码 / 私钥口令进系统钥匙串（桌面经 QtKeychain 对应 macOS Keychain / Windows 凭据管理器 / Linux libsecret；iOS 用原生 Sec API）。旧 JSON 残留的明文会在首次加载时迁移进钥匙串。

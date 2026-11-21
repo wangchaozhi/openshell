@@ -24,6 +24,18 @@ struct PortForward
     }
 };
 
+struct Socks5Proxy
+{
+    QString host;
+    int port = 1080;
+    QString username;
+    QString password;
+
+    bool enabled() const { return !host.trimmed().isEmpty(); }
+    QString validationError() const;
+    bool operator==(const Socks5Proxy &) const = default;
+};
+
 struct ConnectionProfile
 {
     QString id;
@@ -50,6 +62,8 @@ struct ConnectionProfile
     // Telnet 专属设置。Telnet 仍然只走明文终端通道。
     bool telnetAutoLogin = true;
     QString telnetTerminalType = QStringLiteral("xterm-256color");
+
+    Socks5Proxy socks5;
 
     // 跳板机 (ProxyJump)：通过另一台 SSH 主机 direct-tcpip 转发到目标。
     // 留空走直连。

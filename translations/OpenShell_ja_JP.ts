@@ -91,6 +91,14 @@
     <context>
         <name>ConnectionCatalog</name>
         <message>
+            <source>SOCKS5 proxy port must be between 1 and 65535</source>
+            <translation>SOCKS5 プロキシのポートは 1～65535 の範囲で指定してください</translation>
+        </message>
+        <message>
+            <source>Enter both SOCKS5 credentials, up to 255 bytes each, or leave both blank</source>
+            <translation>SOCKS5 のユーザー名とパスワードは両方入力するか、両方とも空欄にしてください（各 255 バイトまで）</translation>
+        </message>
+        <message>
             <location filename="../src/ConnectionCatalog.cpp" line="173" />
             <source>Connection name is required</source>
             <translation>接続名を入力してください</translation>
@@ -119,6 +127,14 @@
     </context>
     <context>
         <name>ConnectionEditor</name>
+        <message>
+            <source>SOCKS5 proxy host is required</source>
+            <translation>SOCKS5 プロキシのホストを入力してください</translation>
+        </message>
+        <message>
+            <source>Use SOCKS5 Proxy</source>
+            <translation>SOCKS5 プロキシを使用</translation>
+        </message>
         <message>
             <location filename="../qml/ConnectionEditor.qml" line="26" />
             <source>New Connection</source>
@@ -247,8 +263,12 @@
         </message>
         <message>
             <location filename="../qml/ConnectionEditor.qml" line="440" />
-            <source>Jump Host (ProxyJump) — leave blank for direct connect</source>
-            <translation>踏み台ホスト (ProxyJump) — 直結の場合は空欄</translation>
+            <source>Use Jump Host (ProxyJump)</source>
+            <translation>踏み台ホスト (ProxyJump) を使用</translation>
+        </message>
+        <message>
+            <source>Jump host is required</source>
+            <translation>踏み台ホストを入力してください</translation>
         </message>
         <message>
             <location filename="../qml/ConnectionEditor.qml" line="446" />
@@ -990,6 +1010,14 @@
     <context>
         <name>MobileConnectionEditorPage</name>
         <message>
+            <source>SOCKS5 proxy host is required</source>
+            <translation>SOCKS5 プロキシのホストを入力してください</translation>
+        </message>
+        <message>
+            <source>Use SOCKS5 Proxy</source>
+            <translation>SOCKS5 プロキシを使用</translation>
+        </message>
+        <message>
             <location filename="../qml/mobile/MobileConnectionEditorPage.qml" line="55" />
             <source>Connection name is required</source>
             <translation>接続名を入力してください</translation>
@@ -1428,6 +1456,38 @@
     </context>
     <context>
         <name>QObject</name>
+        <message>
+            <source>Could not connect to %1:%2</source>
+            <translation>%1:%2 に接続できませんでした</translation>
+        </message>
+        <message>
+            <source>Invalid SOCKS5 destination hostname</source>
+            <translation>SOCKS5 の接続先ホスト名が無効です</translation>
+        </message>
+        <message>
+            <source>Invalid SOCKS5 proxy reply</source>
+            <translation>SOCKS5 プロキシの応答が無効です</translation>
+        </message>
+        <message>
+            <source>SOCKS5 handshake failed</source>
+            <translation>SOCKS5 のハンドシェイクに失敗しました</translation>
+        </message>
+        <message>
+            <source>SOCKS5 handshake timed out</source>
+            <translation>SOCKS5 のハンドシェイクがタイムアウトしました</translation>
+        </message>
+        <message>
+            <source>SOCKS5 proxy refused the connection (code %1)</source>
+            <translation>SOCKS5 プロキシが接続を拒否しました（コード %1）</translation>
+        </message>
+        <message>
+            <source>SOCKS5 proxy rejected the authentication method</source>
+            <translation>SOCKS5 プロキシが認証方式を拒否しました</translation>
+        </message>
+        <message>
+            <source>SOCKS5 username or password rejected</source>
+            <translation>SOCKS5 のユーザー名またはパスワードが拒否されました</translation>
+        </message>
         <message>
             <location filename="../src/AppControllerRemoteFiles.cpp" line="167" />
             <source>Upload completed</source>
