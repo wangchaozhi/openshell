@@ -20,6 +20,8 @@ ApplicationWindow {
     Material.background: "#0b1220"
     Material.foreground: "#f8fafc"
 
+    SshHostKeyPrompt {}
+
     // Android 上 system BACK 会让 Qt 默认关闭 ApplicationWindow，但
     // QGuiApplication 设了 setQuitOnLastWindowClosed(false)，导致进程
     // 留着、Activity 重建时却没有 window —— 整屏白且打不回来。这里拦截

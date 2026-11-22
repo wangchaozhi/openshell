@@ -17,6 +17,7 @@ Rectangle {
     signal editConnectionRequested(string id)
     signal deleteConnectionRequested(string id)
     signal themeChanged(string theme)
+    signal connectionsImported()
 
     ThemePalette {
         id: theme
@@ -24,6 +25,49 @@ Rectangle {
     }
 
     color: theme.panel
+
+    Dialog {
+        id: importDialog
+        property var profiles: []
+        property string message: ""
+        anchors.centerIn: parent
+        title: qsTr("Import connections")
+        modal: true
+        width: Math.min(540, root.width - 32)
+        standardButtons: profiles.length > 0 ? Dialog.Ok | Dialog.Cancel : Dialog.Close
+
+        ColumnLayout {
+            anchors.fill: parent
+            Label {
+                Layout.fillWidth: true
+                visible: importDialog.message.length > 0
+                text: importDialog.message
+                wrapMode: Text.WordWrap
+            }
+            ListView {
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.min(280, contentHeight)
+                clip: true
+                model: importDialog.profiles
+                delegate: Label {
+                    required property var modelData
+                    width: ListView.view.width
+                    padding: 6
+                    elide: Text.ElideRight
+                    text: modelData.name + "   " + (modelData.username ? modelData.username + "@" : "")
+                          + modelData.host + ":" + modelData.port
+                          + (modelData.jumpHost ? "   →   " + modelData.jumpHost : "")
+                }
+            }
+        }
+
+        onAccepted: {
+            if (profiles.length > 0) {
+                appController.importConnectionProfiles(profiles)
+                root.connectionsImported()
+            }
+        }
+    }
 
     function filteredConnections() {
         const q = searchField.text.trim().toLowerCase()
@@ -232,6 +276,35 @@ Rectangle {
                 model: [qsTr("All"), "SSH", "SFTP", "TELNET"]
             }
 
+            ToolButton {
+                text: qsTr("Import / Backup")
+                onClicked: backupMenu.open()
+                Menu {
+                    id: backupMenu
+                    MenuItem {
+                        text: qsTr("Import connections")
+                        onTriggered: {
+                            importDialog.profiles = appController.chooseConnectionImport()
+                            importDialog.message = appController.lastError
+                            if (importDialog.profiles.length > 0 || importDialog.message) {
+                                importDialog.open()
+                            }
+                        }
+                    }
+                    MenuItem {
+                        text: qsTr("Back up connections")
+                        onTriggered: {
+                            appController.exportConnectionProfiles()
+                            if (appController.lastError) {
+                                importDialog.profiles = []
+                                importDialog.message = appController.lastError
+                                importDialog.open()
+                            }
+                        }
+                    }
+                }
+            }
+
             Item { Layout.fillWidth: true }
 
             Label {
@@ -304,7 +377,7 @@ Rectangle {
             Layout.fillHeight: true
             clip: true
 
-            ColumnLayout {
+    ColumnLayout {
                 width: connectionScroll.availableWidth
                 spacing: 0
 

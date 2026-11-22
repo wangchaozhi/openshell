@@ -6,6 +6,8 @@
 #include <QVariantMap>
 #include <QVector>
 
+class QDir;
+
 struct PortForward
 {
     QString type = QStringLiteral("L"); // L / R / D；目前只实现了 L
@@ -105,3 +107,5 @@ private:
 
     QVector<ConnectionProfile> m_profiles;
 };
+
+QVector<ConnectionProfile> parseOpenSshConnections(const QString &content, const QDir &directory);

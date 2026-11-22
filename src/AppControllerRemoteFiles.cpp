@@ -8,9 +8,43 @@
 #include <QDir>
 #include <QFile>
 #include <QFutureWatcher>
+#include <QTemporaryDir>
 #include <QTimer>
+#include <QUrl>
 #include <QUuid>
+#include <QSettings>
 #include <QtConcurrent>
+#include <optional>
+
+QString stagePickedUpload(const QUrl &source, bool folder, const QTemporaryDir &sandbox);
+
+namespace {
+constexpr auto transferConflictSetting = "transfers/conflictPolicy";
+
+SftpDirectoryLister::Conflict conflictPolicy(const QString &value)
+{
+    if (value == QStringLiteral("overwrite")) {
+        return SftpDirectoryLister::Conflict::Overwrite;
+    }
+    if (value == QStringLiteral("skip")) {
+        return SftpDirectoryLister::Conflict::Skip;
+    }
+    return SftpDirectoryLister::Conflict::Rename;
+}
+}
+
+QString AppController::transferConflictPolicy() const
+{
+    return QSettings().value(transferConflictSetting, QStringLiteral("rename")).toString();
+}
+
+void AppController::setTransferConflictPolicy(const QString &policy)
+{
+    if (policy == QStringLiteral("rename") || policy == QStringLiteral("skip")
+        || policy == QStringLiteral("overwrite")) {
+        QSettings().setValue(transferConflictSetting, policy);
+    }
+}
 
 QString AppController::remoteHomePath(const QString &connectionId) const
 {
@@ -101,6 +135,7 @@ QString AppController::requestRemoteDirectoryEntries(const QString &connectionId
                                                  targetPath,
                                                  entries,
                                                  error);
+                releaseUnusedSftpProfile(connectionId);
                 watcher->deleteLater();
             });
 
@@ -120,45 +155,75 @@ QString AppController::requestUploadLocalPath(const QString &connectionId,
                                               const QString &localPath,
                                               const QString &remoteDirectory)
 {
+    return requestUpload(connectionId, localPath, remoteDirectory, false, false);
+}
+
+QString AppController::requestUploadPickedPath(const QString &connectionId, const QString &url,
+                                               const QString &remoteDirectory, bool folder)
+{
+    return requestUpload(connectionId, url, remoteDirectory, true, folder);
+}
+
+QString AppController::requestUpload(const QString &connectionId, const QString &source,
+                                     const QString &remoteDirectory, bool fromPicker, bool folder)
+{
     const QString requestId = QUuid::createUuid().toString(QUuid::WithoutBraces);
     const auto cancelFlag = QSharedPointer<std::atomic_bool>::create(false);
     m_transferCancelFlags.insert(requestId, cancelFlag);
+    m_transferConnectionIds.insert(requestId, connectionId);
+    const auto conflict = conflictPolicy(transferConflictPolicy());
     const ConnectionProfile profile = m_catalog->profileById(connectionId);
     if (profile.id.isEmpty()) {
         m_transferCancelFlags.remove(requestId);
+        m_transferConnectionIds.remove(requestId);
         const QString error = tr("Unknown connection");
         setLastError(error);
-        QTimer::singleShot(0, this, [this, requestId, connectionId, localPath, error]() {
+        QTimer::singleShot(0, this, [this, requestId, connectionId, source, error]() {
             emit remoteOperationFinished(requestId, connectionId, QStringLiteral("upload"),
-                                         localPath, false, error);
+                                         source, false, error);
         });
         return requestId;
     }
 
     auto *watcher = new QFutureWatcher<QVariantMap>(this);
     connect(watcher, &QFutureWatcher<QVariantMap>::finished, this,
-            [this, watcher, requestId, connectionId, localPath]() {
+            [this, watcher, requestId, connectionId, source]() {
                 const QVariantMap result = watcher->result();
                 const bool ok = result.value(QStringLiteral("ok")).toBool();
                 const QString message = result.value(QStringLiteral("message")).toString();
                 m_transferCancelFlags.remove(requestId);
+                m_transferConnectionIds.remove(requestId);
+                releaseUnusedSftpProfile(connectionId);
                 setLastError(ok ? QString() : message);
                 emit remoteOperationFinished(requestId,
                                              connectionId,
                                              QStringLiteral("upload"),
-                                             localPath,
+                                             source,
                                              ok,
                                              message);
                 watcher->deleteLater();
             });
 
-    watcher->setFuture(QtConcurrent::run([this, requestId, connectionId, profile, localPath, remoteDirectory, cancelFlag]() {
+    watcher->setFuture(QtConcurrent::run([this, requestId, connectionId, profile, source,
+                                         remoteDirectory, cancelFlag, conflict, fromPicker, folder]() {
+        QString localPath = source;
+        std::optional<QTemporaryDir> sandbox;
+        if (fromPicker) {
+            sandbox.emplace();
+            localPath = stagePickedUpload(QUrl(source), folder, *sandbox);
+            if (localPath.isEmpty()) {
+                return QVariantMap{{QStringLiteral("ok"), false},
+                                   {QStringLiteral("message"), folder
+                                       ? tr("Cannot read the selected upload folder")
+                                       : tr("Cannot read picked content URL: %1").arg(source)}};
+            }
+        }
         QString error;
         AppControllerTransferProgressReporter progress(this,
                                           requestId,
                                           connectionId,
                                           QStringLiteral("upload"),
-                                          localPath);
+                                          source);
         const bool ok = SftpDirectoryLister::upload(profile,
                                                     localPath,
                                                     remoteDirectory,
@@ -168,11 +233,11 @@ QString AppController::requestUploadLocalPath(const QString &connectionId,
                                                     },
                                                     [cancelFlag]() {
                                                         return cancelFlag->load();
-                                                    });
+                                                    }, conflict);
         QVariantMap result;
         result.insert(QStringLiteral("ok"), ok);
         result.insert(QStringLiteral("message"),
-                      ok ? QObject::tr("Upload completed") : error);
+                      ok && error.isEmpty() ? QObject::tr("Upload completed") : error);
         return result;
     }));
 
@@ -235,6 +300,8 @@ QString AppController::requestRemoteDownload(const QString &connectionId,
     const QString requestId = QUuid::createUuid().toString(QUuid::WithoutBraces);
     const auto cancelFlag = QSharedPointer<std::atomic_bool>::create(false);
     m_transferCancelFlags.insert(requestId, cancelFlag);
+    m_transferConnectionIds.insert(requestId, connectionId);
+    const auto conflict = conflictPolicy(transferConflictPolicy());
     const ConnectionProfile profile = m_catalog->profileById(connectionId);
     auto *watcher = new QFutureWatcher<QVariantMap>(this);
     connect(watcher, &QFutureWatcher<QVariantMap>::finished, this,
@@ -243,12 +310,15 @@ QString AppController::requestRemoteDownload(const QString &connectionId,
                 const bool ok = result.value(QStringLiteral("ok")).toBool();
                 const QString message = result.value(QStringLiteral("message")).toString();
                 m_transferCancelFlags.remove(requestId);
+                m_transferConnectionIds.remove(requestId);
+                releaseUnusedSftpProfile(connectionId);
                 setLastError(ok ? QString() : message);
                 emit remoteOperationFinished(requestId, connectionId, QStringLiteral("download"),
                                              remotePath, ok, message);
                 watcher->deleteLater();
             });
-    watcher->setFuture(QtConcurrent::run([this, requestId, connectionId, profile, remotePath, localDirectory, cancelFlag]() {
+    watcher->setFuture(QtConcurrent::run([this, requestId, connectionId, profile, remotePath,
+                                         localDirectory, cancelFlag, conflict]() {
         QString error;
         QString downloadedPath;
         AppControllerTransferProgressReporter progress(this,
@@ -267,7 +337,7 @@ QString AppController::requestRemoteDownload(const QString &connectionId,
                                                          },
                                                          [cancelFlag]() {
                                                              return cancelFlag->load();
-                                                         });
+                                                         }, conflict);
         QVariantMap result;
         result.insert(QStringLiteral("ok"), ok);
         result.insert(QStringLiteral("message"), ok ? downloadedPath : (error.isEmpty() ? QObject::tr("Download failed") : error));

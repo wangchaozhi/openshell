@@ -4,6 +4,26 @@
     <context>
         <name>AppController</name>
         <message>
+            <source>Cannot read the selected upload folder</source>
+            <translation>无法读取选中的上传目录</translation>
+        </message>
+        <message>
+            <source>Import connections</source>
+            <translation>导入连接</translation>
+        </message>
+        <message>
+            <source>Back up connections</source>
+            <translation>备份连接</translation>
+        </message>
+        <message>
+            <source>Unsupported connection backup version</source>
+            <translation>不支持此连接备份版本</translation>
+        </message>
+        <message>
+            <source>No connections found in %1</source>
+            <translation>在 %1 中未找到连接</translation>
+        </message>
+        <message>
             <location filename="../src/AppControllerRemoteFiles.cpp" line="57" />
             <location filename="../src/AppControllerRemoteFiles.cpp" line="83" />
             <location filename="../src/AppControllerRemoteFiles.cpp" line="125" />
@@ -334,6 +354,18 @@
     <context>
         <name>ConnectionManagerView</name>
         <message>
+            <source>Import / Backup</source>
+            <translation>导入 / 备份</translation>
+        </message>
+        <message>
+            <source>Import connections</source>
+            <translation>导入连接</translation>
+        </message>
+        <message>
+            <source>Back up connections</source>
+            <translation>备份连接</translation>
+        </message>
+        <message>
             <location filename="../qml/ConnectionManagerView.qml" line="33" />
             <location filename="../qml/ConnectionManagerView.qml" line="232" />
             <source>All</source>
@@ -580,6 +612,10 @@
     </context>
     <context>
         <name>FileBrowserDialogs</name>
+        <message>
+            <source>Transfer conflicts</source>
+            <translation>传输冲突</translation>
+        </message>
         <message>
             <location filename="../qml/filebrowser/FileBrowserDialogs.qml" line="131" />
             <source>Change File Permissions</source>
@@ -957,6 +993,14 @@
     <context>
         <name>MainWindow</name>
         <message>
+            <source>Cancel transfers and close?</source>
+            <translation>取消传输并关闭？</translation>
+        </message>
+        <message>
+            <source>This is the last tab for this connection. Closing it will cancel its active transfers.</source>
+            <translation>这是此连接的最后一个标签页。关闭后会取消正在进行的传输。</translation>
+        </message>
+        <message>
             <location filename="../qml/MainWindow.qml" line="14" />
             <location filename="../qml/MainWindow.qml" line="254" />
             <location filename="../qml/MainWindow.qml" line="255" />
@@ -1193,6 +1237,18 @@
     </context>
     <context>
         <name>MobileFilesPage</name>
+        <message>
+            <source>Upload folder</source>
+            <translation>上传文件夹</translation>
+        </message>
+        <message>
+            <source>Pick files to upload</source>
+            <translation>选择要上传的文件</translation>
+        </message>
+        <message>
+            <source>Pick a folder to upload</source>
+            <translation>选择要上传的文件夹</translation>
+        </message>
         <message>
             <location filename="../qml/mobile/MobileFilesPage.qml" line="139" />
             <source>Operation failed: %1</source>
@@ -1456,6 +1512,30 @@
     </context>
     <context>
         <name>QObject</name>
+        <message>
+            <source>Cannot replace remote file %1</source>
+            <translation>无法替换远程文件 %1</translation>
+        </message>
+        <message>
+            <source>Skipped existing destination %1</source>
+            <translation>已跳过同名目标 %1</translation>
+        </message>
+        <message>
+            <source>Cannot read the SSH host key for %1</source>
+            <translation>无法读取 %1 的 SSH 主机密钥</translation>
+        </message>
+        <message>
+            <source>SSH host key was not verified for %1 (%2)</source>
+            <translation>未验证 %1 的 SSH 主机密钥（%2）</translation>
+        </message>
+        <message>
+            <source>Cannot encrypt credentials with Android Keystore</source>
+            <translation>无法使用 Android Keystore 加密凭据</translation>
+        </message>
+        <message>
+            <source>Cannot save Android credentials</source>
+            <translation>无法保存 Android 凭据</translation>
+        </message>
         <message>
             <source>Cannot read remote directory %1</source>
             <translation>无法读取远程目录 %1</translation>
@@ -2329,6 +2409,30 @@
     <context>
         <name>TerminalView</name>
         <message>
+            <source>Find in terminal</source>
+            <translation>在终端中查找</translation>
+        </message>
+        <message>
+            <source>Previous</source>
+            <translation>上一个</translation>
+        </message>
+        <message>
+            <source>Next</source>
+            <translation>下一个</translation>
+        </message>
+        <message>
+            <source>History</source>
+            <translation>历史行数</translation>
+        </message>
+        <message>
+            <source>Close</source>
+            <translation>关闭</translation>
+        </message>
+        <message>
+            <source>Terminal history lines</source>
+            <translation>终端历史保留行数</translation>
+        </message>
+        <message>
             <location filename="../qml/TerminalView.qml" line="161" />
             <source>(no session)</source>
             <translation>（无会话）</translation>
@@ -2384,6 +2488,10 @@
     </context>
     <context>
         <name>TransferTaskList</name>
+        <message>
+            <source>Retry</source>
+            <translation>重试</translation>
+        </message>
         <message>
             <location filename="../qml/filebrowser/TransferTaskList.qml" line="87" />
             <source>Failed</source>
@@ -2481,6 +2589,54 @@
             <location filename="../src/TrayController.cpp" line="173" />
             <source>OpenShell</source>
             <translation>OpenShell</translation>
+        </message>
+    </context>
+    <context>
+        <name>SshHostKeyPrompt</name>
+        <message>
+            <source>SSH host key changed</source>
+            <translation>SSH 主机密钥已更改</translation>
+        </message>
+        <message>
+            <source>Verify SSH host key</source>
+            <translation>验证 SSH 主机密钥</translation>
+        </message>
+        <message>
+            <source>The SSH key for %1 changed. Verify the new fingerprint independently before accepting it.
+
+Previous: %2
+Current: %3</source>
+            <translation>%1 的 SSH 主机密钥已更改。接受之前，请通过其他可信渠道核对新指纹。
+
+原指纹：%2
+新指纹：%3</translation>
+        </message>
+        <message>
+            <source>Verify this fingerprint for %1 before trusting the server.
+
+%2</source>
+            <translation>信任服务器前，请核对 %1 的指纹。
+
+%2</translation>
+        </message>
+    </context>
+    <context>
+        <name>TransferConflictBox</name>
+        <message>
+            <source>Transfer conflicts</source>
+            <translation>传输冲突</translation>
+        </message>
+        <message>
+            <source>Rename new files</source>
+            <translation>重命名新文件</translation>
+        </message>
+        <message>
+            <source>Skip existing files</source>
+            <translation>跳过已有文件</translation>
+        </message>
+        <message>
+            <source>Overwrite existing files</source>
+            <translation>覆盖已有文件</translation>
         </message>
     </context>
 </TS>

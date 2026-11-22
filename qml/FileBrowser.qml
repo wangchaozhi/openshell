@@ -649,9 +649,9 @@ Rectangle {
         const targetPath = targetRemoteDirectory && targetRemoteDirectory.length > 0
                        ? targetRemoteDirectory
                        : remotePath
-        startRemoteOperation(appController.requestUploadLocalPath(connectionId,
-                                                                  path,
-                                                                  targetPath))
+        const requestId = appController.requestUploadLocalPath(connectionId, path, targetPath)
+        upsertTransferTask(requestId, connectionId, "upload", path, 0, 0, 0, targetPath)
+        startRemoteOperation(requestId)
     }
 
     function uploadLocalPath(path) {
@@ -827,8 +827,13 @@ Rectangle {
         if (!folder || folder.length === 0) {
             return
         }
+        downloadRemotePathTo(path, folder)
+    }
+
+    function downloadRemotePathTo(path, folder) {
         const requestId = appController.requestRemoteDownload(connectionId, path, folder)
         rememberDownloadTarget(requestId, folder)
+        upsertTransferTask(requestId, connectionId, "download", path, 0, 0, 0)
         startRemoteOperation(requestId)
     }
 
@@ -883,6 +888,7 @@ Rectangle {
             path: task.path || "",
             localPath: task.localPath || "",
             localDirectory: task.localDirectory || "",
+            remoteDirectory: task.remoteDirectory || "",
             done: Number(task.done) || 0,
             total: Number(task.total) || 0,
             speed: 0,
@@ -920,6 +926,7 @@ Rectangle {
                 path: task.path || "",
                 localPath: task.localPath || "",
                 localDirectory: task.localDirectory || "",
+                remoteDirectory: task.remoteDirectory || "",
                 done: Number(task.done) || 0,
                 total: Number(task.total) || 0,
                 status: task.status || "done",
@@ -969,7 +976,22 @@ Rectangle {
 
     function transferPercent(task) { return FileFormat.transferPercent(task) }
 
-    function upsertTransferTask(requestId, connectionId, operation, path, done, total, speed) {
+    function canRetryTransfer(task) {
+        return task.status === "failed" && task.connectionId === connectionId
+                && !!(task.operation === "upload" ? task.remoteDirectory : task.localDirectory)
+    }
+
+    function retryTransfer(task) {
+        if (canRetryTransfer(task)) {
+            if (task.operation === "upload") {
+                uploadLocalPathTo(task.path, task.remoteDirectory)
+            } else {
+                downloadRemotePathTo(task.path, task.localDirectory)
+            }
+        }
+    }
+
+    function upsertTransferTask(requestId, connectionId, operation, path, done, total, speed, remoteDirectory) {
         const next = transferTasks.slice()
         let found = false
         for (let i = 0; i < next.length; ++i) {
@@ -993,6 +1015,7 @@ Rectangle {
                     message: previousStatus === "canceling" ? previousMessage : "",
                     localPath: next[i].localPath || "",
                     localDirectory: next[i].localDirectory || "",
+                    remoteDirectory: next[i].remoteDirectory || "",
                     startedAt: next[i].startedAt || Date.now(),
                     finishedAt: previousStatus === "canceling" ? (next[i].finishedAt || 0) : 0
                 }
@@ -1013,6 +1036,7 @@ Rectangle {
                 message: "",
                 localPath: "",
                 localDirectory: operation === "download" ? (downloadTargetFolders[requestId] || "") : "",
+                remoteDirectory: remoteDirectory || "",
                 startedAt: Date.now(),
                 finishedAt: 0
             })

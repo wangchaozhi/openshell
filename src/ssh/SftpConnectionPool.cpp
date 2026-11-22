@@ -1,27 +1,32 @@
 #include "SftpConnectionPool.h"
 
 #include "TcpConnection.h"
+#include "SshHostTrust.h"
+#include "SshSupport.h"
 
-#include <QFile>
+#include <QCoreApplication>
 #include <QHash>
 #include <QMutex>
 #include <QMutexLocker>
 #include <QObject>
 #include <QVector>
 
-#include <cstdlib>
-#include <cstring>
 
 namespace SftpConnectionPool {
 
 struct CachedConnection
 {
     explicit CachedConnection(Lane connectionLane) : lane(connectionLane) {}
+    ~CachedConnection() { reset(this); }
 
     const Lane lane;
     TcpConnection::Socket sock = TcpConnection::invalidSocket;
-    Socks5Proxy socks5;
+    ConnectionProfile connectedProfile;
     LIBSSH2_SESSION *session = nullptr;
+    LIBSSH2_SESSION *jumpSession = nullptr;
+    LIBSSH2_CHANNEL *jumpTunnel = nullptr;
+    SessionAbstract sessionContext;
+    SessionAbstract jumpContext;
     LIBSSH2_SFTP *sftp = nullptr;
     QMutex mutex; // serializes work on this single libssh2 session (not session-thread-safe)
 };
@@ -36,9 +41,9 @@ QMutex &cacheMapMutex()
     return mutex;
 }
 
-QHash<QString, QVector<CachedConnection *>> &connectionCache()
+QHash<QString, QVector<QSharedPointer<CachedConnection>>> &connectionCache()
 {
-    static QHash<QString, QVector<CachedConnection *>> cache;
+    static QHash<QString, QVector<QSharedPointer<CachedConnection>>> cache;
     return cache;
 }
 
@@ -86,98 +91,52 @@ QString cacheKey(const ConnectionProfile &profile, Lane lane)
              laneName(lane));
 }
 
-LIBSSH2_USERAUTH_KBDINT_RESPONSE_FUNC(kbdInteractiveCallback)
+bool sameCredentialsAndRoute(const ConnectionProfile &first, const ConnectionProfile &second)
 {
-    Q_UNUSED(name);
-    Q_UNUSED(name_len);
-    Q_UNUSED(instruction);
-    Q_UNUSED(instruction_len);
-    Q_UNUSED(prompts);
-
-    if (!abstract || !*abstract || num_prompts <= 0) {
-        return;
-    }
-
-    const auto *password = static_cast<const QByteArray *>(*abstract);
-    for (int i = 0; i < num_prompts; ++i) {
-        char *copy = static_cast<char *>(std::malloc(static_cast<size_t>(password->size()) + 1));
-        if (!copy) {
-            responses[i].text = nullptr;
-            responses[i].length = 0;
-            continue;
-        }
-        std::memcpy(copy, password->constData(), static_cast<size_t>(password->size()));
-        copy[password->size()] = '\0';
-        responses[i].text = copy;
-        responses[i].length = static_cast<unsigned int>(password->size());
-    }
+    return first.password == second.password
+           && first.keyPassphrase == second.keyPassphrase
+           && first.socks5 == second.socks5
+           && first.jumpHost == second.jumpHost
+           && first.jumpPort == second.jumpPort
+           && first.jumpUsername == second.jumpUsername
+           && first.jumpAuthType == second.jumpAuthType
+           && first.jumpPassword == second.jumpPassword
+           && first.jumpPrivateKeyPath == second.jumpPrivateKeyPath
+           && first.jumpKeyPassphrase == second.jumpKeyPassphrase;
 }
 
-QString lastError(LIBSSH2_SESSION *session)
+bool establishSession(LIBSSH2_SESSION **session, SessionAbstract &context,
+                      TcpConnection::Socket socket, const QString &host, int port,
+                      const SshSupport::AuthSpec &auth, const ConnectionProfile &profile,
+                      LIBSSH2_SESSION *jumpSession, LIBSSH2_CHANNEL **tunnel, QString *error)
 {
-    if (!session) {
-        return QStringLiteral("(no session)");
-    }
-    char *msg = nullptr;
-    int len = 0;
-    libssh2_session_last_error(session, &msg, &len, 0);
-    if (msg && len > 0) {
-        return QString::fromUtf8(msg, len);
-    }
-    return QStringLiteral("(unknown libssh2 error)");
-}
-
-bool authenticate(LIBSSH2_SESSION *session, const ConnectionProfile &profile, QString *errorOut)
-{
-    const QByteArray user = profile.username.toUtf8();
-    const QByteArray password = profile.password.toUtf8();
-    const QString authType = profile.authType.isEmpty()
-                                 ? QStringLiteral("password")
-                                 : profile.authType.toLower();
-
-    if (authType == QStringLiteral("key") || authType == QStringLiteral("publickey")) {
-        const QByteArray keyPath = QFile::encodeName(profile.privateKeyPath);
-        const QByteArray passphrase = profile.keyPassphrase.toUtf8();
-        const int rc = libssh2_userauth_publickey_fromfile(session,
-                                                           user.constData(),
-                                                           nullptr,
-                                                           keyPath.constData(),
-                                                           passphrase.isEmpty()
-                                                               ? nullptr
-                                                               : passphrase.constData());
-        if (rc == 0) {
-            return true;
-        }
-        if (errorOut) {
-            *errorOut = QObject::tr("SFTP key auth failed: %1").arg(lastError(session));
+    *session = libssh2_session_init();
+    if (!*session) {
+        if (error) {
+            *error = QObject::tr("libssh2_session_init failed");
         }
         return false;
     }
-
-    if (libssh2_userauth_password(session, user.constData(), password.constData()) == 0) {
-        return true;
+    *libssh2_session_abstract(*session) = &context;
+    if (tunnel) {
+        SshSupport::setJumpTunnel(*session, context, jumpSession, tunnel);
     }
-
-    void **abstract = libssh2_session_abstract(session);
-    *abstract = const_cast<QByteArray *>(&password);
-    const int rc = libssh2_userauth_keyboard_interactive(session,
-                                                         user.constData(),
-                                                         kbdInteractiveCallback);
-    *abstract = nullptr;
-    if (rc == 0) {
-        return true;
+    libssh2_session_set_blocking(*session, 1);
+    libssh2_session_set_timeout(*session, TcpConnection::timeoutMs(profile));
+    if (libssh2_session_handshake(*session, socket) != 0) {
+        if (error) {
+            *error = QObject::tr("SFTP handshake failed: %1").arg(SshSupport::lastError(*session));
+        }
+        return false;
     }
-
-    if (errorOut) {
-        *errorOut = QObject::tr("SFTP password auth failed: %1").arg(lastError(session));
-    }
-    return false;
+    return SshHostTrust::verify(*session, host, port, error)
+           && SshSupport::authenticate(*session, auth, error);
 }
 
 } // namespace
 
-Lease::Lease(CachedConnection *connection, bool alreadyLocked)
-    : m_connection(connection)
+Lease::Lease(QSharedPointer<CachedConnection> connection, bool alreadyLocked)
+    : m_connection(std::move(connection))
 {
     if (m_connection && !alreadyLocked) {
         m_connection->mutex.lock();
@@ -192,9 +151,8 @@ Lease::~Lease()
 }
 
 Lease::Lease(Lease &&other) noexcept
-    : m_connection(other.m_connection)
+    : m_connection(std::move(other.m_connection))
 {
-    other.m_connection = nullptr;
 }
 
 Lease &Lease::operator=(Lease &&other) noexcept
@@ -205,27 +163,13 @@ Lease &Lease::operator=(Lease &&other) noexcept
     if (m_connection) {
         m_connection->mutex.unlock();
     }
-    m_connection = other.m_connection;
-    other.m_connection = nullptr;
+    m_connection = std::move(other.m_connection);
     return *this;
 }
 
 bool ensureLibssh2(QString *errorOut)
 {
-    static bool initialized = false;
-    static QMutex initMutex;
-    QMutexLocker lock(&initMutex);
-    if (initialized) {
-        return true;
-    }
-    if (libssh2_init(0) != 0) {
-        if (errorOut) {
-            *errorOut = QObject::tr("libssh2_init failed");
-        }
-        return false;
-    }
-    initialized = true;
-    return true;
+    return SshSupport::initialize(errorOut);
 }
 
 Lease acquire(const ConnectionProfile &profile, Lane lane)
@@ -236,22 +180,22 @@ Lease acquire(const ConnectionProfile &profile, Lane lane)
     }
     const QString key = cacheKey(profile, lane);
 
-    CachedConnection *fallback = nullptr;
+    QSharedPointer<CachedConnection> fallback;
     {
         QMutexLocker lock(&cacheMapMutex());
         auto &pool = connectionCache()[key];
         if (pool.isEmpty()) {
-            pool.append(new CachedConnection(lane));
+            pool.append(QSharedPointer<CachedConnection>::create(lane));
         }
 
-        for (CachedConnection *connection : pool) {
+        for (const auto &connection : std::as_const(pool)) {
             if (connection->mutex.tryLock()) {
                 return Lease(connection, true);
             }
         }
 
         if (pool.size() < poolSize) {
-            auto *connection = new CachedConnection(lane);
+            auto connection = QSharedPointer<CachedConnection>::create(lane);
             connection->mutex.lock();
             pool.append(connection);
             return Lease(connection, true);
@@ -263,6 +207,25 @@ Lease acquire(const ConnectionProfile &profile, Lane lane)
     }
 
     return Lease(fallback, false);
+}
+
+void releaseProfile(const QString &connectionId)
+{
+    const QString prefix = connectionId + QLatin1Char('|');
+    QVector<QSharedPointer<CachedConnection>> retired;
+    {
+        const QMutexLocker guard(&cacheMapMutex());
+        auto &cache = connectionCache();
+        for (auto it = cache.begin(); it != cache.end();) {
+            if (it.key().startsWith(prefix)) {
+                retired.append(it.value());
+                connectionWaitCursor().remove(it.key());
+                it = cache.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
 }
 
 void reset(CachedConnection *connection, LIBSSH2_SFTP_HANDLE *openHandle)
@@ -286,11 +249,21 @@ void reset(CachedConnection *connection, LIBSSH2_SFTP_HANDLE *openHandle)
         libssh2_session_free(connection->session);
         connection->session = nullptr;
     }
+    if (connection->jumpTunnel) {
+        libssh2_channel_free(connection->jumpTunnel);
+        connection->jumpTunnel = nullptr;
+    }
+    if (connection->jumpSession) {
+        libssh2_session_free(connection->jumpSession);
+        connection->jumpSession = nullptr;
+    }
+    connection->sessionContext = {};
+    connection->jumpContext = {};
     if (connection->sock != TcpConnection::invalidSocket) {
         TcpConnection::close(connection->sock);
         connection->sock = TcpConnection::invalidSocket;
     }
-    connection->socks5 = {};
+    connection->connectedProfile = {};
 }
 
 bool connectionLost(CachedConnection *connection, int errorCode)
@@ -321,7 +294,8 @@ bool ensureConnected(CachedConnection *connection,
                      const ConnectionProfile &profile,
                      QString *errorOut)
 {
-    if (connection->session && connection->sftp && connection->socks5 == profile.socks5) {
+    if (connection->session && (connection->lane == Lane::Exec || connection->sftp)
+        && sameCredentialsAndRoute(connection->connectedProfile, profile)) {
         if (connection->lane != Lane::Transfer) {
             return true;
         }
@@ -337,48 +311,62 @@ bool ensureConnected(CachedConnection *connection,
     reset(connection);
 
     const int port = profile.port > 0 ? profile.port : 22;
-    connection->sock = TcpConnection::open(profile, profile.host, port, errorOut);
+    const QString jumpHost = profile.jumpHost.trimmed();
+    const bool useJump = !jumpHost.isEmpty();
+    const int jumpPort = profile.jumpPort > 0 ? profile.jumpPort : 22;
+    connection->sock = TcpConnection::open(profile, useJump ? jumpHost : profile.host,
+                                           useJump ? jumpPort : port, errorOut);
     if (connection->sock == TcpConnection::invalidSocket) {
         return false;
     }
 
-    connection->session = libssh2_session_init();
-    if (!connection->session) {
-        if (errorOut) {
-            *errorOut = QObject::tr("libssh2_session_init failed");
+    if (useJump) {
+        const SshSupport::AuthSpec jumpAuth{
+            profile.jumpUsername.isEmpty() ? profile.username : profile.jumpUsername,
+            profile.jumpAuthType, profile.jumpPassword, profile.jumpPrivateKeyPath,
+            profile.jumpKeyPassphrase
+        };
+        if (!establishSession(&connection->jumpSession, connection->jumpContext, connection->sock,
+                              jumpHost, jumpPort, jumpAuth, profile, nullptr, nullptr, errorOut)) {
+            reset(connection);
+            return false;
         }
-        reset(connection);
-        return false;
-    }
-
-    libssh2_session_set_blocking(connection->session, 1);
-    libssh2_session_set_timeout(connection->session, TcpConnection::timeoutMs(profile));
-
-    if (libssh2_session_handshake(connection->session, connection->sock) != 0) {
-        if (errorOut) {
-            *errorOut = QObject::tr("SFTP handshake failed: %1")
-                            .arg(lastError(connection->session));
+        const QByteArray targetHost = profile.host.toUtf8();
+        connection->jumpTunnel = libssh2_channel_direct_tcpip_ex(connection->jumpSession,
+                                                                 targetHost.constData(), port,
+                                                                 "127.0.0.1", 22);
+        if (!connection->jumpTunnel) {
+            if (errorOut) {
+                *errorOut = QCoreApplication::translate("Libssh2ChannelWorker",
+                                                       "direct-tcpip via jump host failed: %1")
+                                .arg(SshSupport::lastError(connection->jumpSession));
+            }
+            reset(connection);
+            return false;
         }
+    }
+
+    const SshSupport::AuthSpec auth{profile.username, profile.authType, profile.password,
+                                    profile.privateKeyPath, profile.keyPassphrase};
+    if (!establishSession(&connection->session, connection->sessionContext, connection->sock,
+                          profile.host, port, auth, profile, connection->jumpSession,
+                          useJump ? &connection->jumpTunnel : nullptr, errorOut)) {
         reset(connection);
         return false;
     }
 
-    if (!authenticate(connection->session, profile, errorOut)) {
-        reset(connection);
-        return false;
-    }
-
-    connection->sftp = libssh2_sftp_init(connection->session);
-    if (!connection->sftp) {
-        if (errorOut) {
-            *errorOut = QObject::tr("SFTP init failed: %1")
-                            .arg(lastError(connection->session));
+    if (connection->lane != Lane::Exec) {
+        connection->sftp = libssh2_sftp_init(connection->session);
+        if (!connection->sftp) {
+            if (errorOut) {
+                *errorOut = QObject::tr("SFTP init failed: %1")
+                                .arg(SshSupport::lastError(connection->session));
+            }
+            reset(connection);
+            return false;
         }
-        reset(connection);
-        return false;
     }
-
-    connection->socks5 = profile.socks5;
+    connection->connectedProfile = profile;
     return true;
 }
 
@@ -394,7 +382,7 @@ LIBSSH2_SFTP *sftp(CachedConnection *connection)
 
 QString lastError(CachedConnection *connection)
 {
-    return lastError(connection ? connection->session : nullptr);
+    return SshSupport::lastError(connection ? connection->session : nullptr);
 }
 
 } // namespace SftpConnectionPool

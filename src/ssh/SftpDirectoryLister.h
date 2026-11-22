@@ -8,6 +8,7 @@
 class SftpDirectoryLister
 {
 public:
+    enum class Conflict { Overwrite, Skip, Rename };
     using ProgressCallback = std::function<void(qint64 bytesDone, qint64 bytesTotal)>;
     using CancelCallback = std::function<bool()>;
 
@@ -22,7 +23,8 @@ public:
                        const QString &remoteDirectory,
                        QString *errorOut = nullptr,
                        ProgressCallback progress = {},
-                       CancelCallback isCanceled = {});
+                       CancelCallback isCanceled = {},
+                       Conflict conflict = Conflict::Overwrite);
     static bool chmod(const ConnectionProfile &profile,
                       const QString &remotePath,
                       int permissions,
@@ -33,7 +35,8 @@ public:
                          QString *downloadedPath = nullptr,
                          QString *errorOut = nullptr,
                          ProgressCallback progress = {},
-                         CancelCallback isCanceled = {});
+                         CancelCallback isCanceled = {},
+                         Conflict conflict = Conflict::Overwrite);
     static bool createDirectory(const ConnectionProfile &profile,
                                 const QString &remotePath,
                                 QString *errorOut = nullptr);

@@ -4,13 +4,18 @@
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QDir>
-#include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QSettings>
+#include <QTemporaryDir>
 #include <QUrl>
+
+#ifdef Q_OS_ANDROID
+#include <QCoreApplication>
+#include <QJniObject>
+#endif
 
 #if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
 #include <QFileDialog>
@@ -79,10 +84,7 @@ QString AppController::localPathFromUrl(const QString &url) const
 QString AppController::chooseLocalFile()
 {
 #if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
-    // Mobile uses QtQuick.Dialogs.FileDialog directly from QML
-    // (see qml/mobile/MobileFilesPage.qml). The returned URL is then
-    // staged via stageUrlForUpload() before being handed to SFTP.
-    setLastError(tr("Use the QML FileDialog + stageUrlForUpload on mobile"));
+    // Mobile's native file picker is hosted by MobileFilesPage.qml.
     return {};
 #else
     return QFileDialog::getOpenFileName(nullptr, tr("Select file to upload"), QDir::homePath());
@@ -92,10 +94,7 @@ QString AppController::chooseLocalFile()
 QString AppController::chooseLocalFolder()
 {
 #if defined(Q_OS_ANDROID) || defined(Q_OS_IOS)
-    // Folder pickers map to SAF tree URIs on Android and security-scoped tree
-    // bookmarks on iOS — neither expose a real filesystem path that the rest
-    // of the SFTP upload code can walk via QDir. Tracked separately.
-    setLastError(tr("Folder upload from mobile is not yet supported (needs SAF tree walker)"));
+    // Mobile's native folder picker is hosted by MobileFilesPage.qml.
     return {};
 #else
     return QFileDialog::getExistingDirectory(nullptr, tr("Select folder to upload"), QDir::homePath());
@@ -115,64 +114,29 @@ QString AppController::chooseDownloadFolder()
 #endif
 }
 
-QString AppController::stageUrlForUpload(const QString &url)
+QString stagePickedUpload(const QUrl &source, bool folder, const QTemporaryDir &sandbox)
 {
-    const QUrl parsed(url);
-
-    // file:// → just unwrap. SftpTransfer / QDir can already handle that path.
-    if (parsed.isLocalFile()) {
-        setLastError(QString());
-        return parsed.toLocalFile();
+    // Qt's iOS file engine resolves the security scope for picker paths when
+    // QFile or QDir accesses them.
+    const QFileInfo local(source.toLocalFile());
+    if (source.isLocalFile() && (folder ? local.isDir() : local.isFile())) {
+        return source.toLocalFile();
     }
-
-    // content:// (Android SAF), assets-library:// (legacy iOS), etc.
-    // QFile on Android can open content:// URIs directly; we read them out
-    // and copy into the app's temp sandbox so the rest of the upload pipeline
-    // (QFileInfo / QFile by path) keeps working unchanged.
-    QFile src(url);
-    if (!src.open(QIODevice::ReadOnly)) {
-        setLastError(tr("Cannot read picked content URL: %1").arg(url));
+#if defined(Q_OS_ANDROID)
+    if (!sandbox.isValid()) {
         return {};
     }
-
-    QString fileName = parsed.fileName();
-    if (fileName.isEmpty()) {
-        // content:// URIs often have no useful filename; fall back to query
-        // string or a uuid stub.
-        fileName = QStringLiteral("upload-%1.bin").arg(
-            QString::number(QDateTime::currentMSecsSinceEpoch(), 16));
-    }
-
-    const QString sandbox = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
-    QDir().mkpath(sandbox);
-    const QString destPath = QDir(sandbox).filePath(fileName);
-
-    QFile dst(destPath);
-    if (!dst.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        src.close();
-        setLastError(tr("Cannot stage picked file to %1").arg(destPath));
-        return {};
-    }
-
-    constexpr qint64 kChunk = 64 * 1024;
-    QByteArray buf;
-    while (!src.atEnd()) {
-        buf = src.read(kChunk);
-        if (buf.isEmpty()) {
-            break;
-        }
-        if (dst.write(buf) != buf.size()) {
-            src.close();
-            dst.close();
-            QFile::remove(destPath);
-            setLastError(tr("Short write while staging %1").arg(destPath));
-            return {};
-        }
-    }
-    src.close();
-    dst.close();
-    setLastError(QString());
-    return destPath;
+    const auto context = QNativeInterface::QAndroidApplication::context();
+    const auto uri = QJniObject::fromString(source.toString(QUrl::FullyEncoded));
+    const auto path = QJniObject::fromString(sandbox.path());
+    return QJniObject::callStaticObjectMethod("com/wangchaozhi/openshell/UploadStaging", "copy",
+               "(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Z)Ljava/lang/String;",
+               context.object<jobject>(), uri.object<jstring>(), path.object<jstring>(),
+               static_cast<jboolean>(folder)).toString();
+#else
+    Q_UNUSED(sandbox);
+    return {};
+#endif
 }
 
 bool AppController::openLocalFolderForPath(const QString &path) const

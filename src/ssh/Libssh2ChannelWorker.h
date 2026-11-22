@@ -46,22 +46,9 @@ private slots:
     void pump();
 
 private:
-    struct AuthSpec {
-        QString username;
-        QString authType;
-        QString password;
-        QString privateKeyPath;
-        QString keyPassphrase;
-    };
-
     bool openSocket(const QString &host, int port, QString *errorOut);
     bool handshake(LIBSSH2_SESSION *session, QString *errorOut);
-    bool authenticate(LIBSSH2_SESSION *session, const AuthSpec &spec, QString *errorOut);
     bool openShell(QString *errorOut);
-    bool authPassword(LIBSSH2_SESSION *session, const AuthSpec &spec, QString *errorOut);
-    bool authKeyboardInteractive(LIBSSH2_SESSION *session, const AuthSpec &spec, QString *errorOut);
-    bool authKey(LIBSSH2_SESSION *session, const AuthSpec &spec, QString *errorOut);
-    bool authAgent(LIBSSH2_SESSION *session, const AuthSpec &spec, QString *errorOut);
 
     bool openJumpAndTunnel(QString *errorOut);
     void installJumpCallbacks();
@@ -103,5 +90,4 @@ private:
     bool m_pumpScheduled = false;
 
     bool m_running = false;
-    bool m_libsshInited = false;
 };

@@ -12,18 +12,21 @@ OpenShell 是一个基于 Qt 6 / QML / C++20 的跨平台 SSH / SFTP / Telnet �
 
 - 连接 Profile 管理：名称、协议、主机、端口、用户名、密码/私钥/Agent、分组和备注。
 - SSH 终端会话：基于 libssh2 的真实连接，支持多标签、窗口 resize、Ctrl+C 中断。
+- SSH 主机指纹：终端、SFTP 和监控在认证前校验目标及跳板机的 SHA-256 指纹，首次连接和指纹变化时需要确认。
 - Telnet 终端会话：明文 TCP，支持基础 IAC 协商、可配置终端类型、窗口尺寸上报，并可按常见 `login:` / `Username:` / `Password:` 提示自动填充用户名/密码。Telnet 仅用于终端；SFTP、监控、跳板机和端口转发需要 SSH。
 - 终端渲染：自研 libvterm + `QQuickPaintedItem` 渲染，支持清屏、光标、基础颜色和文本属性。
 - 终端选择复制：拖选复制、全选、双击选词、三击选行、Shift 扩展选择、选中即复制。
+- 桌面终端支持在滚屏历史中搜索和设置保留行数。连接管理支持导入常用 OpenSSH 配置，以及导入和导出不含密码、私钥和口令的连接备份。
 - SFTP 双栏文件管理：本地/远程目录浏览，排序，上传、下载、删除、重命名、新建文件/文件夹、权限修改。
+- SFTP 上传和下载先写临时文件，支持同名跳过、另存和覆盖，并在传输遇到短暂断线时尝试恢复一次。移动端可选择多个文件或一个目录上传。
 - 远程目录同步：可将远程文件栏自动同步到终端 prompt 所在目录。
 - 远程文件打开：双击远程文件可用系统默认应用、指定文本编辑器或内置编辑器打开。
 - 编辑回传：外部编辑器保存后自动上传回远程；内置编辑器保存时上传回远程。
 - 跳板机（ProxyJump）：通过自定义 libssh2 send/recv 回调走 `direct-tcpip` 通道连接目标。
-- 出站 SOCKS5 代理：在连接编辑器填写代理地址和端口（默认 1080），可选用户名和密码。适用于 SSH、SFTP 和 Telnet，目标域名由代理解析。SSH 终端配置了跳板机时，先通过 SOCKS5 连接跳板机。
+- 出站 SOCKS5 代理：在连接编辑器填写代理地址和端口（默认 1080），可选用户名和密码。适用于 SSH 终端、SFTP、监控和 Telnet。配置了跳板机时，先通过代理连接跳板机。
 - 本地端口转发（`-L`）：在本地绑定端口、经会话隧道转发到远程目标。Remote（`-R`）/ Dynamic（`-D`）尚未实现，触发时会给出明确报错。
 - 断线自动重连：每个连接可配置开关，按指数退避（封顶 30 秒）。
-- 凭据安全：密码 / 私钥口令进系统钥匙串（桌面经 QtKeychain 对应 macOS Keychain / Windows 凭据管理器 / Linux libsecret；iOS 用原生 Sec API）。旧 JSON 残留的明文会在首次加载时迁移进钥匙串。
+- 凭据安全：桌面和 iOS 使用系统钥匙串，Android 使用 Android Keystore 中的密钥做 AES-GCM 加密。旧版凭据在加载时迁移。
 - 系统托盘：支持隐藏/显示窗口、快速打开连接、切换语言、退出。
 - 多语言：英文、简体中文、日文、韩文、德文以编译后的 `.qm` 资源内置；英文走源串兜底。
 
@@ -157,12 +160,10 @@ QStandardPaths::AppDataLocation/connections/<id>.json
 ## 后续计划
 
 - 连接文件加密：可选 GPG / age 包装 JSON 以便 Git 同步（设计见 `docs/connection-encryption-design.md`）。
-- Android 凭据加固：用 `AndroidKeyStore` 包的 AES-GCM 替换当前沙箱占位实现。
-- 移动端目录上传：补全 SAF / iOS security-scoped tree 行走器（文件选择器已通过 `pickMobileFileAsync` 接好）。
 - Remote (`-R`) 与 Dynamic (`-D`) 端口转发（Local `-L` 已实现）。
-- 更完整的终端能力：滚屏历史、搜索、更多 VT 序列兼容、复制格式细节。
+- 更完整的终端能力：更多 VT 序列兼容和复制格式细节。
 - Telnet 增强：连接级编码、CRLF 模式、更多选项协商、可配置登录提示匹配规则。
-- SFTP 增强：传输队列、断点续传、冲突处理、批量操作。
+- SFTP 增强：跨应用重启恢复传输与更多批量操作。
 - 服务器监控：通过 SSH exec 采集 CPU、内存、磁盘、网络状态并展示 dashboard。
 - 翻译：继续校对术语和润色本地化文案。
 - 打包发布：完善 Windows/macOS/Linux release 流程。

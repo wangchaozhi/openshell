@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import ".."
 
 Item {
     id: root
@@ -454,7 +455,7 @@ Item {
 
         contentItem: ColumnLayout {
             implicitWidth: remoteOpenSettingsDialog.width
-            implicitHeight: 142
+            implicitHeight: 205
             spacing: 10
 
             Item {
@@ -597,6 +598,17 @@ Item {
                 Layout.rightMargin: 12
                 Layout.fillWidth: true
                 text: qsTr("Auto upload after external edits")
+            }
+
+            Label {
+                Layout.leftMargin: 12
+                text: qsTr("Transfer conflicts")
+                color: root.fileBrowser.theme.textSecondary
+            }
+            TransferConflictBox {
+                Layout.fillWidth: true
+                Layout.leftMargin: 12
+                Layout.rightMargin: 12
             }
 
             Item {

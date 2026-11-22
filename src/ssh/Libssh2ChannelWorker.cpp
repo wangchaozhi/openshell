@@ -1,6 +1,8 @@
 ﻿#include "Libssh2ChannelWorker.h"
 
-#include <QFile>
+#include "SshHostTrust.h"
+#include "SshSupport.h"
+
 #include <QHostAddress>
 #include <QSocketNotifier>
 #include <QString>
@@ -9,7 +11,6 @@
 #include <QTimer>
 
 #include <cstring>
-#include <cstdlib>
 
 #include <libssh2.h>
 
@@ -20,13 +21,6 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #endif
-
-// Note: SessionAbstract is declared at file scope (not in anonymous namespace)
-// so that Libssh2ChannelWorker member pointers can use it across TU boundaries.
-struct SessionAbstract {
-    LIBSSH2_CHANNEL **jumpTunnelSlot = nullptr;
-    const QByteArray *kbdintPassword = nullptr;
-};
 
 namespace {
 
@@ -41,86 +35,6 @@ void applyTcpKeepalive(TcpConnection::Socket sock)
     int one = 1;
     ::setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE,
                  reinterpret_cast<const char *>(&one), sizeof(one));
-}
-
-// libssh2 的 session abstract 是一个 void* 槽位，被 jump callbacks
-// 和 kbdint callback 同时使用。统一放一个 SessionAbstract，避免互相覆盖。
-ssize_t jumpSendCallback(libssh2_socket_t /*socket*/, const void *buffer, size_t length,
-                         int /*flags*/, void **abstract)
-{
-    auto *ctx = static_cast<SessionAbstract *>(*abstract);
-    LIBSSH2_CHANNEL *tunnel = (ctx && ctx->jumpTunnelSlot) ? *ctx->jumpTunnelSlot : nullptr;
-    if (!tunnel) {
-        errno = ECONNRESET;
-        return -1;
-    }
-    const ssize_t rc = libssh2_channel_write(tunnel,
-                                             static_cast<const char *>(buffer),
-                                             length);
-    if (rc == LIBSSH2_ERROR_EAGAIN) {
-        errno = EAGAIN;
-        return -EAGAIN;
-    }
-    if (rc < 0) {
-        errno = EIO;
-        return -1;
-    }
-    return rc;
-}
-
-ssize_t jumpRecvCallback(libssh2_socket_t /*socket*/, void *buffer, size_t length,
-                         int /*flags*/, void **abstract)
-{
-    auto *ctx = static_cast<SessionAbstract *>(*abstract);
-    LIBSSH2_CHANNEL *tunnel = (ctx && ctx->jumpTunnelSlot) ? *ctx->jumpTunnelSlot : nullptr;
-    if (!tunnel) {
-        errno = ECONNRESET;
-        return -1;
-    }
-    const ssize_t rc = libssh2_channel_read(tunnel, static_cast<char *>(buffer), length);
-    if (rc == LIBSSH2_ERROR_EAGAIN) {
-        errno = EAGAIN;
-        return -EAGAIN;
-    }
-    if (rc == 0 && libssh2_channel_eof(tunnel)) {
-        return 0;
-    }
-    if (rc < 0) {
-        errno = EIO;
-        return -1;
-    }
-    return rc;
-}
-
-LIBSSH2_USERAUTH_KBDINT_RESPONSE_FUNC(keyboardInteractiveCallback)
-{
-    Q_UNUSED(name);
-    Q_UNUSED(name_len);
-    Q_UNUSED(instruction);
-    Q_UNUSED(instruction_len);
-    Q_UNUSED(prompts);
-
-    if (!abstract || !*abstract || num_prompts <= 0) {
-        return;
-    }
-
-    auto *ctx = static_cast<SessionAbstract *>(*abstract);
-    if (!ctx->kbdintPassword) {
-        return;
-    }
-    const QByteArray *password = ctx->kbdintPassword;
-    for (int i = 0; i < num_prompts; ++i) {
-        char *copy = static_cast<char *>(std::malloc(static_cast<size_t>(password->size()) + 1));
-        if (!copy) {
-            responses[i].text = nullptr;
-            responses[i].length = 0;
-            continue;
-        }
-        std::memcpy(copy, password->constData(), static_cast<size_t>(password->size()));
-        copy[password->size()] = '\0';
-        responses[i].text = copy;
-        responses[i].length = static_cast<unsigned int>(password->size());
-    }
 }
 
 } // namespace
@@ -142,12 +56,11 @@ void Libssh2ChannelWorker::start()
     }
 
     QString err;
-    if (libssh2_init(0) != 0) {
-        emit errorOccurred(tr("libssh2_init failed"));
+    if (!SshSupport::initialize(&err)) {
+        emit errorOccurred(err);
         emit disconnected(tr("Initialization failed"));
         return;
     }
-    m_libsshInited = true;
 
     const bool useJump = !m_profile.jumpHost.trimmed().isEmpty();
     if (useJump) {
@@ -182,9 +95,9 @@ void Libssh2ChannelWorker::start()
         installJumpCallbacks();
     }
 
-    AuthSpec targetSpec{m_profile.username, m_profile.authType, m_profile.password,
+    SshSupport::AuthSpec targetSpec{m_profile.username, m_profile.authType, m_profile.password,
                         m_profile.privateKeyPath, m_profile.keyPassphrase};
-    if (!handshake(m_session, &err) || !authenticate(m_session, targetSpec, &err)
+    if (!handshake(m_session, &err) || !SshSupport::authenticate(m_session, targetSpec, &err)
         || !openShell(&err)) {
         if (!err.isEmpty()) {
             emit errorOccurred(err);
@@ -348,165 +261,14 @@ bool Libssh2ChannelWorker::handshake(LIBSSH2_SESSION *session, QString *errorOut
         }
         return false;
     }
-    return true;
-}
-
-bool Libssh2ChannelWorker::authenticate(LIBSSH2_SESSION *session,
-                                        const AuthSpec &spec,
-                                        QString *errorOut)
-{
-    const QString type = spec.authType.isEmpty()
-                             ? QStringLiteral("password")
-                             : spec.authType.toLower();
-    bool ok = false;
-    QString err;
-    if (type == QStringLiteral("password")) {
-        ok = authPassword(session, spec, &err);
-    } else if (type == QStringLiteral("key") || type == QStringLiteral("publickey")) {
-        ok = authKey(session, spec, &err);
-    } else if (type == QStringLiteral("agent")) {
-        ok = authAgent(session, spec, &err);
-    } else {
-        err = tr("Unknown auth type '%1'").arg(type);
+    const bool jump = session == m_jumpSession;
+    const QString host = jump ? m_profile.jumpHost : m_profile.host;
+    const int port = jump ? m_profile.jumpPort : m_profile.port;
+    const bool trusted = SshHostTrust::verify(session, host, port > 0 ? port : 22, errorOut);
+    if (!trusted) {
+        emit preventAutoReconnect();
     }
-
-    if (!ok && errorOut) {
-        *errorOut = err.isEmpty() ? tr("Authentication failed") : err;
-    }
-    return ok;
-}
-
-bool Libssh2ChannelWorker::authPassword(LIBSSH2_SESSION *session,
-                                        const AuthSpec &spec,
-                                        QString *errorOut)
-{
-    const QByteArray user = spec.username.toUtf8();
-    const QByteArray pwd = spec.password.toUtf8();
-    const int rc = libssh2_userauth_password(session, user.constData(), pwd.constData());
-    if (rc != 0) {
-        if (authKeyboardInteractive(session, spec, errorOut)) {
-            return true;
-        }
-        if (errorOut) {
-            *errorOut = tr("Password auth failed: %1").arg(lastSessionError(session));
-        }
-        return false;
-    }
-    return true;
-}
-
-bool Libssh2ChannelWorker::authKeyboardInteractive(LIBSSH2_SESSION *session,
-                                                   const AuthSpec &spec,
-                                                   QString *errorOut)
-{
-    const QByteArray user = spec.username.toUtf8();
-    const QByteArray pwd = spec.password.toUtf8();
-    void **abstract = libssh2_session_abstract(session);
-    auto *ctx = static_cast<SessionAbstract *>(*abstract);
-    if (!ctx) {
-        if (errorOut) {
-            *errorOut = tr("session abstract not initialized");
-        }
-        return false;
-    }
-    ctx->kbdintPassword = &pwd;
-    const int rc = libssh2_userauth_keyboard_interactive(session,
-                                                         user.constData(),
-                                                         keyboardInteractiveCallback);
-    ctx->kbdintPassword = nullptr;
-    if (rc != 0) {
-        if (errorOut) {
-            *errorOut = tr("Keyboard-interactive auth failed: %1").arg(lastSessionError(session));
-        }
-        return false;
-    }
-    return true;
-}
-
-bool Libssh2ChannelWorker::authKey(LIBSSH2_SESSION *session,
-                                   const AuthSpec &spec,
-                                   QString *errorOut)
-{
-    if (spec.privateKeyPath.isEmpty()) {
-        if (errorOut) {
-            *errorOut = tr("Private key path is empty");
-        }
-        return false;
-    }
-    const QByteArray user = spec.username.toUtf8();
-    const QByteArray keyPath = QFile::encodeName(spec.privateKeyPath);
-    const QByteArray passphrase = spec.keyPassphrase.toUtf8();
-    const int rc = libssh2_userauth_publickey_fromfile(session,
-                                                       user.constData(),
-                                                       nullptr,
-                                                       keyPath.constData(),
-                                                       passphrase.isEmpty() ? nullptr
-                                                                            : passphrase.constData());
-    if (rc != 0) {
-        if (errorOut) {
-            *errorOut = tr("Key auth failed: %1").arg(lastSessionError(session));
-        }
-        return false;
-    }
-    return true;
-}
-
-bool Libssh2ChannelWorker::authAgent(LIBSSH2_SESSION *session,
-                                     const AuthSpec &spec,
-                                     QString *errorOut)
-{
-    LIBSSH2_AGENT *agent = libssh2_agent_init(session);
-    if (!agent) {
-        if (errorOut) {
-            *errorOut = tr("libssh2_agent_init failed");
-        }
-        return false;
-    }
-
-    auto cleanup = [&]() {
-        libssh2_agent_disconnect(agent);
-        libssh2_agent_free(agent);
-    };
-
-    if (libssh2_agent_connect(agent) != 0) {
-        if (errorOut) {
-            *errorOut = tr("Cannot connect to ssh-agent");
-        }
-        cleanup();
-        return false;
-    }
-    if (libssh2_agent_list_identities(agent) != 0) {
-        if (errorOut) {
-            *errorOut = tr("ssh-agent: list_identities failed");
-        }
-        cleanup();
-        return false;
-    }
-
-    const QByteArray user = spec.username.toUtf8();
-    libssh2_agent_publickey *prev = nullptr;
-    libssh2_agent_publickey *cur = nullptr;
-    bool ok = false;
-    for (;;) {
-        const int rc = libssh2_agent_get_identity(agent, &cur, prev);
-        if (rc < 0) {
-            break;
-        }
-        if (rc == 1) { // 娌℃湁鏇村 identity
-            break;
-        }
-        if (libssh2_agent_userauth(agent, user.constData(), cur) == 0) {
-            ok = true;
-            break;
-        }
-        prev = cur;
-    }
-
-    if (!ok && errorOut) {
-        *errorOut = tr("ssh-agent: no identity accepted by server");
-    }
-    cleanup();
-    return ok;
+    return trusted;
 }
 
 bool Libssh2ChannelWorker::openShell(QString *errorOut)
@@ -602,10 +364,6 @@ void Libssh2ChannelWorker::teardown()
         TcpConnection::close(m_socket);
         m_socket = TcpConnection::invalidSocket;
     }
-    if (m_libsshInited) {
-        libssh2_exit();
-        m_libsshInited = false;
-    }
     m_pendingInput.clear();
     m_pendingResize = false;
     m_pumpScheduled = false;
@@ -636,11 +394,11 @@ bool Libssh2ChannelWorker::openJumpAndTunnel(QString *errorOut)
         return false;
     }
 
-    AuthSpec jumpSpec{m_profile.jumpUsername.isEmpty() ? m_profile.username
+    SshSupport::AuthSpec jumpSpec{m_profile.jumpUsername.isEmpty() ? m_profile.username
                                                        : m_profile.jumpUsername,
                       m_profile.jumpAuthType, m_profile.jumpPassword,
                       m_profile.jumpPrivateKeyPath, m_profile.jumpKeyPassphrase};
-    if (!authenticate(m_jumpSession, jumpSpec, errorOut)) {
+    if (!SshSupport::authenticate(m_jumpSession, jumpSpec, errorOut)) {
         return false;
     }
 
@@ -662,14 +420,7 @@ bool Libssh2ChannelWorker::openJumpAndTunnel(QString *errorOut)
 
 void Libssh2ChannelWorker::installJumpCallbacks()
 {
-    if (!m_session || !m_sessionAbstract) {
-        return;
-    }
-    m_sessionAbstract->jumpTunnelSlot = &m_jumpTunnel;
-    libssh2_session_callback_set2(m_session, LIBSSH2_CALLBACK_SEND,
-                                  reinterpret_cast<libssh2_cb_generic *>(&jumpSendCallback));
-    libssh2_session_callback_set2(m_session, LIBSSH2_CALLBACK_RECV,
-                                  reinterpret_cast<libssh2_cb_generic *>(&jumpRecvCallback));
+    SshSupport::setJumpTunnel(m_session, *m_sessionAbstract, m_jumpSession, &m_jumpTunnel);
 }
 
 void Libssh2ChannelWorker::setupForwarding()

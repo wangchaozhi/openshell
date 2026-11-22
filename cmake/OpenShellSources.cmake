@@ -11,6 +11,7 @@ set(OPENSHELL_APP_SOURCES
     src/AppControllerTransferProgressReporter.h
     src/ConnectionCatalog.cpp
     src/ConnectionCatalog.h
+    src/OpenSshConnectionImport.cpp
     src/SessionController.cpp
     src/SessionController.h
     src/SettingsStore.cpp
@@ -24,6 +25,10 @@ set(OPENSHELL_APP_SOURCES
     src/ssh/SshSession.cpp
     src/ssh/SshSession.h
     src/ssh/SshWorkerFactory.h
+    src/ssh/SshSupport.cpp
+    src/ssh/SshSupport.h
+    src/ssh/SshHostTrust.cpp
+    src/ssh/SshHostTrust.h
     src/ssh/TcpConnection.cpp
     src/ssh/TcpConnection.h
     src/ssh/TelnetChannelWorker.cpp
@@ -68,6 +73,8 @@ set(OPENSHELL_QML_FILES
     qml/SessionTabs.qml
     qml/TerminalView.qml
     qml/SystemMonitorPoller.qml
+    qml/SshHostKeyPrompt.qml
+    qml/TransferConflictBox.qml
     qml/SystemInfoView.qml
     qml/FileBrowser.qml
     qml/ThemePalette.qml
@@ -131,6 +138,10 @@ set(OPENSHELL_TEST_SESSION_CONTROLLER_SOURCES
     src/SessionController.h
     src/ssh/SshChannelWorker.cpp
     src/ssh/SshChannelWorker.h
+    src/ssh/SshSupport.cpp
+    src/ssh/SshSupport.h
+    src/ssh/SshHostTrust.cpp
+    src/ssh/SshHostTrust.h
     src/ssh/TcpConnection.cpp
     src/ssh/TcpConnection.h
     src/ssh/Libssh2ChannelWorker.cpp
@@ -156,6 +167,10 @@ set(OPENSHELL_TEST_SFTP_CONNECTION_POOL_SOURCES
     tests/test_sftp_connection_pool.cpp
     src/ssh/SftpConnectionPool.cpp
     src/ssh/SftpConnectionPool.h
+    src/ssh/SshSupport.cpp
+    src/ssh/SshSupport.h
+    src/ssh/SshHostTrust.cpp
+    src/ssh/SshHostTrust.h
     src/ssh/TcpConnection.cpp
     src/ssh/TcpConnection.h
     src/ConnectionCatalog.cpp

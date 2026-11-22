@@ -2,6 +2,7 @@
 
 #include "VtScreen.h"
 
+#include <QList>
 #include <utility>
 
 // TerminalScreenItem 的选区部分：拖选 / 选词 / 选行 / 取选中文本 / 复制。
@@ -45,6 +46,71 @@ QString TerminalScreenItem::selectedText() const
 bool TerminalScreenItem::hasSelection() const
 {
     return m_screen && m_selectionActive && !selectedText().isEmpty();
+}
+
+bool TerminalScreenItem::findText(const QString &text, bool backwards, bool restart)
+{
+    if (!m_screen || text.isEmpty()) {
+        return false;
+    }
+    const int firstRow = -m_screen->scrollbackSize();
+    const int lastRow = m_rows - 1;
+    const int rowCount = lastRow - firstRow + 1;
+    if (rowCount <= 0) {
+        return false;
+    }
+    const bool fromSelection = !restart && m_selectionActive;
+    const QPoint start = fromSelection ? normalizedSelection().first
+                                        : QPoint(0, backwards ? lastRow : -m_scrollOffset);
+    const int direction = backwards ? -1 : 1;
+    int row = qBound(firstRow, start.y(), lastRow);
+    for (int visited = 0; visited < rowCount + (fromSelection ? 1 : 0); ++visited) {
+        QString line;
+        QList<int> columns;
+        for (int col = 0; col < m_cols; ++col) {
+            const VtCell cell = m_screen->cellAtAbsolute(row, col);
+            if (cell.placeholder) {
+                continue;
+            }
+            const QString value = cell.text.isEmpty() ? QStringLiteral(" ") : cell.text;
+            line += value;
+            for (qsizetype i = 0; i < value.size(); ++i) {
+                columns.append(col);
+            }
+        }
+        qsizetype from = backwards ? line.size() - 1 : 0;
+        if (fromSelection && visited == 0) {
+            if (backwards) {
+                while (from >= 0 && columns.at(from) >= start.x()) {
+                    --from;
+                }
+            } else {
+                while (from < columns.size() && columns.at(from) <= start.x()) {
+                    ++from;
+                }
+            }
+        }
+        if (from >= 0 && from < columns.size()) {
+            const qsizetype match = backwards ? line.lastIndexOf(text, from, Qt::CaseInsensitive)
+                                              : line.indexOf(text, from, Qt::CaseInsensitive);
+            if (match >= 0) {
+                const int left = columns.at(match);
+                const int last = columns.at(match + text.size() - 1);
+                const int right = qMin(m_cols - 1, last + m_screen->cellAtAbsolute(row, last).width - 1);
+                m_selecting = false;
+                setSelectionRange(QPoint(left, row), QPoint(right, row));
+                if (row < -m_scrollOffset || row >= m_rows - m_scrollOffset) {
+                    setScrollOffset(-row);
+                }
+                return true;
+            }
+        }
+        row += direction;
+        if (row < firstRow || row > lastRow) {
+            row = backwards ? lastRow : firstRow;
+        }
+    }
+    return false;
 }
 
 void TerminalScreenItem::selectAll()

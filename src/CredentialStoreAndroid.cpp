@@ -1,33 +1,23 @@
 #include "CredentialStore.h"
 
-#include <QByteArray>
+#include <QJniObject>
+#include <QObject>
 #include <QSettings>
-#include <QStandardPaths>
-
-// Android backend for CredentialStore.
-//
-// FIXME: This is a sandbox-only fallback that base64-wraps secrets into the
-// app-private QSettings store. App-private storage is protected by Android's
-// per-app sandbox, but it is NOT encrypted at rest. Anyone with a rooted
-// device or a backup containing the app's sandbox can read these values.
-//
-// The correct implementation is to wrap each secret with an AES key generated
-// in the AndroidKeyStore via QJniObject (see KeyGenParameterSpec.Builder with
-// PURPOSE_ENCRYPT|PURPOSE_DECRYPT and BLOCK_MODE_GCM), storing only the IV +
-// ciphertext in QSettings. That requires wiring AndroidX Security or a hand-
-// rolled JNI stack and is tracked separately. This stub keeps the API working
-// so the rest of the app compiles and stops storing secrets in JSON.
 
 namespace {
 
-QString settingsGroup()
-{
-    return QStringLiteral("credentials");
-}
-
 QString settingsKey(const QString &id, const QString &field)
 {
-    return settingsGroup() + QStringLiteral("/") + id + QStringLiteral("/") + field;
+    return QStringLiteral("credentials/") + id + QLatin1Char('/') + field;
+}
+
+QString crypt(const char *method, const QString &value, const QString &key)
+{
+    const auto input = QJniObject::fromString(value);
+    const auto field = QJniObject::fromString(key);
+    return QJniObject::callStaticObjectMethod("com/wangchaozhi/openshell/CredentialCrypto", method,
+                                            "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+                                            input.object<jstring>(), field.object<jstring>()).toString();
 }
 
 } // namespace
@@ -35,27 +25,45 @@ QString settingsKey(const QString &id, const QString &field)
 bool CredentialStore::save(const QString &id, const QString &field,
                            const QString &secret, QString *error)
 {
-    Q_UNUSED(error);
     QSettings settings;
     const QString key = settingsKey(id, field);
     if (secret.isEmpty()) {
         settings.remove(key);
-        return true;
+    } else {
+        const QString sealed = crypt("seal", secret, key);
+        if (sealed.isEmpty()) {
+            if (error) {
+                *error = QObject::tr("Cannot encrypt credentials with Android Keystore");
+            }
+            return false;
+        }
+        settings.setValue(key, sealed);
     }
-    // Base64 to keep INI/XML serialization happy with non-ASCII bytes.
-    settings.setValue(key, secret.toUtf8().toBase64());
+    settings.sync();
+    if (settings.status() != QSettings::NoError) {
+        if (error) {
+            *error = QObject::tr("Cannot save Android credentials");
+        }
+        return false;
+    }
     return true;
 }
 
 QString CredentialStore::load(const QString &id, const QString &field)
 {
-    QSettings settings;
-    const QVariant raw = settings.value(settingsKey(id, field));
-    if (!raw.isValid()) {
-        return QString();
+    const QString key = settingsKey(id, field);
+    const QString value = QSettings().value(key).toString();
+    if (value.startsWith(QStringLiteral("v1:"))) {
+        return crypt("unseal", value, key);
     }
-    const QByteArray decoded = QByteArray::fromBase64(raw.toByteArray());
-    return QString::fromUtf8(decoded);
+    if (!value.isEmpty()) {
+        const QString legacy = QString::fromUtf8(QByteArray::fromBase64(value.toLatin1()));
+        if (!legacy.isEmpty()) {
+            save(id, field, legacy, nullptr);
+        }
+        return legacy;
+    }
+    return {};
 }
 
 void CredentialStore::remove(const QString &id, const QString &field)

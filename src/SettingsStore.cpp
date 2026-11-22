@@ -13,6 +13,7 @@ constexpr auto kUiTheme = "ui/theme";
 constexpr auto kRemoteFileOpenMode = "remoteFiles/openMode";
 constexpr auto kExternalTextEditorPath = "remoteFiles/externalTextEditorPath";
 constexpr auto kAutoUploadRemoteEdits = "remoteFiles/autoUploadEdits";
+constexpr auto kTerminalHistoryLines = "terminal/historyLines";
 constexpr auto kDefaultLanguage = "system";
 constexpr auto kDefaultUiTheme = "dark";
 constexpr auto kDefaultRemoteFileOpenMode = "system";
@@ -22,6 +23,16 @@ SettingsStore::SettingsStore(QObject *parent)
     : QObject(parent)
 {
     // Organization/application names are set in main() before any settings access.
+}
+
+int SettingsStore::terminalHistoryLines() const
+{
+    return qBound(0, QSettings().value(kTerminalHistoryLines, 5000).toInt(), 50000);
+}
+
+void SettingsStore::setTerminalHistoryLines(int lines)
+{
+    QSettings().setValue(kTerminalHistoryLines, qBound(0, lines, 50000));
 }
 
 QString SettingsStore::language() const

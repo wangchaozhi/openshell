@@ -1,6 +1,9 @@
 #include "AppController.h"
 
 #include "SessionController.h"
+#include "SettingsStore.h"
+#include "terminal/VtScreen.h"
+#include "ssh/SftpConnectionPool.h"
 
 QString AppController::openSession(const QString &connectionId)
 {
@@ -17,14 +20,80 @@ QString AppController::openSession(const QString &connectionId)
         return QString();
     }
 
+    if (auto *screen = qobject_cast<VtScreen *>(m_sessions->sessionScreen(sessionId))) {
+        screen->setScrollbackLimit(m_settings->terminalHistoryLines());
+    }
+
     setCurrentConnectionId(connectionId);
     setLastError(QString());
     return sessionId;
 }
 
-void AppController::closeSession(const QString &sessionId)
+int AppController::terminalHistoryLines() const
 {
+    return m_settings->terminalHistoryLines();
+}
+
+void AppController::setTerminalHistoryLines(int lines)
+{
+    m_settings->setTerminalHistoryLines(lines);
+    const int limit = m_settings->terminalHistoryLines();
+    for (const auto &entry : m_sessions->sessionsAsVariantList()) {
+        const QString sessionId = entry.toMap().value(QStringLiteral("id")).toString();
+        if (auto *screen = qobject_cast<VtScreen *>(m_sessions->sessionScreen(sessionId))) {
+            screen->setScrollbackLimit(limit);
+        }
+    }
+}
+
+bool AppController::closeSession(const QString &sessionId, bool cancelTransfers)
+{
+    const auto active = m_sessions->sessionsAsVariantList();
+    QString profileId;
+    for (const QVariant &entry : active) {
+        const auto session = entry.toMap();
+        if (session.value(QStringLiteral("id")).toString() == sessionId) {
+            profileId = session.value(QStringLiteral("connectionId")).toString();
+            break;
+        }
+    }
+    bool lastSession = !profileId.isEmpty();
+    for (const QVariant &entry : active) {
+        const auto session = entry.toMap();
+        if (session.value(QStringLiteral("id")).toString() != sessionId
+            && session.value(QStringLiteral("connectionId")).toString() == profileId) {
+            lastSession = false;
+            break;
+        }
+    }
+    if (lastSession) {
+        const auto requests = m_transferConnectionIds.keys(profileId);
+        if (!requests.isEmpty() && !cancelTransfers) {
+            return false;
+        }
+        for (const QString &request : requests) {
+            cancelRemoteOperation(request);
+        }
+    }
     m_sessions->close(sessionId);
+    if (lastSession) {
+        SftpConnectionPool::releaseProfile(profileId);
+    }
+    return true;
+}
+
+void AppController::releaseUnusedSftpProfile(const QString &connectionId)
+{
+    if (connectionId.isEmpty() || m_transferConnectionIds.values().contains(connectionId)) {
+        return;
+    }
+    const auto active = m_sessions->sessionsAsVariantList();
+    for (const QVariant &entry : active) {
+        if (entry.toMap().value(QStringLiteral("connectionId")).toString() == connectionId) {
+            return;
+        }
+    }
+    SftpConnectionPool::releaseProfile(connectionId);
 }
 
 QVariantList AppController::sessions() const

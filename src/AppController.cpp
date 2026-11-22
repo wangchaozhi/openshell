@@ -5,6 +5,7 @@
 #include "SettingsStore.h"
 #include "SystemMonitorController.h"
 #include "TranslationManager.h"
+#include "ssh/SshHostTrust.h"
 
 #include <QCoreApplication>
 #include <QFileSystemWatcher>
@@ -24,6 +25,10 @@ AppController::AppController(QObject *parent)
     , m_remoteEditWatcher(new QFileSystemWatcher(this))
 {
     m_translations->installLanguage(m_settings->language());
+    SshHostTrust::installPrompt(this, [this](const QString &id, const QString &endpoint,
+                                            const QString &fingerprint, const QString &previous) {
+        emit sshHostKeyConfirmationRequested(id, endpoint, fingerprint, previous);
+    });
 
 #if !defined(Q_OS_ANDROID) && !defined(Q_OS_IOS)
     m_tray = new TrayController(this);
@@ -56,6 +61,10 @@ AppController::AppController(QObject *parent)
             &AppController::sessionReconnected);
     connect(m_monitor, &SystemMonitorController::snapshotReady, this,
             &AppController::systemMonitorSnapshotReady);
+    connect(m_monitor, &SystemMonitorController::snapshotReady, this,
+            [this](const QString &, const QString &connectionId) {
+                releaseUnusedSftpProfile(connectionId);
+            });
     connect(m_remoteEditWatcher, &QFileSystemWatcher::fileChanged, this,
             &AppController::handleWatchedRemoteEditChanged);
 
@@ -65,6 +74,7 @@ AppController::AppController(QObject *parent)
     // 卡顿时窗口会被放大成 N 倍。
     if (auto *app = QCoreApplication::instance()) {
         connect(app, &QCoreApplication::aboutToQuit, this, [this]() {
+            SshHostTrust::stop();
             if (m_sessions) {
                 m_sessions->shutdownAll();
             }
@@ -72,7 +82,15 @@ AppController::AppController(QObject *parent)
     }
 }
 
-AppController::~AppController() = default;
+AppController::~AppController()
+{
+    SshHostTrust::stop();
+}
+
+void AppController::resolveSshHostKey(const QString &requestId, bool trusted)
+{
+    SshHostTrust::resolve(requestId, trusted);
+}
 
 QString AppController::language() const
 {

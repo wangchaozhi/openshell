@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Dialogs
 import QtQuick.Layouts
+import ".."
 
 Rectangle {
     id: root
@@ -19,6 +20,9 @@ Rectangle {
     property string errorMessage: ""
     property string pendingOp: ""        // "delete" | "rename" | "create" | "upload" — refresh-pending
     property string renameTargetPath: ""
+    property var uploadQueue: []
+    property string uploadConnectionId: ""
+    property string uploadDirectory: ""
 
     // 上传/下载进度——监听 remoteOperationProgress 同步更新
     property string activeTransferRequestId: ""
@@ -42,6 +46,27 @@ Rectangle {
 
     function refresh() {
         loadDirectory(currentPath.length > 0 ? currentPath : appController.remoteHomePath(connectionId))
+    }
+
+    function uploadSelection(urls, folders) {
+        if (activeTransferRequestId || !connectionId || !currentPath) {
+            return
+        }
+        uploadConnectionId = connectionId
+        uploadDirectory = currentPath
+        uploadQueue = Array.from(urls, url => ({ url: url.toString(), folder: folders }))
+        uploadNext()
+    }
+
+    function uploadNext() {
+        if (uploadQueue.length === 0) {
+            return
+        }
+        const item = uploadQueue[0]
+        uploadQueue = uploadQueue.slice(1)
+        activeTransferOp = "upload"
+        activeTransferRequestId = appController.requestUploadPickedPath(uploadConnectionId, item.url,
+                                                                        uploadDirectory, item.folder)
     }
 
     function navigateUp() {
@@ -150,7 +175,9 @@ Rectangle {
         }
 
         function onRemoteOperationFinished(requestId, connId, operation, path, ok, message) {
-            if (requestId === root.activeTransferRequestId) {
+            const isCurrentTransfer = requestId === root.activeTransferRequestId
+            const isCurrentUpload = isCurrentTransfer && operation === "upload"
+            if (isCurrentTransfer) {
                 root.activeTransferRequestId = ""
                 root.activeTransferOp = ""
                 root.activeTransferLabel = ""
@@ -159,14 +186,23 @@ Rectangle {
                 root.activeTransferSpeed = 0
             }
             if (!ok) {
-                root.errorMessage = message && message.length > 0
-                                    ? message
-                                    : qsTr("Operation failed: %1").arg(operation)
+                if (isCurrentUpload) {
+                    root.uploadQueue = []
+                }
+                if (isCurrentTransfer || connId === root.connectionId) {
+                    root.errorMessage = message && message.length > 0
+                                        ? message
+                                        : qsTr("Operation failed: %1").arg(operation)
+                }
                 return
             }
-            if (operation === "delete" || operation === "rename"
+            if (isCurrentUpload && root.uploadQueue.length > 0) {
+                root.uploadNext()
+                return
+            }
+            if (connId === root.connectionId && (operation === "delete" || operation === "rename"
                     || operation === "create" || operation === "upload"
-                    || operation === "chmod") {
+                    || operation === "chmod")) {
                 root.refresh()
             }
         }
@@ -187,6 +223,11 @@ Rectangle {
         anchors.fill: parent
         anchors.margins: 12
         spacing: 8
+
+        TransferConflictBox {
+            visible: root.hasSession
+            Layout.fillWidth: true
+        }
 
         // 标题 + 导航按钮
         RowLayout {
@@ -537,11 +578,20 @@ Rectangle {
         Button {
             Layout.alignment: Qt.AlignRight
             visible: root.hasSession && !root.loading && root.currentPath.length > 0
+            enabled: !root.activeTransferRequestId
             text: qsTr("Upload")
             leftPadding: 16
             rightPadding: 16
             highlighted: true
             onClicked: uploadPicker.open()
+        }
+
+        Button {
+            Layout.alignment: Qt.AlignRight
+            visible: root.hasSession && !root.loading && root.currentPath.length > 0
+            enabled: !root.activeTransferRequestId
+            text: qsTr("Upload folder")
+            onClicked: folderPicker.open()
         }
 
         Button {
@@ -561,29 +611,15 @@ Rectangle {
     // Framework，iOS 走 UIDocumentPicker；都不需要单独申请存储权限。
     FileDialog {
         id: uploadPicker
-        title: qsTr("Pick a file to upload")
-        fileMode: FileDialog.OpenFile
-        onAccepted: {
-            // Android SAF returns content:// URIs that QFile can read but
-            // QFileInfo / QDir cannot walk — stage them into the app sandbox
-            // first so the existing upload pipeline keeps working.
-            const local = appController.stageUrlForUpload(selectedFile.toString())
-            if (!local || local.length === 0) {
-                root.errorMessage = appController.lastError.length > 0
-                    ? appController.lastError
-                    : qsTr("Unable to stage picked file")
-                return
-            }
-            root.pendingOp = "upload"
-            const slash = local.lastIndexOf("/")
-            root.activeTransferLabel = slash >= 0 ? local.substring(slash + 1) : local
-            root.activeTransferOp = "upload"
-            root.activeTransferBytesDone = 0
-            root.activeTransferBytesTotal = 0
-            root.activeTransferSpeed = 0
-            root.activeTransferRequestId = appController.requestUploadLocalPath(
-                root.connectionId, local, root.currentPath)
-        }
+        title: qsTr("Pick files to upload")
+        fileMode: FileDialog.OpenFiles
+        onAccepted: root.uploadSelection(selectedFiles, false)
+    }
+
+    FolderDialog {
+        id: folderPicker
+        title: qsTr("Pick a folder to upload")
+        onAccepted: root.uploadSelection([selectedFolder], true)
     }
 
     Dialog {

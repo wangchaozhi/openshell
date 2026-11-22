@@ -3,6 +3,7 @@
 #include "ConnectionCatalog.h"
 
 #include <QString>
+#include <QSharedPointer>
 
 #include <libssh2.h>
 #include <libssh2_sftp.h>
@@ -28,7 +29,7 @@ class Lease
 {
 public:
     Lease() = default;
-    Lease(CachedConnection *connection, bool alreadyLocked);
+    Lease(QSharedPointer<CachedConnection> connection, bool alreadyLocked);
     ~Lease();
 
     Lease(const Lease &) = delete;
@@ -37,10 +38,10 @@ public:
     Lease(Lease &&other) noexcept;
     Lease &operator=(Lease &&other) noexcept;
 
-    CachedConnection *get() const { return m_connection; }
+    CachedConnection *get() const { return m_connection.data(); }
 
 private:
-    CachedConnection *m_connection = nullptr;
+    QSharedPointer<CachedConnection> m_connection;
 };
 
 // Initialises libssh2 once per process.
@@ -49,6 +50,7 @@ bool ensureLibssh2(QString *errorOut);
 // Leases a connection for the given profile/lane. Blocks only on the cache map,
 // then on the chosen connection's own mutex.
 Lease acquire(const ConnectionProfile &profile, Lane lane);
+void releaseProfile(const QString &connectionId);
 
 // Ensures the leased connection has a live session + SFTP channel, reconnecting
 // if necessary.

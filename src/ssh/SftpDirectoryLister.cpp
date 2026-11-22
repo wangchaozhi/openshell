@@ -8,6 +8,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QObject>
+#include <QUuid>
 #include <QVariantMap>
 
 #include <libssh2.h>
@@ -16,6 +17,51 @@
 using SftpConnectionPool::Lane;
 
 namespace {
+
+QString alternatePath(const QString &path)
+{
+    const auto separator = path.lastIndexOf(QLatin1Char('/'));
+    const QString parent = path.left(separator + 1);
+    const QString name = path.mid(separator + 1);
+    const auto suffix = name.lastIndexOf(QLatin1Char('.'));
+    const QString id = QUuid::createUuid().toString(QUuid::WithoutBraces).left(8);
+    const QString extra = QStringLiteral(" (%1)").arg(id);
+    return suffix > 0 ? parent + name.left(suffix) + extra + name.mid(suffix)
+                      : parent + name + extra;
+}
+
+bool cancelled(const SftpDirectoryLister::CancelCallback &isCanceled, QString *error)
+{
+    if (!isCanceled || !isCanceled()) {
+        return false;
+    }
+    if (error) {
+        *error = QObject::tr("Transfer cancelled");
+    }
+    return true;
+}
+
+SftpTransfer::ReconnectCallback recoverTransfer(SftpConnectionPool::CachedConnection *connection,
+                                             const ConnectionProfile &profile,
+                                             const SftpDirectoryLister::CancelCallback &isCanceled,
+                                             QString *error)
+{
+    return [connection, &profile, &isCanceled, error, retried = false](
+               int code, LIBSSH2_SFTP *&sftp, LIBSSH2_SFTP_HANDLE *&handle) mutable {
+        if (retried || cancelled(isCanceled, error) || !SftpConnectionPool::connectionLost(connection, code)) {
+            return false;
+        }
+        retried = true;
+        SftpConnectionPool::reset(connection, handle);
+        handle = nullptr;
+        sftp = nullptr;
+        if (!SftpConnectionPool::ensureConnected(connection, profile, error)) {
+            return false;
+        }
+        sftp = SftpConnectionPool::sftp(connection);
+        return true;
+    };
+}
 
 struct DirectoryListing
 {
@@ -220,15 +266,16 @@ bool SftpDirectoryLister::upload(const ConnectionProfile &profile,
                                  const QString &remoteDirectory,
                                  QString *errorOut,
                                  ProgressCallback progress,
-                                 CancelCallback isCanceled)
+                                 CancelCallback isCanceled,
+                                 Conflict conflict)
 {
-    if (!SftpConnectionPool::ensureLibssh2(errorOut)) {
+    if (cancelled(isCanceled, errorOut) || !SftpConnectionPool::ensureLibssh2(errorOut)) {
         return false;
     }
 
     auto lease = SftpConnectionPool::acquire(profile, Lane::Transfer);
     auto *connection = lease.get();
-    if (!SftpConnectionPool::ensureConnected(connection, profile, errorOut)) {
+    if (cancelled(isCanceled, errorOut) || !SftpConnectionPool::ensureConnected(connection, profile, errorOut)) {
         return false;
     }
 
@@ -253,30 +300,36 @@ bool SftpDirectoryLister::upload(const ConnectionProfile &profile,
     }
 
     const QString targetDir = remoteDirectory.isEmpty() ? QStringLiteral("/") : remoteDirectory;
-    const QString remotePath = SftpTransfer::joinRemotePath(targetDir, uploadName);
+    QString remotePath = SftpTransfer::joinRemotePath(targetDir, uploadName);
+    if (conflict != Conflict::Overwrite) {
+        LIBSSH2_SFTP_ATTRIBUTES attributes{};
+        const QByteArray target = remotePath.toUtf8();
+        if (libssh2_sftp_lstat(SftpConnectionPool::sftp(connection), target.constData(), &attributes) == 0) {
+            if (conflict == Conflict::Skip) {
+                if (errorOut) {
+                    *errorOut = QObject::tr("Skipped existing destination %1").arg(remotePath);
+                }
+                return true;
+            }
+            remotePath = alternatePath(remotePath);
+        }
+    }
     const qint64 bytesTotal = SftpTransfer::localPathSize(info);
     qint64 bytesDone = 0;
     if (progress) {
         progress(bytesDone, bytesTotal);
     }
-    const bool ok = SftpTransfer::uploadPathRecursive(SftpConnectionPool::sftp(connection),
+    auto *sftp = SftpConnectionPool::sftp(connection);
+    const bool ok = SftpTransfer::uploadPathRecursive(sftp,
                                                       info.absoluteFilePath(),
                                                       remotePath,
                                                       errorOut,
                                                       bytesTotal,
                                                       &bytesDone,
                                                       progress,
-                                                      isCanceled);
-    if (!ok && isCanceled && isCanceled()) {
-        QString cleanupError;
-        SftpTransfer::removePathRecursive(SftpConnectionPool::sftp(connection),
-                                          remotePath,
-                                          true,
-                                          &cleanupError);
-        if (errorOut) {
-            *errorOut = QObject::tr("Transfer cancelled");
-        }
-    }
+                                                      isCanceled,
+                                                      conflict == Conflict::Overwrite,
+                                                      recoverTransfer(connection, profile, isCanceled, errorOut));
     if (ok && progress) {
         progress(bytesTotal, bytesTotal);
     }
@@ -325,44 +378,53 @@ bool SftpDirectoryLister::download(const ConnectionProfile &profile,
                                    QString *downloadedPath,
                                    QString *errorOut,
                                    ProgressCallback progress,
-                                   CancelCallback isCanceled)
+                                   CancelCallback isCanceled,
+                                   Conflict conflict)
 {
-    if (!SftpConnectionPool::ensureLibssh2(errorOut)) {
+    const QString name = remotePath.section(QLatin1Char('/'), -1);
+    if (!name.isEmpty() && !SftpTransfer::isLocalFileName(name)) {
+        if (errorOut) {
+            *errorOut = QObject::tr("Cannot write local file %1").arg(name);
+        }
+        return false;
+    }
+    if (cancelled(isCanceled, errorOut) || !SftpConnectionPool::ensureLibssh2(errorOut)) {
         return false;
     }
     auto lease = SftpConnectionPool::acquire(profile, Lane::Transfer);
     auto *connection = lease.get();
-    if (!SftpConnectionPool::ensureConnected(connection, profile, errorOut)) {
+    if (cancelled(isCanceled, errorOut) || !SftpConnectionPool::ensureConnected(connection, profile, errorOut)) {
         return false;
     }
 
-    const QString name = remotePath.section(QLatin1Char('/'), -1);
-    const QString localPath = QDir(localDirectory).filePath(name.isEmpty() ? QStringLiteral("download") : name);
+    QString localPath = QDir(localDirectory).filePath(name.isEmpty() ? QStringLiteral("download") : name);
+    const QFileInfo target(localPath);
+    if (conflict != Conflict::Overwrite && (target.exists() || target.isSymLink())) {
+        if (conflict == Conflict::Skip) {
+            if (errorOut) {
+                *errorOut = QObject::tr("Skipped existing destination %1").arg(localPath);
+            }
+            return true;
+        }
+        localPath = alternatePath(localPath);
+    }
     const qint64 bytesTotal = SftpTransfer::remotePathSizeRecursive(SftpConnectionPool::sftp(connection),
                                                                     remotePath);
     qint64 bytesDone = 0;
     if (progress) {
         progress(bytesDone, bytesTotal);
     }
-    const bool ok = SftpTransfer::downloadPathRecursive(SftpConnectionPool::sftp(connection),
+    auto *sftp = SftpConnectionPool::sftp(connection);
+    const bool ok = SftpTransfer::downloadPathRecursive(sftp,
                                                         remotePath,
                                                         localPath,
                                                         errorOut,
                                                         bytesTotal,
                                                         &bytesDone,
                                                         progress,
-                                                        isCanceled);
-    if (!ok && isCanceled && isCanceled()) {
-        const QFileInfo info(localPath);
-        if (info.isDir()) {
-            QDir(localPath).removeRecursively();
-        } else {
-            QFile::remove(localPath);
-        }
-        if (errorOut) {
-            *errorOut = QObject::tr("Transfer cancelled");
-        }
-    }
+                                                        isCanceled,
+                                                        conflict == Conflict::Overwrite,
+                                                        recoverTransfer(connection, profile, isCanceled, errorOut));
     if (ok) {
         if (progress) {
             progress(bytesTotal, bytesTotal);

@@ -33,6 +33,9 @@ SshSession::SshSession(const QString &id,
     // 才能在重连时复用同一个 worker。线程只在用户主动停止时退出。
     connect(m_worker, &SshChannelWorker::output, this, &SshSession::handleOutput);
     connect(m_worker, &SshChannelWorker::errorOccurred, this, &SshSession::handleError);
+    connect(m_worker, &SshChannelWorker::preventAutoReconnect, this, [this]() {
+        m_reconnectAttempt = m_profile.reconnectMaxAttempts;
+    });
     connect(&m_thread, &QThread::finished, this, &SshSession::workerThreadFinished);
 
     // VtScreen 任何变化都告诉 SessionController/QML 重绘

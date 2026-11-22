@@ -33,4 +33,6 @@ public:
     void setMainWindowGeometry(const QRect &geometry);
 
     QString connectionsRoot() const;
+    int terminalHistoryLines() const;
+    void setTerminalHistoryLines(int lines);
 };

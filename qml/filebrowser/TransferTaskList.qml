@@ -108,6 +108,13 @@ Rectangle {
                             text: qsTr("Stop")
                             onClicked: root.fileBrowser.cancelTransferTask(modelData)
                         }
+
+                        Button {
+                            visible: root.fileBrowser.canRetryTransfer(modelData)
+                            Layout.preferredHeight: 22
+                            text: qsTr("Retry")
+                            onClicked: root.fileBrowser.retryTransfer(modelData)
+                        }
                     }
 
                     ProgressBar {

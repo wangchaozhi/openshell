@@ -4,6 +4,26 @@
     <context>
         <name>AppController</name>
         <message>
+            <source>Cannot read the selected upload folder</source>
+            <translation>選択したアップロード用フォルダーを読み取れません</translation>
+        </message>
+        <message>
+            <source>Import connections</source>
+            <translation>接続をインポート</translation>
+        </message>
+        <message>
+            <source>Back up connections</source>
+            <translation>接続をバックアップ</translation>
+        </message>
+        <message>
+            <source>Unsupported connection backup version</source>
+            <translation>この接続バックアップのバージョンには対応していません</translation>
+        </message>
+        <message>
+            <source>No connections found in %1</source>
+            <translation>%1 に接続が見つかりません</translation>
+        </message>
+        <message>
             <location filename="../src/AppControllerRemoteFiles.cpp" line="57" />
             <location filename="../src/AppControllerRemoteFiles.cpp" line="83" />
             <location filename="../src/AppControllerRemoteFiles.cpp" line="125" />
@@ -334,6 +354,18 @@
     <context>
         <name>ConnectionManagerView</name>
         <message>
+            <source>Import / Backup</source>
+            <translation>インポート / バックアップ</translation>
+        </message>
+        <message>
+            <source>Import connections</source>
+            <translation>接続をインポート</translation>
+        </message>
+        <message>
+            <source>Back up connections</source>
+            <translation>接続をバックアップ</translation>
+        </message>
+        <message>
             <location filename="../qml/ConnectionManagerView.qml" line="33" />
             <location filename="../qml/ConnectionManagerView.qml" line="232" />
             <source>All</source>
@@ -580,6 +612,10 @@
     </context>
     <context>
         <name>FileBrowserDialogs</name>
+        <message>
+            <source>Transfer conflicts</source>
+            <translation>転送時の競合</translation>
+        </message>
         <message>
             <location filename="../qml/filebrowser/FileBrowserDialogs.qml" line="131" />
             <source>Change File Permissions</source>
@@ -957,6 +993,14 @@
     <context>
         <name>MainWindow</name>
         <message>
+            <source>Cancel transfers and close?</source>
+            <translation>転送をキャンセルして閉じますか？</translation>
+        </message>
+        <message>
+            <source>This is the last tab for this connection. Closing it will cancel its active transfers.</source>
+            <translation>最後の接続タブを閉じると実行中の転送がキャンセルされます。</translation>
+        </message>
+        <message>
             <location filename="../qml/MainWindow.qml" line="14" />
             <location filename="../qml/MainWindow.qml" line="254" />
             <location filename="../qml/MainWindow.qml" line="255" />
@@ -1193,6 +1237,18 @@
     </context>
     <context>
         <name>MobileFilesPage</name>
+        <message>
+            <source>Upload folder</source>
+            <translation>フォルダーをアップロード</translation>
+        </message>
+        <message>
+            <source>Pick files to upload</source>
+            <translation>アップロードするファイルを選択</translation>
+        </message>
+        <message>
+            <source>Pick a folder to upload</source>
+            <translation>アップロードするフォルダーを選択</translation>
+        </message>
         <message>
             <location filename="../qml/mobile/MobileFilesPage.qml" line="139" />
             <source>Operation failed: %1</source>
@@ -1456,6 +1512,30 @@
     </context>
     <context>
         <name>QObject</name>
+        <message>
+            <source>Cannot replace remote file %1</source>
+            <translation>リモートファイル %1 を置き換えられません</translation>
+        </message>
+        <message>
+            <source>Skipped existing destination %1</source>
+            <translation>既存の転送先 %1 をスキップしました</translation>
+        </message>
+        <message>
+            <source>Cannot read the SSH host key for %1</source>
+            <translation>%1 の SSH ホスト鍵を読み取れません</translation>
+        </message>
+        <message>
+            <source>SSH host key was not verified for %1 (%2)</source>
+            <translation>%1 の SSH ホスト鍵を確認できませんでした（%2）</translation>
+        </message>
+        <message>
+            <source>Cannot encrypt credentials with Android Keystore</source>
+            <translation>Android Keystore で認証情報を暗号化できません</translation>
+        </message>
+        <message>
+            <source>Cannot save Android credentials</source>
+            <translation>Android の認証情報を保存できません</translation>
+        </message>
         <message>
             <source>Cannot read remote directory %1</source>
             <translation>リモートディレクトリ %1 を読み込めません</translation>
@@ -2329,6 +2409,30 @@
     <context>
         <name>TerminalView</name>
         <message>
+            <source>Find in terminal</source>
+            <translation>端末内を検索</translation>
+        </message>
+        <message>
+            <source>Previous</source>
+            <translation>前へ</translation>
+        </message>
+        <message>
+            <source>Next</source>
+            <translation>次へ</translation>
+        </message>
+        <message>
+            <source>History</source>
+            <translation>履歴</translation>
+        </message>
+        <message>
+            <source>Close</source>
+            <translation>閉じる</translation>
+        </message>
+        <message>
+            <source>Terminal history lines</source>
+            <translation>端末の履歴行数</translation>
+        </message>
+        <message>
             <location filename="../qml/TerminalView.qml" line="161" />
             <source>(no session)</source>
             <translation>（セッションなし）</translation>
@@ -2384,6 +2488,10 @@
     </context>
     <context>
         <name>TransferTaskList</name>
+        <message>
+            <source>Retry</source>
+            <translation>再試行</translation>
+        </message>
         <message>
             <location filename="../qml/filebrowser/TransferTaskList.qml" line="87" />
             <source>Failed</source>
@@ -2481,6 +2589,54 @@
             <location filename="../src/TrayController.cpp" line="173" />
             <source>OpenShell</source>
             <translation>OpenShell</translation>
+        </message>
+    </context>
+    <context>
+        <name>SshHostKeyPrompt</name>
+        <message>
+            <source>SSH host key changed</source>
+            <translation>SSH ホスト鍵が変更されました</translation>
+        </message>
+        <message>
+            <source>Verify SSH host key</source>
+            <translation>SSH ホスト鍵を確認</translation>
+        </message>
+        <message>
+            <source>The SSH key for %1 changed. Verify the new fingerprint independently before accepting it.
+
+Previous: %2
+Current: %3</source>
+            <translation>%1 の SSH ホスト鍵が変更されました。承認前に、別の信頼できる手段で新しい指紋を確認してください。
+
+以前: %2
+現在: %3</translation>
+        </message>
+        <message>
+            <source>Verify this fingerprint for %1 before trusting the server.
+
+%2</source>
+            <translation>%1 のサーバーを信頼する前に指紋を確認してください。
+
+%2</translation>
+        </message>
+    </context>
+    <context>
+        <name>TransferConflictBox</name>
+        <message>
+            <source>Transfer conflicts</source>
+            <translation>転送時の競合</translation>
+        </message>
+        <message>
+            <source>Rename new files</source>
+            <translation>新しいファイルの名前を変更</translation>
+        </message>
+        <message>
+            <source>Skip existing files</source>
+            <translation>既存のファイルをスキップ</translation>
+        </message>
+        <message>
+            <source>Overwrite existing files</source>
+            <translation>既存のファイルを上書き</translation>
         </message>
     </context>
 </TS>

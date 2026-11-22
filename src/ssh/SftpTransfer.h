@@ -15,9 +15,11 @@ namespace SftpTransfer {
 
 using ProgressCallback = SftpDirectoryLister::ProgressCallback;
 using CancelCallback = SftpDirectoryLister::CancelCallback;
+using ReconnectCallback = std::function<bool(int, LIBSSH2_SFTP *&, LIBSSH2_SFTP_HANDLE *&)>;
 
 // "/a" + "b" -> "/a/b"; handles the root directory special case.
 QString joinRemotePath(const QString &base, const QString &name);
+bool isLocalFileName(const QString &name);
 
 // Octal permission string ("644") from SFTP attributes, or empty if unavailable.
 QString permissionsToOctal(const LIBSSH2_SFTP_ATTRIBUTES &attrs);
@@ -31,23 +33,27 @@ qint64 remotePathSizeRecursive(LIBSSH2_SFTP *sftp, const QString &remotePath);
 // Creates a remote directory, succeeding if it already exists as a directory.
 bool makeRemoteDirectory(LIBSSH2_SFTP *sftp, const QString &path);
 
-bool uploadPathRecursive(LIBSSH2_SFTP *sftp,
+bool uploadPathRecursive(LIBSSH2_SFTP *&sftp,
                          const QString &localPath,
                          const QString &remotePath,
                          QString *errorOut,
                          qint64 bytesTotal,
                          qint64 *bytesDone,
                          const ProgressCallback &progress,
-                         const CancelCallback &isCanceled = {});
+                         const CancelCallback &isCanceled = {},
+                         bool overwrite = true,
+                         const ReconnectCallback &reconnect = {});
 
-bool downloadPathRecursive(LIBSSH2_SFTP *sftp,
+bool downloadPathRecursive(LIBSSH2_SFTP *&sftp,
                            const QString &remotePath,
                            const QString &localPath,
                            QString *errorOut,
                            qint64 bytesTotal,
                            qint64 *bytesDone,
                            const ProgressCallback &progress,
-                           const CancelCallback &isCanceled = {});
+                           const CancelCallback &isCanceled = {},
+                           bool overwrite = true,
+                           const ReconnectCallback &reconnect = {});
 
 bool removePathRecursive(LIBSSH2_SFTP *sftp,
                          const QString &remotePath,

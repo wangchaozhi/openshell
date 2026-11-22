@@ -66,11 +66,17 @@ QString AppController::requestUploadEditedRemoteFile(const QString &connectionId
                                                      const QString &remotePath)
 {
     const QString requestId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const auto cancelFlag = QSharedPointer<std::atomic_bool>::create(false);
+    m_transferCancelFlags.insert(requestId, cancelFlag);
+    m_transferConnectionIds.insert(requestId, connectionId);
     const ConnectionProfile profile = m_catalog->profileById(connectionId);
     const QString remoteDirectory = remoteParentPath(remotePath);
     auto *watcher = new QFutureWatcher<QVariantMap>(this);
     connect(watcher, &QFutureWatcher<QVariantMap>::finished, this,
             [this, watcher, requestId, connectionId, remotePath]() {
+                m_transferCancelFlags.remove(requestId);
+                m_transferConnectionIds.remove(requestId);
+                releaseUnusedSftpProfile(connectionId);
                 const QVariantMap result = watcher->result();
                 const bool ok = result.value(QStringLiteral("ok")).toBool();
                 const QString message = result.value(QStringLiteral("message")).toString();
@@ -85,7 +91,8 @@ QString AppController::requestUploadEditedRemoteFile(const QString &connectionId
                 watcher->deleteLater();
             });
 
-    watcher->setFuture(QtConcurrent::run([this, requestId, connectionId, profile, localPath, remotePath, remoteDirectory]() {
+    watcher->setFuture(QtConcurrent::run([this, requestId, connectionId, profile, localPath, remotePath,
+                                         remoteDirectory, cancelFlag]() {
         QString error;
         AppControllerTransferProgressReporter progress(this,
                                           requestId,
@@ -102,7 +109,7 @@ QString AppController::requestUploadEditedRemoteFile(const QString &connectionId
                                                        &error,
                                                        [&progress](qint64 done, qint64 total) {
                                                            progress.report(done, total, done == 0 || done == total);
-                                                       });
+                                                       }, [cancelFlag]() { return cancelFlag->load(); });
         QVariantMap result;
         result.insert(QStringLiteral("ok"), ok);
         result.insert(QStringLiteral("localPath"), localPath);

@@ -30,6 +30,7 @@ signals:
     void disconnected(const QString &reason);
     void output(const QByteArray &chunk);
     void errorOccurred(const QString &message);
+    void preventAutoReconnect();
 
 protected:
     ConnectionProfile m_profile;

@@ -66,7 +66,7 @@ public:
     Q_INVOKABLE bool deleteConnection(const QString &id);
 
     Q_INVOKABLE QString openSession(const QString &connectionId);
-    Q_INVOKABLE void closeSession(const QString &sessionId);
+    Q_INVOKABLE bool closeSession(const QString &sessionId, bool cancelTransfers = false);
     Q_INVOKABLE QVariantList sessions() const;
     Q_INVOKABLE QString sessionBuffer(const QString &sessionId) const;
     Q_INVOKABLE QObject *sessionScreen(const QString &sessionId) const;
@@ -82,12 +82,6 @@ public:
     Q_INVOKABLE QString chooseLocalFile();
     Q_INVOKABLE QString chooseLocalFolder();
     Q_INVOKABLE QString chooseDownloadFolder();
-    // For mobile FileDialog results: Android SAF hands back content:// URIs
-    // that QFile can read but QFileInfo / QDir / the existing upload path can
-    // not walk. Stage the bytes into the app sandbox and return the staged
-    // local path; on iOS / desktop just resolves to the file:// path.
-    // Returns an empty string and sets lastError on failure.
-    Q_INVOKABLE QString stageUrlForUpload(const QString &url);
     Q_INVOKABLE bool openLocalFolderForPath(const QString &path) const;
     Q_INVOKABLE QVariantList transferHistory() const;
     Q_INVOKABLE void saveTransferHistory(const QVariantList &history) const;
@@ -100,6 +94,10 @@ public:
     Q_INVOKABLE QString requestUploadLocalPath(const QString &connectionId,
                                                const QString &localPath,
                                                const QString &remoteDirectory);
+    Q_INVOKABLE QString requestUploadPickedPath(const QString &connectionId,
+                                                const QString &url,
+                                                const QString &remoteDirectory,
+                                                bool folder);
     Q_INVOKABLE QString requestRemoteChmod(const QString &connectionId,
                                            const QString &remotePath,
                                            const QString &octalPermissions);
@@ -129,6 +127,14 @@ public:
     Q_INVOKABLE QString remoteSiblingPath(const QString &path, const QString &name) const;
     Q_INVOKABLE void copyTextToClipboard(const QString &text) const;
     Q_INVOKABLE QString clipboardText() const;
+    Q_INVOKABLE void resolveSshHostKey(const QString &requestId, bool trusted);
+    Q_INVOKABLE int terminalHistoryLines() const;
+    Q_INVOKABLE void setTerminalHistoryLines(int lines);
+    Q_INVOKABLE QVariantList chooseConnectionImport();
+    Q_INVOKABLE int importConnectionProfiles(const QVariantList &profiles);
+    Q_INVOKABLE bool exportConnectionProfiles();
+    Q_INVOKABLE QString transferConflictPolicy() const;
+    Q_INVOKABLE void setTransferConflictPolicy(const QString &policy);
 
     Q_INVOKABLE void showWindow();
     Q_INVOKABLE void hideWindow();
@@ -152,6 +158,8 @@ signals:
     void sessionScreenUpdated(const QString &sessionId);
     void sessionStatusChanged(const QString &sessionId, const QString &status, const QString &message);
     void sessionReconnected(const QString &sessionId);
+    void sshHostKeyConfirmationRequested(const QString &requestId, const QString &endpoint,
+                                         const QString &fingerprint, const QString &previousFingerprint);
     void remoteDirectoryEntriesReady(const QString &requestId,
                                      const QString &connectionId,
                                      const QString &path,
@@ -188,6 +196,9 @@ private:
         QDateTime lastKnownModified;
     };
     void setLastError(const QString &message);
+    QString requestUpload(const QString &connectionId, const QString &source,
+                          const QString &remoteDirectory, bool fromPicker, bool folder);
+    void releaseUnusedSftpProfile(const QString &connectionId);
     void openDownloadedRemoteFile(const QString &connectionId,
                                   const QString &remotePath,
                                   const QString &localPath);
@@ -207,4 +218,5 @@ private:
     QFileSystemWatcher *m_remoteEditWatcher = nullptr;
     QHash<QString, RemoteEditWatch> m_remoteEditWatches;
     QHash<QString, QSharedPointer<std::atomic_bool>> m_transferCancelFlags;
+    QHash<QString, QString> m_transferConnectionIds;
 };

@@ -70,6 +70,7 @@ public:
     Q_INVOKABLE void clearSelection();
     Q_INVOKABLE void scrollByLines(int delta);
     Q_INVOKABLE void scrollToBottom();
+    Q_INVOKABLE bool findText(const QString &text, bool backwards = false, bool restart = false);
     // 移动端调起软键盘。仅 Android / iOS 有实际效果，桌面是 no-op。
     Q_INVOKABLE void showSoftKeyboard();
 

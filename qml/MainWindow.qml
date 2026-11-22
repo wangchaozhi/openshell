@@ -34,6 +34,8 @@ ApplicationWindow {
         mode: window.uiTheme
     }
 
+    SshHostKeyPrompt {}
+
     readonly property var activeSession: {
         for (let i = 0; i < activeSessions.length; ++i) {
             if (activeSessions[i].id === activeSessionId) {
@@ -107,6 +109,7 @@ ApplicationWindow {
         } else if (appController.lastError && appController.lastError.length > 0) {
             statusMessage = appController.lastError
         }
+        return newId
     }
 
     function reconnectSession(sessionId, connectionId) {
@@ -114,8 +117,31 @@ ApplicationWindow {
         if (targetConnectionId.length === 0) {
             return
         }
-        appController.closeSession(sessionId)
-        openSessionFor(targetConnectionId)
+        if (openSessionFor(targetConnectionId)) {
+            appController.closeSession(sessionId)
+        }
+    }
+
+    function closeServerTab(sessionId) {
+        if (!appController.closeSession(sessionId)) {
+            closeTransferDialog.sessionId = sessionId
+            closeTransferDialog.open()
+        }
+    }
+
+    Dialog {
+        id: closeTransferDialog
+        property string sessionId: ""
+        anchors.centerIn: parent
+        title: qsTr("Cancel transfers and close?")
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        width: Math.min(440, window.width - 32)
+        contentItem: Label {
+            text: qsTr("This is the last tab for this connection. Closing it will cancel its active transfers.")
+            wrapMode: Text.WordWrap
+        }
+        onAccepted: appController.closeSession(sessionId, true)
     }
 
     function detachSession(sessionId) {
@@ -456,8 +482,8 @@ ApplicationWindow {
                     }
                 }
                 onConnectionManagerActivated: window.activeView = "connections"
-                onSessionClosed: (id) => appController.closeSession(id)
-                onSessionDisconnected: (id) => appController.closeSession(id)
+                onSessionClosed: (id) => window.closeServerTab(id)
+                onSessionDisconnected: (id) => window.closeServerTab(id)
                 onSessionReconnectRequested: (id, connectionId) => window.reconnectSession(id, connectionId)
                 onSessionDetached: (id) => window.detachSession(id)
                 onSystemInfoActivated: {
@@ -483,6 +509,10 @@ ApplicationWindow {
 
                 ConnectionManagerView {
                     connections: window.connections
+                    onConnectionsImported: {
+                        window.refreshConnections()
+                        window.statusMessage = appController.lastError
+                    }
                     selectedConnectionId: window.selectedConnectionId
                     uiTheme: window.uiTheme
 

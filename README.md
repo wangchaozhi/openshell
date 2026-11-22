@@ -23,18 +23,21 @@ Screenshots from the [project introduction on Zhihu](https://zhuanlan.zhihu.com/
 
 - Connection profiles: name, protocol, host, port, username, password/private key/agent auth, group, and notes.
 - SSH terminal sessions: real libssh2-backed connections, multi-tab sessions, resize handling, and Ctrl+C interrupt support.
+- SSH host keys: the terminal, SFTP, and monitoring verify SHA-256 fingerprints for destination and jump hosts before authentication. First connections and changed fingerprints require confirmation.
 - Telnet terminal sessions: plaintext TCP with basic IAC negotiation, configurable terminal type, window-size reporting, and optional auto-login for common `login:` / `Username:` / `Password:` prompts. Telnet is terminal-only; SFTP, monitoring, jump hosts, and forwarding require SSH.
 - Terminal rendering: libvterm screen model rendered through a custom `QQuickPaintedItem`, with cursor, clear screen, basic colors, and text attributes.
 - Terminal selection and copy: drag selection, select all, double-click word selection, triple-click line selection, Shift-extend selection, and copy-on-selection.
+- The desktop terminal supports scrollback search and a configurable history limit. Connection management can import common OpenSSH settings and export or restore backups without passwords, private keys, or passphrases.
 - SFTP dual-pane file browser: local/remote directory browsing, sorting, upload, download, delete, rename, create file/folder, and chmod.
+- SFTP uploads and downloads stage files before committing. Name conflicts offer skip, rename, or overwrite. An in-progress transfer tries to resume once after connection loss. Mobile users can select multiple files or a folder for upload.
 - Remote directory sync: optionally sync the remote file browser to the current directory detected from the terminal prompt.
 - Remote file opening: double-click remote files and open them with the system default app, a configured editor, or the built-in editor.
 - Edit upload-back: external editor saves can be watched and uploaded back to the original remote path; the built-in editor uploads on save.
 - Jump host (ProxyJump): chain through a bastion via a libssh2 `direct-tcpip` tunnel with custom send/recv callbacks.
-- Outbound SOCKS5 proxy: configure the proxy host, port (default 1080), and optional credentials per SSH, SFTP, or Telnet connection. The proxy resolves destination names. SSH terminal sessions with a jump host reach the bastion through the proxy.
+- Outbound SOCKS5 proxy: configure the proxy host, port (default 1080), and optional credentials for SSH terminals, SFTP, monitoring, and Telnet. A configured jump host is reached through the proxy.
 - Local port forwarding (`-L`): bind a local port and tunnel it to a remote host through the established session. Remote (`-R`) and dynamic (`-D`) forwarders are not yet implemented and surface a clear error.
 - Auto reconnect: configurable per profile, with exponential backoff capped at 30 s.
-- Credentials: passwords / passphrases stored in the OS keychain (macOS Keychain / Windows Credential Manager / libsecret on Linux via QtKeychain; iOS via Sec API). Plaintext fields in legacy JSON are migrated on first load.
+- Passwords and passphrases use the OS keychain on desktop and iOS, and AES-GCM with Android Keystore on Android. Legacy credentials migrate when loaded.
 - System tray: show/hide window, quick-open connections, language switching, and quit.
 - Localization: English, Simplified Chinese, Japanese, Korean, and German ship as compiled `.qm` resources. English is the source language and uses no translation file.
 
@@ -163,12 +166,10 @@ OpenShell is built in spare time. If it saves you time, a coffee would be apprec
 ## Roadmap
 
 - Connection JSON encryption for Git sync (design in `docs/connection-encryption-design.md`).
-- Android credential storage hardening: replace the sandbox-only `QSettings` stub with an `AndroidKeyStore`-wrapped AES-GCM backend.
-- Mobile folder upload via SAF / iOS security-scoped tree bookmarks (file picker already wired through `pickMobileFileAsync`).
 - Remote (`-R`) and dynamic (`-D`) port forwarding (local `-L` is done).
-- Terminal improvements: scrollback history, search, broader VT compatibility, and copy formatting refinements.
+- Terminal improvements: broader VT compatibility and copy formatting refinements.
 - Telnet improvements: per-profile encoding, CRLF mode, broader option negotiation, and configurable login prompt matching.
-- SFTP improvements: transfer queue, resume support, conflict handling, and batch operations.
+- SFTP improvements: resumption across app restarts and more batch operations.
 - Server monitoring: collect CPU, memory, disk, and network stats through SSH exec and render a dashboard.
 - Translations: continue reviewing terminology and polishing localized copy.
 - Packaging: improve Windows/macOS/Linux release workflows.

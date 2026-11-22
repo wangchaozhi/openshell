@@ -11,6 +11,8 @@ Rectangle {
     readonly property bool sessionConnected: session && session.status === "connected"
     property string clipboardTextSnapshot: ""
     property string detectedRemotePath: ""
+    property bool finding: false
+    property bool foundText: true
     property alias themePalette: theme
 
     signal remoteDirectoryDetected(string path)
@@ -75,6 +77,26 @@ Rectangle {
         terminal.screen = next
         terminal.requestFocus()
         promptPathProbe.restart()
+    }
+
+    function searchTerminal(backwards, restart) {
+        foundText = findField.text.length === 0 || terminal.findText(findField.text, backwards, restart)
+    }
+
+    Shortcut {
+        sequence: StandardKey.Find
+        enabled: root.sessionId.length > 0 && root.visible
+        onActivated: {
+            root.finding = true
+            findField.forceActiveFocus()
+            findField.selectAll()
+        }
+    }
+
+    Timer {
+        id: findDelay
+        interval: 150
+        onTriggered: root.searchTerminal(false, true)
     }
 
     function normalizePromptPath(path) {
@@ -174,6 +196,43 @@ Rectangle {
                         return theme.textMuted
                     }
                     font.pixelSize: 11
+                }
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            visible: root.finding
+            ThemedTextField {
+                id: findField
+                Layout.fillWidth: true
+                placeholderText: qsTr("Find in terminal")
+                error: !root.foundText
+                onTextEdited: findDelay.restart()
+                onAccepted: {
+                    const queryChanged = findDelay.running
+                    findDelay.stop()
+                    root.searchTerminal(false, queryChanged)
+                }
+                Keys.onEscapePressed: {
+                    root.finding = false
+                    terminal.requestFocus()
+                }
+            }
+            ThemedButton { text: qsTr("Previous"); onClicked: root.searchTerminal(true, false) }
+            ThemedButton { text: qsTr("Next"); onClicked: root.searchTerminal(false, false) }
+            ThemedButton {
+                text: qsTr("History")
+                onClicked: {
+                    historyLimit.value = appController.terminalHistoryLines()
+                    historyDialog.open()
+                }
+            }
+            ThemedButton {
+                text: qsTr("Close")
+                onClicked: {
+                    root.finding = false
+                    terminal.requestFocus()
                 }
             }
         }
@@ -298,5 +357,21 @@ Rectangle {
                 }
             }
         }
+    }
+
+    Dialog {
+        id: historyDialog
+        anchors.centerIn: parent
+        modal: true
+        title: qsTr("Terminal history lines")
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        SpinBox {
+            id: historyLimit
+            from: 0
+            to: 50000
+            editable: true
+            stepSize: 500
+        }
+        onAccepted: appController.setTerminalHistoryLines(historyLimit.value)
     }
 }
